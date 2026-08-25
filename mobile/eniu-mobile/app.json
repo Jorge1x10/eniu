@@ -20,7 +20,7 @@
       "package": "com.eniu.app",
       "icon": "./assets/brand/app-icon-light.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/brand/app-icon-dark.png",
+        "foregroundImage": "./assets/brand/app-icon-adaptive-foreground.png",
         "backgroundColor": "#2A2A2A"
       },
       "predictiveBackGestureEnabled": true,
