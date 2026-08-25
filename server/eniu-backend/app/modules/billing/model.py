@@ -12,17 +12,19 @@ class BillingSubscription(BaseModel):
     stripe_customer_id = db.Column(db.String(255), nullable=True, unique=True, index=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True, unique=True, index=True)
     stripe_price_id = db.Column(db.String(255), nullable=True)
-    plan_key = db.Column(db.String(64), nullable=False, default="essential", server_default="essential")
+    plan_key = db.Column(db.String(64), nullable=False, default="free", server_default="free")
     status = db.Column(db.String(32), nullable=False, default="inactive", server_default="inactive")
     cancel_at_period_end = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     current_period_end = db.Column(db.DateTime(timezone=True), nullable=True)
 
     user = db.relationship("User", back_populates="billing_subscription")
 
+    PLAN_NAMES = {"free": "Plan gratuito", "essential": "Plan Esencial"}
+
     def to_plan_dict(self):
         return {
             "key": self.plan_key,
-            "name": "Plan Esencial" if self.plan_key == "essential" else self.plan_key.title(),
+            "name": self.PLAN_NAMES.get(self.plan_key, self.plan_key.title()),
             "status": self.status,
             "has_access": self.status in ACCESS_STATUSES,
             "cancel_at_period_end": self.cancel_at_period_end,
