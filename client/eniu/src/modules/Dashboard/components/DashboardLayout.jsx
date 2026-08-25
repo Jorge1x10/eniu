@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router";
+import { X } from "lucide-react";
 
 import darkLogo from "../../../assets/Images/eniu-DarkBannerNoBack.svg";
 import { DASH_ICONS } from "../../../assets/icons/navIcons";
@@ -20,7 +21,7 @@ const dashboardOptions = [
   { label: "Configuración", path: "/dashboard/configuracion", icon: DASH_ICONS.config },
 ];
 
-export default function DashboardNav() {
+export default function DashboardNav({ isOpen = false, onClose = () => {} }) {
   const { user, isLoading } = useAuth();
   const { selectedBusiness } = useBusiness();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -45,7 +46,29 @@ export default function DashboardNav() {
   const initial = displayUser.charAt(0).toUpperCase();
 
   return (
-    <aside className="flex h-full w-1/5 shrink-0 flex-col justify-between overflow-hidden rounded-br-xl rounded-tr-xl bg-[#111111]">
+    <>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex h-full w-72 max-w-[80vw] shrink-0 flex-col justify-between overflow-hidden rounded-br-xl rounded-tr-xl bg-[#111111] transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:w-1/5 lg:max-w-none lg:translate-x-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar menú"
+          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg text-[#FFFDF5] hover:bg-[#2A2A2A] lg:hidden"
+        >
+          <X size={20} />
+        </button>
+
       <div className="flex items-center gap-3 px-5 py-10">
         {user.profile_picture ? (
           <img
@@ -116,6 +139,7 @@ export default function DashboardNav() {
               key={path}
               to={destination}
               end={path === "/dashboard" || ["Menús", "Productos", "Categorías", "Plantillas", "Códigos QR", "Analíticas"].includes(label)}
+              onClick={onClose}
               className={({ isActive }) => {
                 const isOptionActive = label === "Productos"
                   ? location.pathname.endsWith("/products")
@@ -151,6 +175,7 @@ export default function DashboardNav() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
-    </aside>
+      </aside>
+    </>
   );
 }
