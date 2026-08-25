@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-eniu-yellow: #ffe05a;
+  --color-eniu-yellow-pressed: #e8c93d;
+  --color-eniu-cream: #f8e8ae;
+  --color-eniu-sand: #e9ddb7;
+  --color-eniu-ink: #111111;
+  --color-eniu-paper: #fffdf5;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-display: 'Manrope', sans-serif;
+}
+
+html { background:#fffdf5; }
+body { min-width:320px; min-height:100vh; }
+#root { min-height:100vh; }
+::selection { background:#ffe05a; color:#111111; }
+:focus-visible { outline:3px solid #e8c93d; outline-offset:3px; }

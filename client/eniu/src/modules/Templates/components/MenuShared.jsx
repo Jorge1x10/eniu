@@ -1,0 +1,30 @@
+import { Image as ImageIcon } from "lucide-react";
+
+import { resolveAssetUrl } from "../templates/menuData";
+
+export function MenuCover({ business, catalogue, theme, coverUrl, compact = false }) {
+  if (!theme.show_cover) return null;
+  return coverUrl ? (
+    <div className={`relative overflow-hidden ${compact ? "h-20" : "h-44"}`}><img src={resolveAssetUrl(coverUrl)} alt={`Portada de ${catalogue.name}`} className="h-full w-full object-cover" /><div className="absolute inset-0 bg-black/25" /></div>
+  ) : (
+    <div className={`flex items-center justify-center opacity-70 ${compact ? "h-16" : "h-28"}`} style={{ backgroundColor: theme.primary_color }}><ImageIcon size={28} /><span className="ml-2 text-sm font-semibold">{business?.name || "Tu negocio"}</span></div>
+  );
+}
+
+export function CategoryNavigation({ sections, active, onSelect, rounded = true }) {
+  if (!sections.length) return null;
+  const choices = [{ id: "all", name: "Todo" }, ...sections];
+  return <nav aria-label="Categorías del menú" className="flex gap-2 overflow-x-auto px-4 py-3">{choices.map((section) => <button key={section.id} type="button" onClick={() => onSelect(section.id)} aria-pressed={active === section.id} className={`min-h-11 shrink-0 cursor-pointer px-4 text-xs font-bold ${rounded ? "rounded-full" : "border-b-2"}`} style={{ backgroundColor: active === section.id ? "var(--menu-primary)" : "transparent", borderColor: "var(--menu-accent)" }}>{section.name}</button>)}</nav>;
+}
+
+export function Availability({ available }) {
+  return available ? null : <span className="inline-block rounded-full border border-current px-2 py-0.5 text-[10px] font-bold">Agotado</span>;
+}
+
+export function MenuFooter() {
+  return <footer className="py-7 text-center text-[10px] opacity-60">Menú creado con ENIU</footer>;
+}
+
+export function EmptyMenu() {
+  return <div className="mx-5 my-10 rounded-xl border border-dashed border-current p-6 text-center text-sm opacity-70">Los productos aparecerán aquí cuando los agregues.</div>;
+}

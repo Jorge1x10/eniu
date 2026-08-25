@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "Eniu",
+    "slug": "eniu-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/brand/app-icon-light.png",
+    "scheme": "eniu",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#FFFDF5",
+    "primaryColor": "#FFE05A",
+    "ios": {
+      "bundleIdentifier": "com.eniu.app",
+      "icon": {
+        "light": "./assets/brand/app-icon-light.png",
+        "dark": "./assets/brand/app-icon-dark.png"
+      }
+    },
+    "android": {
+      "package": "com.eniu.app",
+      "icon": "./assets/brand/app-icon-light.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/app-icon-dark.png",
+        "backgroundColor": "#2A2A2A"
+      },
+      "predictiveBackGestureEnabled": true,
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/brand/app-icon-light.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F8E8AE",
+          "image": "./assets/brand/splash-logo-light.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#2A2A2A",
+            "image": "./assets/brand/splash-logo-dark.png"
+          }
+        }
+      ],
+      "expo-secure-store",
+      "expo-dev-client",
+      [
+        "react-native-nitro-google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.366455277593-n4oms8920un3540rbbq0g9lg6p45rr84"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

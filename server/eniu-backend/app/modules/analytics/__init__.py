@@ -1,0 +1,1 @@
+"""Anonymous public-menu analytics."""

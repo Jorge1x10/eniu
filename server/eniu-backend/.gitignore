@@ -1,0 +1,10 @@
+.env
+uploads/
+venv/
+app/site-packages/
+app/Scripts/
+app/Include/
+__pycache__/
+*.pyc
+.pytest_cache/
+
