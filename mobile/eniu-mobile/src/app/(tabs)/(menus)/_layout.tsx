@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 export default function MenusLayout() {
   return (
     <Stack screenOptions={{ headerTransparent: true, headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}>
-      <Stack.Screen name="index" options={{ title: 'Menús', headerLargeTitle: true }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="[catalogueId]/index" options={{ title: 'Menú' }} />
       <Stack.Screen name="[catalogueId]/products" options={{ title: 'Productos' }} />
       <Stack.Screen name="[catalogueId]/categories" options={{ title: 'Categorías' }} />

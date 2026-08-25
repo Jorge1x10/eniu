@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { CreateBusinessCard } from '@/components/create-business-card';
@@ -23,6 +24,7 @@ function dateRange() {
 export default function HomeScreen() {
   const theme = useEniuTheme();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { selectedBusiness, isLoading: loadingBusinesses } = useBusiness();
   const catalogues = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
@@ -41,7 +43,7 @@ export default function HomeScreen() {
         maxWidth: 760,
         alignSelf: 'center',
         paddingHorizontal: width < 380 ? 16 : 20,
-        paddingTop: process.env.EXPO_OS === 'web' ? 28 : 18,
+        paddingTop: insets.top + 20,
         paddingBottom: 120,
         gap: 24,
       }}

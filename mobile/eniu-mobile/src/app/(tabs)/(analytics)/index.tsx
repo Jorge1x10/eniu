@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { MetricCard } from '@/components/metric-card';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
@@ -14,6 +16,7 @@ function queryRange() { const to = new Date(); const from = new Date(); from.set
 
 export default function AnalyticsScreen() {
   const theme = useEniuTheme();
+  const insets = useSafeAreaInsets();
   const { selectedBusiness } = useBusiness();
   const menus = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
   const selected = menus.data?.catalogues[0];
@@ -24,7 +27,8 @@ export default function AnalyticsScreen() {
   const qr = analytics.data?.sources?.find((source) => source.key === 'qr')?.views ?? 0;
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 18, backgroundColor: theme.background }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingTop: insets.top + 20, paddingBottom: 120, gap: 18, backgroundColor: theme.background }}>
+      <ScreenHeader eyebrow="Rendimiento del menú" title="Analíticas" subtitle="Estas métricas representan visitas e interés; no son ventas ni pedidos." />
       <BusinessSwitcher />
       {!selectedBusiness ? <EmptyState title="Sin negocio seleccionado" description="Crea un negocio desde Inicio." /> : menus.isLoading || analytics.isLoading ? <LoadingState label="Calculando analíticas…" /> : menus.isError || analytics.isError ? <ErrorState message="No pudimos cargar las analíticas." onRetry={() => { menus.refetch(); analytics.refetch(); }} /> : !selected ? <EmptyState title="Sin datos todavía" description="Crea un menú para comenzar a registrar visitas." /> : <>
         <Text style={{ color: theme.muted }}>Menú: <Text style={{ color: theme.text, fontWeight: '900' }}>{selected.name}</Text></Text>

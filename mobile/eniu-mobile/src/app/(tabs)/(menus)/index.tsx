@@ -1,12 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { CatalogueCard } from '@/components/catalogue-card';
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
@@ -16,6 +18,7 @@ import type { Catalogue } from '@/types/models';
 
 export default function MenusScreen() {
   const theme = useEniuTheme();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { selectedBusiness } = useBusiness();
   const query = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
@@ -38,7 +41,8 @@ export default function MenusScreen() {
 
   const menus = query.data?.catalogues ?? [];
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 18, backgroundColor: theme.background }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingTop: insets.top + 20, paddingBottom: 120, gap: 18, backgroundColor: theme.background }}>
+      <ScreenHeader eyebrow={selectedBusiness?.name || 'Negocio'} title="Menús" subtitle="Administra los menús que compartes con tus clientes." />
       <BusinessSwitcher />
       {!selectedBusiness ? <EmptyState title="Primero crea un negocio" description="Ve a Inicio para crear el negocio que contendrá tus menús." /> : <>
         <Button onPress={() => { setCreating((value) => !value); setError(''); }}>{creating ? 'Cerrar formulario' : 'Crear menú'}</Button>

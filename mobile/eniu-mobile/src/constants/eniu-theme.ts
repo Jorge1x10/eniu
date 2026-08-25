@@ -18,6 +18,7 @@ export const eniuLight = {
   muted: '#666666',
   border: '#E9DDB7',
   field: '#FFFFFF',
+  eyebrow: '#8A7420',
 };
 
 export const eniuDark = {
@@ -29,6 +30,7 @@ export const eniuDark = {
   muted: '#C7C7C7',
   border: '#555555',
   field: '#1B1B1B',
+  eyebrow: '#D9C36A',
 };
 
 export function useEniuTheme() {
