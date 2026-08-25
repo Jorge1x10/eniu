@@ -1,7 +1,8 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
-import { extname, relative, resolve } from 'node:path'
+import { relative, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = resolve(new URL('../dist/', import.meta.url).pathname.slice(1))
+const root = fileURLToPath(new URL('../dist/', import.meta.url))
 const files = {}
 
 async function collect(directory) {
