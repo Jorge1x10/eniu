@@ -1,20 +1,21 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
-import { Button } from '@/components/ui/button';
+import { MenuSkeleton } from '@/components/menu-skeleton';
+import { ChevronRightIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, getCatalogue } from '@/features/catalogues/catalogue-api';
 import { api } from '@/lib/api';
-import type { Catalogue } from '@/types/models';
+import type { Catalogue, Category, Product } from '@/types/models';
 
 const actions = [
-  { route: 'products', title: 'Productos', description: 'Precios, disponibilidad e imágenes' },
-  { route: 'categories', title: 'Categorías', description: 'Organiza el contenido del menú' },
-  { route: 'template', title: 'Diseño y plantilla', description: 'Estilo, colores y visibilidad' },
-  { route: 'publication', title: 'Publicar y compartir', description: 'Enlace público y código QR' },
+  { route: 'products', title: 'Productos', description: 'Precios, disponibilidad e imágenes', tone: 'yellow' },
+  { route: 'categories', title: 'Categorías', description: 'Organiza el contenido del menú', tone: 'cream' },
+  { route: 'template', title: 'Diseño y plantilla', description: 'Estilo, colores y visibilidad', tone: 'sand' },
+  { route: 'publication', title: 'Publicar y compartir', description: 'Enlace público y código QR', tone: 'yellow' },
 ] as const;
 
 export default function CatalogueDetailScreen() {
@@ -24,6 +25,10 @@ export default function CatalogueDetailScreen() {
   const { selectedBusiness } = useBusiness();
   const query = useQuery({ queryKey: catalogueKeys.detail(selectedBusiness?.id, catalogueId), queryFn: () => getCatalogue(selectedBusiness!.id, catalogueId), enabled: Boolean(selectedBusiness && catalogueId) });
   const catalogue = query.data?.catalogue;
+  const base = `businesses/${selectedBusiness?.id}/catalogues/${catalogueId}`;
+  const products = useQuery({ queryKey: ['products', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ products: Product[] }>(`${base}/products`), enabled: Boolean(selectedBusiness && catalogueId) });
+  const categories = useQuery({ queryKey: ['categories', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ categories: Category[] }>(`${base}/categories`), enabled: Boolean(selectedBusiness && catalogueId) });
+  const counts: Record<string, number | undefined> = { products: products.data?.products.length, categories: categories.data?.categories.length };
 
   async function togglePublication() {
     if (!selectedBusiness || !catalogue) return;
@@ -34,10 +39,44 @@ export default function CatalogueDetailScreen() {
   }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 18, backgroundColor: theme.background }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 16, backgroundColor: theme.background }}>
       {query.isLoading ? <LoadingState /> : query.isError || !catalogue ? <ErrorState message="No pudimos cargar este menú." onRetry={() => query.refetch()} /> : <>
-        <View style={{ gap: 10, padding: 20, borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}><View style={{ alignSelf: 'flex-start', borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : theme.surfaceAlt, paddingHorizontal: 11, paddingVertical: 6 }}><Text style={{ color: catalogue.is_published ? '#111111' : theme.muted, fontWeight: '800', fontSize: 12 }}>{catalogue.is_published ? 'Publicado' : 'Borrador'}</Text></View><Text selectable style={{ color: theme.text, fontSize: 26, fontWeight: '900' }}>{catalogue.name}</Text><Text style={{ color: theme.muted, lineHeight: 21 }}>{catalogue.description || 'Sin descripción'}</Text><Button variant="secondary" onPress={togglePublication}>{catalogue.is_published ? 'Despublicar menú' : 'Publicar menú'}</Button></View>
-        <View style={{ gap: 12 }}>{actions.map((action) => <Link key={action.route} href={{ pathname: `/(tabs)/(menus)/[catalogueId]/${action.route}`, params: { catalogueId } }} asChild><Pressable style={({ pressed }) => ({ backgroundColor: theme.surface, borderRadius: 18, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, padding: 18, opacity: pressed ? 0.7 : 1 })}><Text style={{ color: theme.text, fontSize: 17, fontWeight: '900' }}>{action.title}</Text><Text style={{ color: theme.muted, marginTop: 5 }}>{action.description}</Text></Pressable></Link>)}</View>
+        <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: '#111111', padding: 20, gap: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <View style={{ minHeight: 26, justifyContent: 'center', borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : 'rgba(255,255,255,0.12)', paddingHorizontal: 10 }}><Text style={{ color: catalogue.is_published ? '#111111' : '#C7C7C7', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 }}>{catalogue.is_published ? 'PUBLICADO' : 'BORRADOR'}</Text></View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text style={{ color: '#C7C7C7', fontSize: 12, fontWeight: '600' }}>Visible</Text><Switch value={catalogue.is_published} onValueChange={togglePublication} trackColor={{ true: theme.yellow }} /></View>
+          </View>
+          <View style={{ gap: 6 }}>
+            <Text selectable style={{ color: '#FFFDF5', fontSize: 26, fontWeight: '800' }}>{catalogue.name}</Text>
+            <Text style={{ color: '#C7C7C7', fontSize: 13, lineHeight: 20 }}>{catalogue.description || 'Sin descripción'}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 14, alignItems: 'stretch' }}>
+            <MenuSkeleton width={86} padding={9} />
+            <View style={{ flex: 1, minWidth: 0, gap: 10, justifyContent: 'flex-end' }}>
+              {catalogue.public_slug ? <Text numberOfLines={1} style={{ color: '#C7C7C7', fontSize: 12 }}>eniu.mx/m/{catalogue.public_slug}</Text> : null}
+              <Link href={{ pathname: '/(tabs)/(menus)/[catalogueId]/publication', params: { catalogueId } }} asChild>
+                <Pressable style={({ pressed }) => ({ height: 42, borderRadius: 13, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}><Text style={{ color: '#111111', fontWeight: '700', fontSize: 13.5 }}>Ver como cliente</Text></Pressable>
+              </Link>
+            </View>
+          </View>
+        </View>
+
+        <View style={{ gap: 9 }}>{actions.map((action) => {
+          const count = counts[action.route];
+          const badgeBg = action.tone === 'yellow' ? theme.yellow : action.tone === 'cream' ? theme.cream : theme.sand;
+          return (
+            <Link key={action.route} href={{ pathname: `/(tabs)/(menus)/[catalogueId]/${action.route}`, params: { catalogueId } }} asChild>
+              <Pressable style={({ pressed }) => ({ minHeight: 66, backgroundColor: theme.surface, borderRadius: 18, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 14, opacity: pressed ? 0.7 : 1 })}>
+                <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: badgeBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{count != null ? <Text style={{ color: '#111111', fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{count}</Text> : null}</View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '900' }}>{action.title}</Text>
+                  <Text style={{ color: theme.muted, fontSize: 12, marginTop: 2 }}>{action.description}</Text>
+                </View>
+                <ChevronRightIcon color={theme.yellowPressed} size={13} />
+              </Pressable>
+            </Link>
+          );
+        })}</View>
       </>}
     </ScrollView>
   );

@@ -10,7 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-sta
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { api } from '@/lib/api';
-import type { Category } from '@/types/models';
+import type { Category, Product } from '@/types/models';
 
 export default function CategoriesScreen() {
   const theme = useEniuTheme();
@@ -20,6 +20,7 @@ export default function CategoriesScreen() {
   const key = ['categories', selectedBusiness?.id, catalogueId] as const;
   const base = `businesses/${selectedBusiness?.id}/catalogues/${catalogueId}/categories`;
   const query = useQuery({ queryKey: key, queryFn: () => api.get<{ categories: Category[] }>(base), enabled: Boolean(selectedBusiness && catalogueId) });
+  const products = useQuery({ queryKey: ['products', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ products: Product[] }>(`businesses/${selectedBusiness?.id}/catalogues/${catalogueId}/products`), enabled: Boolean(selectedBusiness && catalogueId) });
   const [editing, setEditing] = useState<Category | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [name, setName] = useState(''); const [description, setDescription] = useState('');
@@ -41,11 +42,25 @@ export default function CategoriesScreen() {
   }
 
   const categories = query.data?.categories ?? [];
+  const currency = new Intl.NumberFormat('es-MX', { style: 'currency', currency: selectedBusiness?.currency || 'MXN' });
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 100, gap: 16, backgroundColor: theme.background }}>
       <Button onPress={() => formOpen ? setFormOpen(false) : startEdit()}>{formOpen ? 'Cerrar formulario' : 'Crear categoría'}</Button>
       {formOpen ? <View style={{ padding: 18, gap: 14, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous' }}><Text style={{ color: theme.text, fontSize: 19, fontWeight: '900' }}>{editing ? 'Editar categoría' : 'Nueva categoría'}</Text><FormField label="Nombre" value={name} onChangeText={setName} maxLength={64} placeholder="Bebidas" /><FormField label="Descripción" value={description} onChangeText={setDescription} multiline placeholder="Refrescos y aguas" /><Feedback message={error} /><Button loading={saving} onPress={save}>Guardar categoría</Button></View> : null}
-      {query.isLoading ? <LoadingState /> : query.isError ? <ErrorState message="No pudimos cargar las categorías." onRetry={() => query.refetch()} /> : categories.length ? <View style={{ gap: 11 }}>{categories.map((category) => <Pressable key={category.id} onPress={() => startEdit(category)} onLongPress={() => remove(category)} style={({ pressed }) => ({ padding: 17, gap: 7, borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, opacity: pressed ? 0.72 : 1 })}><Text style={{ color: theme.text, fontSize: 17, fontWeight: '900' }}>{category.name}</Text><Text style={{ color: theme.muted, lineHeight: 19 }}>{category.description || 'Sin descripción'}</Text><Text style={{ color: theme.yellowPressed, fontSize: 12, fontWeight: '800' }}>Toca para editar · Mantén para eliminar</Text></Pressable>)}</View> : <EmptyState title="Sin categorías" description="Organiza los productos de este menú creando categorías." action="Crear categoría" onAction={() => startEdit()} />}
+      {categories.length ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>Toca una categoría para editarla, mantén presionado para eliminarla.</Text> : null}
+      {query.isLoading ? <LoadingState /> : query.isError ? <ErrorState message="No pudimos cargar las categorías." onRetry={() => query.refetch()} /> : categories.length ? <View style={{ gap: 10 }}>{categories.map((category) => {
+        const items = (products.data?.products ?? []).filter((product) => product.category_id === category.id);
+        const prices = items.map((product) => Number(product.price)).filter((value) => Number.isFinite(value) && value > 0);
+        const empty = products.data ? items.length === 0 : null;
+        return (
+          <Pressable key={category.id} onPress={() => startEdit(category)} onLongPress={() => remove(category)} style={({ pressed }) => ({ padding: 16, borderRadius: 18, borderCurve: 'continuous', backgroundColor: empty ? theme.surfaceAlt : theme.surface, borderWidth: 1, borderColor: theme.border, flexDirection: 'row', alignItems: 'center', gap: 14, opacity: pressed ? 0.72 : 1 })}>
+            <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+              <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700' }}>{category.name}</Text>
+              {empty ? <Text style={{ color: theme.yellowPressed, fontSize: 12, fontWeight: '600' }}>Vacía — no se muestra a tus clientes</Text> : <Text style={{ color: theme.muted, fontSize: 12 }}>{items.length} producto{items.length === 1 ? '' : 's'}{prices.length ? ` · desde ${currency.format(Math.min(...prices))}` : ''}</Text>}
+            </View>
+          </Pressable>
+        );
+      })}</View> : <EmptyState title="Sin categorías" description="Organiza los productos de este menú creando categorías." action="Crear categoría" onAction={() => startEdit()} />}
     </ScrollView>
   );
 }

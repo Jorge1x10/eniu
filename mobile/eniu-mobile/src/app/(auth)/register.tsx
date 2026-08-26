@@ -27,7 +27,7 @@ export default function RegisterScreen() {
     setLoading(true); setError('');
     try {
       await register({ username: form.username.trim(), email: form.email.trim().toLowerCase(), phone: form.phone, password: form.password });
-      router.replace('/(tabs)/(home)');
+      router.replace('/(onboarding)/business');
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'No fue posible crear la cuenta.');
     } finally { setLoading(false); }

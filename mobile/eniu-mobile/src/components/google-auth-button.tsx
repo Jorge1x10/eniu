@@ -34,7 +34,7 @@ export function GoogleAuthButton({ mode }: { mode: 'login' | 'register' }) {
       if (response.type === 'cancelled') return;
       if (response.type !== 'success' || !response.data?.idToken) throw new Error('Google no devolvió una credencial válida.');
       await loginWithGoogle(response.data.idToken);
-      router.replace('/(tabs)/(home)');
+      router.replace(mode === 'register' ? '/(onboarding)/business' : '/(tabs)/(home)');
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'No fue posible continuar con Google.');
     } finally { setLoading(false); }
