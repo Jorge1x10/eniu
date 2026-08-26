@@ -2,8 +2,9 @@ import os
 from flask import Flask, request
 from flask_cors import CORS
 from flask_migrate import Migrate
+from app import storage
 from app.database.db import db
-from app.extensions import bcrypt, jwt, limiter
+from app.extensions import bcrypt, cache, jwt, limiter
 from config import Config
 
 
@@ -17,6 +18,9 @@ def create_app(test_config=None):
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
+    if app.config.get("TESTING"):
+        # Never let a cached response from one test leak into another.
+        app.config["CACHE_TYPE"] = "NullCache"
     CORS(
         app,
         resources={
@@ -32,6 +36,8 @@ def create_app(test_config=None):
     jwt.init_app(app)
     app.config.setdefault("RATELIMIT_ENABLED", not app.config.get("TESTING", False))
     limiter.init_app(app)
+    cache.init_app(app)
+    storage.configure(app)
 
     migrate.init_app(app,db)
 

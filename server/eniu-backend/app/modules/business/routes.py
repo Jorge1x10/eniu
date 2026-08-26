@@ -1,5 +1,6 @@
-from flask import Blueprint, current_app, jsonify, request, send_from_directory
+from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from app import storage
 from .services import (
     create_business,
     get_business_by_id,
@@ -86,7 +87,4 @@ def get_business_photo(business_id):
     if not business or not business.photo_filename:
         return jsonify({"message": "Foto no encontrada"}), 404
 
-    return send_from_directory(
-        current_app.config["BUSINESS_UPLOAD_FOLDER"],
-        business.photo_filename,
-    )
+    return storage.serve_file(current_app.config["BUSINESS_UPLOAD_FOLDER"], business.photo_filename)
