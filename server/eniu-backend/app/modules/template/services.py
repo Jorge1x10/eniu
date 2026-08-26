@@ -1,11 +1,11 @@
 import re
-from pathlib import Path
 from uuid import UUID, uuid4
 
 from flask import current_app
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.utils import secure_filename
 
+from app import storage
 from app.database.db import db
 from app.modules.catalogue.services import catalogue_access
 from app.modules.template.model import CatalogueTemplate
@@ -135,19 +135,13 @@ def _validate_image(image, label):
 def _delete_cover(filename):
     if not filename:
         return
-    try:
-        (Path(current_app.config["CATALOGUE_COVER_FOLDER"]) / filename).unlink(missing_ok=True)
-    except OSError:
-        current_app.logger.warning("No fue posible eliminar la portada %s", filename)
+    storage.delete_file(current_app.config["CATALOGUE_COVER_FOLDER"], filename)
 
 
 def _delete_background(filename):
     if not filename:
         return
-    try:
-        (Path(current_app.config["CATALOGUE_BACKGROUND_FOLDER"]) / filename).unlink(missing_ok=True)
-    except OSError:
-        current_app.logger.warning("No fue posible eliminar el fondo %s", filename)
+    storage.delete_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], filename)
 
 
 def get_template(owner_id, business_id, catalogue_id):
@@ -197,22 +191,16 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
 
         if cover and cover.filename:
             extension = _validate_image(cover, "La portada")
-            folder = Path(current_app.config["CATALOGUE_COVER_FOLDER"])
-            folder.mkdir(parents=True, exist_ok=True)
             new_filename = f"{uuid4().hex}.{extension}"
-            cover.stream.seek(0)
-            cover.save(folder / new_filename)
+            storage.save_file(current_app.config["CATALOGUE_COVER_FOLDER"], new_filename, cover)
             config.cover_filename = new_filename
         elif data.get("remove_cover") is True:
             config.cover_filename = None
 
         if background and background.filename:
             extension = _validate_image(background, "El fondo")
-            folder = Path(current_app.config["CATALOGUE_BACKGROUND_FOLDER"])
-            folder.mkdir(parents=True, exist_ok=True)
             new_background_filename = f"{uuid4().hex}.{extension}"
-            background.stream.seek(0)
-            background.save(folder / new_background_filename)
+            storage.save_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], new_background_filename, background)
             config.background_filename = new_background_filename
         elif data.get("remove_background") is True:
             config.background_filename = None

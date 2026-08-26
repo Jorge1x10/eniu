@@ -168,7 +168,7 @@ class PublicationApiTestCase(unittest.TestCase):
         slug = response.get_json()["publication"]["public_slug"]
         public_response = self.client.get(f"/api/public/menus/{slug}")
         self.assertEqual(public_response.status_code, 200)
-        self.assertEqual(public_response.headers["Cache-Control"], "no-cache")
+        self.assertEqual(public_response.headers["Cache-Control"], "public, max-age=20")
         payload = public_response.get_json()
         self.assertFalse(FORBIDDEN_KEYS.intersection(set(all_keys(payload))))
         self.assertIsNone(UUID_PATTERN.search(json.dumps(payload)))
