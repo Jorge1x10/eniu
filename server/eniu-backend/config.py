@@ -38,11 +38,20 @@ class Config:
     # Keep this value stable: changing it invalidates opaque analytics keys.
     ANALYTICS_TOKEN_SECRET = os.getenv("ANALYTICS_TOKEN_SECRET") or SECRET_KEY
 
-    # In-memory limiter is fine for a single-instance beta; point this at a
-    # shared Redis URL (e.g. redis://...) once the API runs on more than one
-    # instance, otherwise each instance tracks its own counters.
-    RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
+    # Set REDIS_URL (e.g. redis://...) once the API runs on more than one
+    # instance: it upgrades both the rate limiter and the response cache
+    # below from single-process, in-memory storage to a shared backend.
+    # Without it everything still works for a single-instance deployment.
+    REDIS_URL = os.getenv("REDIS_URL")
+    RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI") or REDIS_URL or "memory://"
     RATELIMIT_HEADERS_ENABLED = True
+
+    # Short-lived server-side cache for the public menu endpoint, which is
+    # what QR scans hit. Cuts repeat DB work during traffic spikes at the
+    # cost of edits taking up to this many seconds to show publicly.
+    CACHE_TYPE = "RedisCache" if REDIS_URL else "SimpleCache"
+    CACHE_REDIS_URL = REDIS_URL
+    PUBLIC_MENU_CACHE_SECONDS = int(os.getenv("PUBLIC_MENU_CACHE_SECONDS", "20"))
 
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
     # Prefer a restricted Stripe key (rk_) scoped to the resources used here.
@@ -57,6 +66,21 @@ class Config:
         "PUBLIC_WEB_BASE_URL",
         os.getenv("FRONT", "http://localhost:5173"),
     ).rstrip("/")
+
+    # Local disk is fine for a single instance but doesn't survive a
+    # redeploy and can't be shared across instances. Set STORAGE_BACKEND=s3
+    # to store uploads in an S3-compatible bucket instead (AWS S3,
+    # Cloudflare R2, Backblaze B2, DigitalOcean Spaces, ...).
+    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local")
+    S3_BUCKET = os.getenv("S3_BUCKET")
+    S3_PREFIX = os.getenv("S3_PREFIX", "")
+    S3_REGION = os.getenv("S3_REGION", "auto")
+    S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+    S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID")
+    S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
+    # Whatever serves that bucket's objects publicly, e.g. a custom domain
+    # on a public R2 bucket or a CloudFront distribution in front of S3.
+    S3_PUBLIC_BASE_URL = os.getenv("S3_PUBLIC_BASE_URL")
 
     MAX_CONTENT_LENGTH = 26 * 1024 * 1024
     BUSINESS_UPLOAD_FOLDER = os.path.join(

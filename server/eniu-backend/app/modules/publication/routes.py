@@ -1,6 +1,9 @@
-from flask import Blueprint, current_app, jsonify, make_response, request, send_from_directory
+from flask import Blueprint, current_app, jsonify, make_response, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+from app import storage
+from app.extensions import cache
+from config import Config
 from .services import (
     change_publication,
     get_preview,
@@ -44,10 +47,11 @@ def catalogue_preview(business_id, catalogue_id):
 
 
 @publication_bp.get("/public/menus/<public_slug>")
+@cache.cached(timeout=Config.PUBLIC_MENU_CACHE_SECONDS)
 def public_menu(public_slug):
     result, status = get_public_menu(public_slug)
     response = make_response(jsonify(result), status)
-    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Cache-Control"] = f"public, max-age={Config.PUBLIC_MENU_CACHE_SECONDS}"
     return response
 
 
@@ -56,9 +60,7 @@ def public_cover(public_slug):
     filename = get_public_cover(public_slug)
     if not filename:
         return jsonify({"message": "Imagen no encontrada"}), 404
-    response = send_from_directory(current_app.config["CATALOGUE_COVER_FOLDER"], filename)
-    response.headers["Cache-Control"] = "no-cache"
-    return response
+    return storage.serve_file(current_app.config["CATALOGUE_COVER_FOLDER"], filename)
 
 
 @publication_bp.get("/public/menus/<public_slug>/background")
@@ -66,9 +68,7 @@ def public_background(public_slug):
     filename = get_public_background(public_slug)
     if not filename:
         return jsonify({"message": "Imagen no encontrada"}), 404
-    response = send_from_directory(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], filename)
-    response.headers["Cache-Control"] = "no-cache"
-    return response
+    return storage.serve_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], filename)
 
 
 @publication_bp.get("/public/menus/<public_slug>/product-images/<int:section_index>/<int:product_index>")
@@ -76,6 +76,4 @@ def public_product_image(public_slug, section_index, product_index):
     filename = get_public_product_image(public_slug, section_index, product_index)
     if not filename:
         return jsonify({"message": "Imagen no encontrada"}), 404
-    response = send_from_directory(current_app.config["PRODUCT_UPLOAD_FOLDER"], filename)
-    response.headers["Cache-Control"] = "no-cache"
-    return response
+    return storage.serve_file(current_app.config["PRODUCT_UPLOAD_FOLDER"], filename)

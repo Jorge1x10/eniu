@@ -1,8 +1,9 @@
 import json
 
-from flask import Blueprint, current_app, jsonify, request, send_from_directory
+from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+from app import storage
 from .services import get_background, get_cover, get_template, update_template
 
 
@@ -48,7 +49,7 @@ def catalogue_cover(catalogue_id):
     filename = get_cover(get_jwt_identity(), catalogue_id)
     if not filename:
         return jsonify({"message": "Portada no encontrada"}), 404
-    return send_from_directory(current_app.config["CATALOGUE_COVER_FOLDER"], filename)
+    return storage.serve_file(current_app.config["CATALOGUE_COVER_FOLDER"], filename, private=True)
 
 
 @template_bp.get("/catalogues/<catalogue_id>/background")
@@ -57,4 +58,4 @@ def catalogue_background(catalogue_id):
     filename = get_background(get_jwt_identity(), catalogue_id)
     if not filename:
         return jsonify({"message": "Fondo no encontrado"}), 404
-    return send_from_directory(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], filename)
+    return storage.serve_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], filename, private=True)

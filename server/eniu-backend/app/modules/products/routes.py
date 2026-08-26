@@ -1,6 +1,7 @@
-from flask import Blueprint, current_app, jsonify, request, send_from_directory
+from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+from app import storage
 from .services import (
     create_product,
     delete_product,
@@ -94,7 +95,6 @@ def product_image(product_id, filename):
     stored_filename = get_product_image(product_id, filename)
     if not stored_filename:
         return jsonify({"message": "Imagen no encontrada"}), 404
-    return send_from_directory(
-        current_app.config["PRODUCT_UPLOAD_FOLDER"],
-        stored_filename,
+    return storage.serve_file(
+        current_app.config["PRODUCT_UPLOAD_FOLDER"], stored_filename, immutable=True
     )

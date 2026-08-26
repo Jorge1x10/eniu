@@ -1,12 +1,12 @@
 from decimal import Decimal, InvalidOperation
 import json
-from pathlib import Path
 from uuid import UUID, uuid4
 
 from flask import current_app
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from app import storage
 from app.database.db import db
 from app.modules.catalogue.services import catalogue_access
 from app.modules.category.model import Category
@@ -173,29 +173,24 @@ def _validate_images(images, existing_count=0):
 
 
 def _save_images(images):
-    upload_folder = Path(current_app.config["PRODUCT_UPLOAD_FOLDER"])
-    upload_folder.mkdir(parents=True, exist_ok=True)
+    upload_folder = current_app.config["PRODUCT_UPLOAD_FOLDER"]
     saved = []
     for image in images:
         extension = secure_filename(image.filename).rsplit(".", 1)[-1].lower()
         image_id = uuid4().hex
         filename = f"{image_id}.{extension}"
-        image.stream.seek(0)
-        image.save(upload_folder / filename)
+        storage.save_file(upload_folder, filename, image)
         saved.append({"id": image_id, "filename": filename, "is_default": False})
     return saved
 
 
 def _delete_images(pictures):
-    upload_folder = Path(current_app.config["PRODUCT_UPLOAD_FOLDER"])
+    upload_folder = current_app.config["PRODUCT_UPLOAD_FOLDER"]
     for picture in pictures:
         filename = picture.get("filename")
         if not filename:
             continue
-        try:
-            (upload_folder / filename).unlink(missing_ok=True)
-        except OSError:
-            current_app.logger.warning("No fue posible eliminar la imagen %s", filename)
+        storage.delete_file(upload_folder, filename)
 
 
 def _set_default(pictures, default_key=None):

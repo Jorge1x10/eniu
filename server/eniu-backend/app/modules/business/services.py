@@ -1,7 +1,7 @@
 from app.modules.business.model import Business
 from flask import current_app
-from pathlib import Path
 from uuid import UUID, uuid4
+from app import storage
 from app.database.db import db
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
@@ -120,11 +120,7 @@ def _delete_photo(filename):
     if not filename:
         return
 
-    photo_path = Path(current_app.config["BUSINESS_UPLOAD_FOLDER"]) / filename
-    try:
-        photo_path.unlink(missing_ok=True)
-    except OSError:
-        current_app.logger.warning("No fue posible eliminar la foto %s", filename)
+    storage.delete_file(current_app.config["BUSINESS_UPLOAD_FOLDER"], filename)
 
 
 def update_business(owner_id, business_id, data, photo=None):
@@ -203,10 +199,8 @@ def update_business(owner_id, business_id, data, photo=None):
             if _photo_size(photo) > MAX_PHOTO_BYTES:
                 return {"message": "La foto puede pesar máximo 5 MB"}, 400
 
-            upload_folder = Path(current_app.config["BUSINESS_UPLOAD_FOLDER"])
-            upload_folder.mkdir(parents=True, exist_ok=True)
             new_photo_filename = f"{uuid4().hex}.{extension}"
-            photo.save(upload_folder / new_photo_filename)
+            storage.save_file(current_app.config["BUSINESS_UPLOAD_FOLDER"], new_photo_filename, photo)
             business.photo_filename = new_photo_filename
         elif str(data.get("remove_photo", "false")).lower() in {
             "true", "1", "yes", "on"
