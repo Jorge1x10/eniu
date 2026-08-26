@@ -95,4 +95,6 @@ def product_image(product_id, filename):
     stored_filename = get_product_image(product_id, filename)
     if not stored_filename:
         return jsonify({"message": "Imagen no encontrada"}), 404
-    return storage.serve_file(current_app.config["PRODUCT_UPLOAD_FOLDER"], stored_filename)
+    return storage.serve_file(
+        current_app.config["PRODUCT_UPLOAD_FOLDER"], stored_filename, immutable=True
+    )

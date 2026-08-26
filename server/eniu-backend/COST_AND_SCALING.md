@@ -3,19 +3,31 @@
 Este documento resume los cambios hechos para reducir el costo por usuario y
 preparar la API para correr en más de una instancia.
 
-## 1. Imágenes con caché inmutable
+## 1. Imágenes con caché ajustada a cada URL
 
 Los nombres de archivo de fotos de negocio, imágenes de producto, portadas y
 fondos de catálogo se generan con un UUID nuevo en cada subida (ver
-`app/modules/*/services.py`), así que una URL nunca cambia de contenido.
-Todos los endpoints que sirven esas imágenes ahora responden con
-`Cache-Control: public, max-age=31536000, immutable` (o `private` cuando el
-endpoint requiere JWT, como la vista previa de plantilla en el dashboard).
+`app/modules/*/services.py`), pero eso solo hace inmutable la URL en el
+único endpoint donde el nombre de archivo vive en la propia ruta:
+`GET /products/<product_id>/images/<filename>`. Ese es el único caso que usa
+`Cache-Control: public, max-age=31536000, immutable`
+(`storage.serve_file(..., immutable=True)`).
+
+El resto de endpoints de imagen (foto de negocio por `business_id`, portada y
+fondo de catálogo por `catalogue_id` o por slug del menú público, imagen de
+producto por posición en el menú) están *indexados por un identificador
+estable*, no por el archivo — el usuario puede reemplazar la foto y la URL
+sigue siendo la misma, solo cambia qué archivo hay detrás. Marcarlos como
+`immutable` haría que el navegador o un CDN sirvieran la imagen vieja para
+siempre después de una actualización. Por eso usan una vida corta y
+revalidable: `Cache-Control: public, max-age=60` (`private, max-age=60` en
+los endpoints que requieren JWT, como la vista previa de plantilla en el
+dashboard).
 
 Esto no cuesta nada y ya reduce tráfico repetido en el navegador. El
 beneficio grande llega al poner un CDN (Cloudflare, por ejemplo) delante del
-dominio de la API: con esta cabecera, el CDN puede servir las imágenes sin
-volver a pegarle a Render en absoluto.
+dominio de la API: con estas cabeceras, el CDN puede servir las imágenes sin
+volver a pegarle a Render en absoluto durante su ventana de caché.
 
 ## 2. Caché del menú público
 
@@ -69,10 +81,16 @@ Funciona con cualquier proveedor compatible con S3 (recomendado: **Cloudflare
 R2** por no cobrar egress, que es el costo que más se dispara al servir
 imágenes). Con `STORAGE_BACKEND=s3`:
 - Las subidas van directo al bucket, con `Cache-Control` inmutable puesto en
-  el objeto mismo.
-- Los endpoints que antes streameaban el archivo ahora hacen un `redirect`
-  302 a `S3_PUBLIC_BASE_URL`, así que el ancho de banda de las imágenes deja
-  de pasar por la API.
+  el objeto mismo (el *objeto* sí es content-addressed por su key aunque la
+  URL de la API que apunta a él no lo sea — ver punto 1).
+- Los endpoints públicos que antes streameaban el archivo ahora hacen un
+  `redirect` 302 a `S3_PUBLIC_BASE_URL`, así que el ancho de banda de esas
+  imágenes deja de pasar por la API.
+- Los endpoints privados (los que requieren JWT, como la vista previa de
+  plantilla) redirigen en cambio a una URL firmada de un minuto de vigencia:
+  así el bucket no necesita ser público para que esto funcione, y quien
+  guarde o comparta ese enlace no puede reusarlo después de que expire —
+  el JWT sigue siendo lo que controla el acceso en cada visita.
 - Sin `STORAGE_BACKEND` (o con `local`), el comportamiento es exactamente el
   de antes: nada cambia si no se configuran estas variables.
 

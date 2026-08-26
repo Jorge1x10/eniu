@@ -11,13 +11,16 @@ S3-compatible bucket instead: AWS S3, Cloudflare R2, Backblaze B2,
 DigitalOcean Spaces, etc. Point S3_PUBLIC_BASE_URL at whatever serves that
 bucket's objects publicly (a custom domain on a public R2 bucket, a
 CloudFront distribution, ...) so `serve_file` can redirect straight to it
-instead of streaming the bytes through this API.
+for public assets instead of streaming the bytes through this API. Private
+assets (private=True) get a short-lived signed URL instead, so a bucket
+that isn't publicly readable still works and the JWT gate on the route
+actually controls access to the file, not just to a redirect.
 """
 from pathlib import Path
 
-from flask import redirect, send_from_directory
+from flask import current_app, redirect, send_from_directory
 
-from app.http_cache import cache_immutable_asset
+from app.http_cache import REVALIDATED_ASSET_MAX_AGE, asset_cache_control
 
 
 class LocalStorage:
@@ -31,9 +34,9 @@ class LocalStorage:
         try:
             (Path(folder) / filename).unlink(missing_ok=True)
         except OSError:
-            pass
+            current_app.logger.warning("No fue posible eliminar el archivo %s", filename)
 
-    def url_for(self, folder, filename):
+    def url_for(self, folder, filename, *, private=False):
         return None
 
 
@@ -62,8 +65,10 @@ class S3Storage:
     def save(self, folder, filename, file_obj):
         file_obj.stream.seek(0)
         extra_args = {
-            # Filenames are UUIDs minted per upload, so the same key never
-            # changes content: safe to hand out a far-future cache lifetime.
+            # The S3 *object* really is content-addressed: filenames are
+            # UUIDs minted per upload and a deleted/replaced upload gets a
+            # new key, so a far-future cache lifetime on the object itself
+            # is safe regardless of whether the API's own URL for it is.
             "CacheControl": "public, max-age=31536000, immutable",
         }
         if file_obj.mimetype:
@@ -76,12 +81,29 @@ class S3Storage:
         )
 
     def delete(self, folder, filename):
-        self._client.delete_object(Bucket=self._bucket, Key=self._key(folder, filename))
+        try:
+            self._client.delete_object(Bucket=self._bucket, Key=self._key(folder, filename))
+        except Exception:
+            current_app.logger.warning(
+                "No fue posible eliminar %s de S3", self._key(folder, filename)
+            )
 
-    def url_for(self, folder, filename):
+    def url_for(self, folder, filename, *, private=False):
+        key = self._key(folder, filename)
+        if private:
+            # A public bucket URL would make the JWT check on the route
+            # pointless: anyone who ever saw the link could fetch it again
+            # forever. A short-lived signed URL keeps the file gated by the
+            # route's own auth check on every fresh visit, and works even
+            # when the bucket itself isn't publicly readable.
+            return self._client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": self._bucket, "Key": key},
+                ExpiresIn=REVALIDATED_ASSET_MAX_AGE,
+            )
         if not self._public_base_url:
             return None
-        return f"{self._public_base_url}/{self._key(folder, filename)}"
+        return f"{self._public_base_url}/{key}"
 
 
 _backend = LocalStorage()
@@ -111,14 +133,26 @@ def delete_file(folder, filename):
     _backend.delete(folder, filename)
 
 
-def serve_file(folder, filename, *, private=False):
+def serve_file(folder, filename, *, private=False, immutable=False):
     """Return a Flask response for `filename`: a redirect straight to the
     bucket/CDN when one is configured, otherwise the file streamed from
-    local disk."""
-    url = _backend.url_for(folder, filename)
+    local disk.
+
+    Pass immutable=True only when `filename` (or something equally unique
+    to this exact file) is itself part of the request URL, so a changed
+    file is guaranteed to live at a different URL. Endpoints keyed by a
+    stable id (business_id, catalogue_id, a menu slug, a product's position
+    in the menu) must leave this False: the file behind that URL can change
+    on a re-upload while the URL stays the same, so a long cache lifetime
+    would keep serving the old image long after it was replaced.
+    """
+    immutable = immutable and not private  # a signed URL can expire before an immutable cache entry would
+    url = _backend.url_for(folder, filename, private=private)
+    cache_control = asset_cache_control(private=private, immutable=immutable)
     if url:
         response = redirect(url, code=302)
-        response.headers["Cache-Control"] = "no-store" if private else "public, max-age=300"
+        response.headers["Cache-Control"] = cache_control
         return response
     response = send_from_directory(folder, filename)
-    return cache_immutable_asset(response, private=private)
+    response.headers["Cache-Control"] = cache_control
+    return response

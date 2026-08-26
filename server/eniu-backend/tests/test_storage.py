@@ -30,23 +30,37 @@ class StorageTestCase(unittest.TestCase):
             self.assertTrue((Path(folder) / "a.png").exists())
 
             with self.app.test_request_context():
+                # Not content-addressed (caller didn't pass immutable=True):
+                # short, revalidated lifetime, never "immutable".
                 response = storage.serve_file(folder, "a.png")
                 self.assertEqual(response.status_code, 200)
-                self.assertIn("immutable", response.headers["Cache-Control"])
-                self.assertIn("public", response.headers["Cache-Control"])
+                self.assertEqual(response.headers["Cache-Control"], "public, max-age=60")
                 response.close()
 
                 private_response = storage.serve_file(folder, "a.png", private=True)
-                self.assertIn("private", private_response.headers["Cache-Control"])
+                self.assertEqual(private_response.headers["Cache-Control"], "private, max-age=60")
                 private_response.close()
+
+                # Only safe when the URL itself embeds the filename.
+                immutable_response = storage.serve_file(folder, "a.png", immutable=True)
+                self.assertEqual(
+                    immutable_response.headers["Cache-Control"],
+                    "public, max-age=31536000, immutable",
+                )
+                immutable_response.close()
 
             storage.delete_file(folder, "a.png")
             self.assertFalse((Path(folder) / "a.png").exists())
 
+    def test_delete_of_a_missing_local_file_does_not_raise(self):
+        with TemporaryDirectory() as tmp_dir, self.app.app_context():
+            storage.delete_file(str(Path(tmp_dir) / "missing"), "a.png")
+
     def test_redirects_to_a_public_url_when_the_backend_exposes_one(self):
         class FakeRemoteBackend:
-            def url_for(self, folder, filename):
-                return f"https://cdn.example.com/{Path(folder).name}/{filename}"
+            def url_for(self, folder, filename, *, private=False):
+                kind = "signed" if private else "public"
+                return f"https://cdn.example.com/{kind}/{Path(folder).name}/{filename}"
 
         original_backend = storage._backend
         storage._backend = FakeRemoteBackend()
@@ -55,14 +69,40 @@ class StorageTestCase(unittest.TestCase):
                 response = storage.serve_file("uploads/products", "a.png")
                 self.assertEqual(response.status_code, 302)
                 self.assertEqual(
-                    response.headers["Location"], "https://cdn.example.com/products/a.png"
+                    response.headers["Location"], "https://cdn.example.com/public/products/a.png"
                 )
-                self.assertEqual(response.headers["Cache-Control"], "public, max-age=300")
+                self.assertEqual(response.headers["Cache-Control"], "public, max-age=60")
 
-                private_response = storage.serve_file("uploads/covers", "b.png", private=True)
-                self.assertEqual(private_response.headers["Cache-Control"], "no-store")
+                # A private redirect must never be marked immutable: a signed
+                # URL can expire well before a long browser cache would.
+                private_response = storage.serve_file(
+                    "uploads/covers", "b.png", private=True, immutable=True
+                )
+                self.assertEqual(
+                    private_response.headers["Location"],
+                    "https://cdn.example.com/signed/covers/b.png",
+                )
+                self.assertEqual(private_response.headers["Cache-Control"], "private, max-age=60")
         finally:
             storage._backend = original_backend
+
+    def test_s3_backend_signs_private_urls_and_uses_public_base_url_for_public_ones(self):
+        s3_backend = storage.S3Storage(
+            bucket="eniu-uploads",
+            prefix="",
+            region="auto",
+            endpoint_url=None,
+            access_key="AKIAFAKEACCESSKEY",
+            secret_key="fakesecretkey",
+            public_base_url="https://cdn.eniu.app",
+        )
+        public_url = s3_backend.url_for("uploads/products", "a.png")
+        self.assertEqual(public_url, "https://cdn.eniu.app/products/a.png")
+
+        signed_url = s3_backend.url_for("uploads/covers", "b.png", private=True)
+        self.assertIn("eniu-uploads", signed_url)
+        self.assertIn("covers/b.png", signed_url)
+        self.assertIn("X-Amz-Signature", signed_url)
 
 
 if __name__ == "__main__":

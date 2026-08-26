@@ -1,12 +1,19 @@
-# Uploaded images are stored under a fresh UUID filename on every save
-# (see business/products/template services), so a given URL never changes
-# its bytes. That makes them safe to cache for a long time: browsers and,
-# once a CDN sits in front of the API, edge caches can serve them without
-# ever coming back to the origin.
+# Only true when the request URL itself embeds the content-addressed
+# filename (e.g. /products/<id>/images/<uuid>.jpg): a changed file then
+# always gets a new URL, so a far-future cache lifetime is safe.
+#
+# Endpoints keyed by a stable id instead (business_id, catalogue_id, a
+# public menu slug, or a product's position in the menu) point at whatever
+# file is *currently* attached to that id — the underlying filename can
+# change on every re-upload while the URL stays the same, so those must use
+# a short, revalidated lifetime instead or browsers/CDNs would keep serving
+# the old image long after it was replaced.
 IMMUTABLE_ASSET_MAX_AGE = 31536000  # 1 year
+REVALIDATED_ASSET_MAX_AGE = 60
 
 
-def cache_immutable_asset(response, *, private=False):
+def asset_cache_control(*, private=False, immutable=False):
     visibility = "private" if private else "public"
-    response.headers["Cache-Control"] = f"{visibility}, max-age={IMMUTABLE_ASSET_MAX_AGE}, immutable"
-    return response
+    if immutable:
+        return f"{visibility}, max-age={IMMUTABLE_ASSET_MAX_AGE}, immutable"
+    return f"{visibility}, max-age={REVALIDATED_ASSET_MAX_AGE}"
