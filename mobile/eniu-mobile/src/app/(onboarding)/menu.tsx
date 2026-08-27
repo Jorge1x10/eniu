@@ -8,7 +8,7 @@ import { Feedback } from '@/components/ui/feedback';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useOnboarding } from '@/features/onboarding/onboarding-context';
 import { getStarterMenu } from '@/features/onboarding/starter-menus';
-import { api } from '@/lib/api';
+import { ApiError, api } from '@/lib/api';
 import type { Catalogue, Category, Product } from '@/types/models';
 
 export default function OnboardingMenuScreen() {
@@ -23,17 +23,45 @@ export default function OnboardingMenuScreen() {
   const currency = new Intl.NumberFormat('es-MX', { style: 'currency', currency: business.currency || 'MXN' });
 
   async function createCatalogue() {
-    const data = await api.post<{ catalogue: Catalogue }>(`businesses/${business!.id}/catalogues`, { name: 'Menú principal' });
-    return data.catalogue;
+    const catalogueName = 'Menú principal';
+    try {
+      const data = await api.post<{ catalogue: Catalogue }>(`businesses/${business!.id}/catalogues`, { name: catalogueName });
+      return data.catalogue;
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 409) {
+        // A prior attempt may have created it already (e.g. a dropped response); reuse it instead of dead-ending the flow.
+        const existing = await api.get<{ catalogues: Catalogue[] }>(`businesses/${business!.id}/catalogues`);
+        const catalogue = existing.catalogues.find((item) => item.name === catalogueName) ?? existing.catalogues[0];
+        if (catalogue) return catalogue;
+      }
+      throw requestError;
+    }
+  }
+
+  async function createStarterCategory(catalogueId: string) {
+    try {
+      const data = await api.post<{ category: Category }>(`businesses/${business!.id}/catalogues/${catalogueId}/categories`, { name: starter.category });
+      return data.category;
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 409) {
+        const existing = await api.get<{ categories: Category[] }>(`businesses/${business!.id}/catalogues/${catalogueId}/categories`);
+        const category = existing.categories.find((item) => item.name === starter.category) ?? existing.categories[0];
+        if (category) return category;
+      }
+      throw requestError;
+    }
   }
 
   async function useStarterMenu() {
     setLoading('starter'); setError('');
     try {
       const catalogue = await createCatalogue();
-      const category = await api.post<{ category: Category }>(`businesses/${business!.id}/catalogues/${catalogue.id}/categories`, { name: starter.category });
+      const category = await createStarterCategory(catalogue.id);
+      const existingProducts = await api.get<{ products: Product[] }>(`businesses/${business!.id}/catalogues/${catalogue.id}/products`);
+      const existingNames = new Set(existingProducts.products.map((product) => product.name));
       for (const product of starter.products) {
-        await api.post<{ product: Product }>(`businesses/${business!.id}/catalogues/${catalogue.id}/products`, { name: product.name, description: product.description, price: product.price, category_id: category.category.id, is_available: true });
+        if (existingNames.has(product.name)) continue;
+        await api.post<{ product: Product }>(`businesses/${business!.id}/catalogues/${catalogue.id}/products`, { name: product.name, description: product.description, price: product.price, category_id: category.id, is_available: true });
       }
       const published = await api.post<{ catalogue: Catalogue }>(`businesses/${business!.id}/catalogues/${catalogue.id}/publish`);
       setCatalogue(published.catalogue);
