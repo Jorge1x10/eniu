@@ -12,6 +12,7 @@ type AuthContextValue = {
   login: (identifier: string, password: string) => Promise<void>;
   register: (payload: { username: string; email: string; phone: string; password: string }) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
+  loginWithApple: (identityToken: string, fullName?: string | null) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: User) => void;
 };
@@ -61,13 +62,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await startSession(data);
   }, [startSession]);
 
+  // Apple sólo entrega el nombre en la primera autorización y fuera del token,
+  // por eso viaja aparte hacia el backend.
+  const loginWithApple = useCallback(async (identityToken: string, fullName?: string | null) => {
+    const data = await api.post<SessionResponse>('auth/apple', { identity_token: identityToken, full_name: fullName || undefined });
+    await startSession(data);
+  }, [startSession]);
+
   const logout = useCallback(async () => {
     await sessionStore.clear();
     setUser(null);
     router.replace('/(auth)/login');
   }, []);
 
-  const value = useMemo(() => ({ user, isLoading, login, register, loginWithGoogle, logout, setUser }), [isLoading, login, loginWithGoogle, logout, register, user]);
+  const value = useMemo(() => ({ user, isLoading, login, register, loginWithGoogle, loginWithApple, logout, setUser }), [isLoading, login, loginWithApple, loginWithGoogle, logout, register, user]);
   return <AuthContext value={value}>{children}</AuthContext>;
 }
 

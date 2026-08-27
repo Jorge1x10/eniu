@@ -404,3 +404,135 @@ def authenticate_google_user(credential):
             "code": "database_error",
             "message": "No fue posible autenticar al usuario"
         }
+
+
+APPLE_ISSUER = "https://appleid.apple.com"
+APPLE_KEYS_URL = "https://appleid.apple.com/auth/keys"
+
+# El cliente cachea el JWKS de Apple, así que se crea una sola vez por proceso.
+_apple_jwk_client = None
+
+
+def _apple_jwks():
+    global _apple_jwk_client
+
+    if _apple_jwk_client is None:
+        _apple_jwk_client = pyjwt.PyJWKClient(APPLE_KEYS_URL, cache_keys=True)
+
+    return _apple_jwk_client
+
+
+def _apple_claims(identity_token):
+    """Valida la firma, el emisor y la audiencia del identity token de Apple."""
+    signing_key = _apple_jwks().get_signing_key_from_jwt(identity_token)
+
+    return pyjwt.decode(
+        identity_token,
+        signing_key.key,
+        algorithms=["RS256"],
+        audience=current_app.config["APPLE_CLIENT_IDS"],
+        issuer=APPLE_ISSUER,
+        leeway=5,
+    )
+
+
+def authenticate_apple_user(identity_token, full_name=None):
+    """Autentica con Sign in with Apple.
+
+    Apple sólo manda el nombre la primera vez que el usuario autoriza la app, y
+    lo hace por fuera del token; por eso llega aparte en `full_name` y se guarda
+    únicamente si todavía no hay uno.
+    """
+    try:
+        apple_data = _apple_claims(identity_token)
+
+    except Exception:
+        return None, {
+            "code": "invalid_apple_credential",
+            "message": "La credencial de Apple no es válida"
+        }
+
+    apple_id = apple_data.get("sub")
+
+    if not apple_id:
+        return None, {
+            "code": "invalid_apple_credential",
+            "message": "La credencial de Apple no es válida"
+        }
+
+    user = User.query.filter_by(apple_id=apple_id).first()
+
+    if user:
+        if full_name and not user.name:
+            user.name = full_name
+
+            try:
+                db.session.commit()
+
+            except Exception:
+                db.session.rollback()
+
+        return user, None
+
+    # Apple manda email_verified como cadena ("true") o como booleano.
+    verified = apple_data.get("email_verified")
+    verified = verified if isinstance(verified, bool) else str(verified).lower() == "true"
+    email = (apple_data.get("email") or "").strip().lower()
+
+    if not email:
+        return None, {
+            "code": "apple_email_unavailable",
+            "message": "Apple no compartió un correo con Eniu. Inicia sesión con el método que usaste al registrarte"
+        }
+
+    if not verified:
+        return None, {
+            "code": "unverified_email",
+            "message": "Apple no ha verificado este correo"
+        }
+
+    user = User.query.filter_by(email=email).first()
+
+    if user:
+        if user.apple_id and user.apple_id != apple_id:
+            return None, {
+                "code": "apple_account_conflict",
+                "message": "El correo ya está vinculado con otra cuenta de Apple"
+            }
+
+        user.apple_id = apple_id
+
+        if full_name and not user.name:
+            user.name = full_name
+
+    else:
+        user = User(
+            name=full_name,
+            email=email,
+            apple_id=apple_id,
+            password=None,
+            username=None,
+            phone_number=None
+        )
+
+        db.session.add(user)
+
+    try:
+        db.session.commit()
+        return user, None
+
+    except IntegrityError:
+        db.session.rollback()
+
+        return None, {
+            "code": "apple_account_conflict",
+            "message": "No fue posible vincular esta cuenta de Apple"
+        }
+
+    except Exception:
+        db.session.rollback()
+
+        return None, {
+            "code": "database_error",
+            "message": "No fue posible autenticar al usuario"
+        }

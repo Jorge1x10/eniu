@@ -4,6 +4,7 @@ from app import db, bcrypt, jwt
 from app.extensions import limiter
 from datetime import timedelta, datetime, date
 from .services import (
+    authenticate_apple_user,
     authenticate_google_user,
     authenticate_user,
     change_password,
@@ -179,6 +180,46 @@ def google_auth():
 
     return jsonify({
         "message": "Autenticación con Google correcta",
+        "user": user.to_dict(),
+        "access_token": access_token,
+        "refresh_token": refresh_token
+    }), 200
+
+
+@auth_bp.post("/apple")
+@limiter.limit("20 per minute")
+def apple_auth():
+    data = request.get_json(silent=True) or {}
+    identity_token = data.get("identity_token")
+
+    if not identity_token:
+        return jsonify({
+            "message": "La credencial de Apple es obligatoria"
+        }), 400
+
+    # Apple entrega el nombre sólo en la primera autorización, así que el
+    # cliente lo reenvía junto con el token.
+    full_name = data.get("full_name")
+    full_name = full_name.strip()[:50] if isinstance(full_name, str) else None
+
+    user, error = authenticate_apple_user(identity_token, full_name or None)
+
+    if error:
+        return jsonify({
+            "message": error.get("message", "No fue posible autenticar con Apple"),
+            "code": error.get("code"),
+        }), 401
+
+    access_token = create_access_token(
+        identity=str(user.id)
+    )
+
+    refresh_token = create_refresh_token(
+        identity=str(user.id)
+    )
+
+    return jsonify({
+        "message": "Autenticación con Apple correcta",
         "user": user.to_dict(),
         "access_token": access_token,
         "refresh_token": refresh_token

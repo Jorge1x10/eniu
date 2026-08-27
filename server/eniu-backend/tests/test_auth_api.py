@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from app import create_app
 from app.database.db import db
@@ -60,6 +61,68 @@ class AuthApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertIsInstance(response.json["message"], str)
         self.assertEqual(response.json["code"], "invalid_google_credential")
+
+    def apple_login(self, claims, **payload):
+        with patch("app.modules.auth.services._apple_claims", return_value=claims):
+            return self.client.post("/api/auth/apple", json={"identity_token": "token", **payload})
+
+    def test_apple_auth_requires_identity_token(self):
+        response = self.client.post("/api/auth/apple", json={})
+        self.assertEqual(response.status_code, 400)
+        self.assertIsInstance(response.json["message"], str)
+
+    def test_apple_auth_invalid_credential_returns_string_message(self):
+        response = self.client.post("/api/auth/apple", json={"identity_token": "not-a-real-token"})
+        self.assertEqual(response.status_code, 401)
+        self.assertIsInstance(response.json["message"], str)
+        self.assertEqual(response.json["code"], "invalid_apple_credential")
+
+    def test_apple_auth_creates_user_and_stores_first_authorization_name(self):
+        claims = {"sub": "apple-1", "email": "Nuevo@Example.com", "email_verified": "true"}
+        response = self.apple_login(claims, full_name="Jorge Alvarado")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["user"]["email"], "nuevo@example.com")
+        self.assertEqual(response.json["user"]["name"], "Jorge Alvarado")
+        self.assertTrue(response.json["user"]["auth_methods"]["apple"])
+        self.assertIn("access_token", response.json)
+
+    def test_apple_auth_accepts_boolean_email_verified(self):
+        claims = {"sub": "apple-bool", "email": "bool@example.com", "email_verified": True}
+        self.assertEqual(self.apple_login(claims).status_code, 200)
+
+    def test_apple_auth_reuses_account_on_later_sign_in_without_name(self):
+        claims = {"sub": "apple-2", "email": "repite@example.com", "email_verified": "true"}
+        first = self.apple_login(claims, full_name="Nombre Original")
+        # En autorizaciones posteriores Apple ya no manda el nombre.
+        second = self.apple_login(claims)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(second.json["user"]["id"], first.json["user"]["id"])
+        self.assertEqual(second.json["user"]["name"], "Nombre Original")
+
+    def test_apple_auth_links_existing_account_by_email(self):
+        self.register(email="mixta@example.com")
+        claims = {"sub": "apple-3", "email": "mixta@example.com", "email_verified": "true"}
+        response = self.apple_login(claims)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json["user"]["auth_methods"]["apple"])
+        self.assertTrue(response.json["user"]["auth_methods"]["password"])
+
+    def test_apple_auth_rejects_email_linked_to_another_apple_id(self):
+        self.apple_login({"sub": "apple-4", "email": "duena@example.com", "email_verified": "true"})
+        response = self.apple_login({"sub": "otro-apple", "email": "duena@example.com", "email_verified": "true"})
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json["code"], "apple_account_conflict")
+
+    def test_apple_auth_without_email_returns_actionable_message(self):
+        response = self.apple_login({"sub": "apple-5", "email_verified": "true"})
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json["code"], "apple_email_unavailable")
+        self.assertIsInstance(response.json["message"], str)
+
+    def test_apple_auth_rejects_unverified_email(self):
+        response = self.apple_login({"sub": "apple-6", "email": "sin@example.com", "email_verified": "false"})
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json["code"], "unverified_email")
 
 
 if __name__ == "__main__":

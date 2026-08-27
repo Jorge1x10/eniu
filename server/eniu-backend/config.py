@@ -54,6 +54,14 @@ class Config:
     PUBLIC_MENU_CACHE_SECONDS = int(os.getenv("PUBLIC_MENU_CACHE_SECONDS", "20"))
 
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+    # Audiencias válidas del identity token de Apple: el bundle id en apps
+    # nativas y el Services ID si algún día se agrega el flujo web. Lista
+    # separada por comas.
+    APPLE_CLIENT_IDS = [
+        value.strip()
+        for value in os.getenv("APPLE_CLIENT_IDS", "com.eniu.app").split(",")
+        if value.strip()
+    ]
     # Prefer a restricted Stripe key (rk_) scoped to the resources used here.
     STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
     STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")

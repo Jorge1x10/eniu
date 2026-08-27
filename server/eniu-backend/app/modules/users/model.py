@@ -7,6 +7,7 @@ class User(BaseModel):
 
     __tablename__ = "users"
     google_id = db.Column(db.String(255), unique=True, nullable=True)
+    apple_id = db.Column(db.String(255), unique=True, nullable=True)
     profile_picture = db.Column(db.String(500), nullable=True)
     email = db.Column(db.String(120), nullable=False, unique=True)
     business = db.relationship("Business", back_populates="owner", cascade="all, delete-orphan")
@@ -41,6 +42,7 @@ class User(BaseModel):
             "auth_methods": {
                 "password": bool(self.password),
                 "google": bool(self.google_id),
+                "apple": bool(self.apple_id),
             },
             "plan": subscription.to_plan_dict() if subscription else {
                 "key": "free",
