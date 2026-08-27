@@ -83,8 +83,15 @@ html[data-theme="dark"] textarea::placeholder {
   color: #A7A7A7;
 }
 
-html[data-theme="dark"] .bg-\[\#FFE05A\].text-\[\#111111\],
 html[data-theme="dark"] .bg-\[\#F8E8AE\].text-\[\#111111\] {
+  color: #111111 !important;
+}
+
+/* Sobre fondo amarillo (#FFE05A) el texto siempre es oscuro, en tema claro y oscuro */
+.bg-\[\#FFE05A\],
+.bg-\[\#FFE05A\] *,
+html[data-theme="dark"] .bg-\[\#FFE05A\],
+html[data-theme="dark"] .bg-\[\#FFE05A\] * {
   color: #111111 !important;
 }
 

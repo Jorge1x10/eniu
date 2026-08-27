@@ -27,7 +27,7 @@ em { font-style:normal; color:var(--text); background:linear-gradient(transparen
 .hero-actions { @apply flex flex-wrap items-center gap-7; }
 .button { @apply inline-flex min-h-[52px] items-center justify-center rounded-full px-7 text-sm font-extrabold no-underline transition-[transform,box-shadow] duration-200; }
 .button:hover { transform:translateY(-2px); box-shadow:0 5px 14px #0000001a; }
-.button.primary { background:var(--yellow); }
+.button.primary { background:var(--yellow); color:var(--ink); }
 .text-link { font-weight:700; font-size:14px; text-underline-offset:5px; }
 .hero-note { margin-top:24px; font-size:12px; color:var(--muted); }
 .hero-visual { height:590px; position:relative; display:grid; place-items:center; }
