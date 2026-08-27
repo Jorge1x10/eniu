@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, Switch, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,6 @@ function Section({ label, children }: React.PropsWithChildren<{ label: string }>
 
 export default function SettingsScreen() {
   const theme = useEniuTheme();
-  const insets = useSafeAreaInsets();
   const { user, setUser, logout } = useAuth();
   const { selectedBusiness, updateBusiness } = useBusiness();
   const [profile, setProfile] = useState({ name: user?.name || '', username: user?.username || '', phone_number: user?.phone_number || '' });
@@ -52,7 +50,7 @@ export default function SettingsScreen() {
   async function toggleMilestoneNotifications(value: boolean) { setMilestoneNotifications(value); await setMilestoneNotificationsEnabled(value); }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="never" keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: insets.top + 10, paddingBottom: 120, gap: 20 }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: 8, paddingBottom: 120, gap: 20 }}>
       <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>Ajustes</Text>
       <Feedback message={error} /><Feedback message={success} tone="success" />
 

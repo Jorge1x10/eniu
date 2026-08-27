@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { CreateBusinessCard } from '@/components/create-business-card';
@@ -25,14 +24,13 @@ function dateRange() {
   return `from=${format(from)}&to=${format(to)}&timezone=America%2FMexico_City`;
 }
 
-// Ambas tarjetas comparten el mismo fondo; la jerarquía la marca el color del
-// cuadro del icono. Antes la primaria usaba crema de fondo y en modo oscuro el
-// texto quedaba blanco sobre crema, ilegible.
-function QuickAction({ title, subtitle, tone, icon, onPress }: { title: string; subtitle: string; tone: 'primary' | 'secondary'; icon: React.ReactNode; onPress?: () => void }) {
+// Las dos acciones rápidas se ven idénticas: mismo fondo y mismo cuadro de
+// icono. Distinguirlas por color hacía que una pareciera deshabilitada.
+function QuickAction({ title, subtitle, icon, onPress }: { title: string; subtitle: string; icon: React.ReactNode; onPress?: () => void }) {
   const theme = useEniuTheme();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ minHeight: 62, borderRadius: 16, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 13, opacity: pressed ? 0.75 : 1 })}>
-      <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: tone === 'primary' ? theme.yellow : theme.cream, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</View>
+    <Pressable onPress={onPress} style={({ pressed }) => ({ minHeight: 62, borderRadius: 16, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 13, opacity: pressed ? 0.75 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] })}>
+      <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800' }}>{title}</Text>
         <Text style={{ color: theme.muted, fontSize: 11.5 }}>{subtitle}</Text>
@@ -43,7 +41,6 @@ function QuickAction({ title, subtitle, tone, icon, onPress }: { title: string; 
 
 export default function HomeScreen() {
   const theme = useEniuTheme();
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { user } = useAuth();
   const { selectedBusiness, isLoading: loadingBusinesses } = useBusiness();
@@ -78,15 +75,16 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      contentInsetAdjustmentBehavior="never"
+      // "automatic" deja que iOS aplique el área segura una sola vez. Sumarla a
+      // mano encima la duplicaba y dejaba un hueco grande bajo la isla dinámica.
+      contentInsetAdjustmentBehavior="automatic"
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{
         width: '100%',
         maxWidth: 760,
         alignSelf: 'center',
         paddingHorizontal: width < 380 ? 16 : 20,
-        // Pegado al notch: sólo el alto de la barra de estado más un respiro.
-        paddingTop: process.env.EXPO_OS === 'web' ? 28 : insets.top + 10,
+        paddingTop: process.env.EXPO_OS === 'web' ? 28 : 8,
         paddingBottom: 120,
         gap: 22,
       }}
@@ -117,10 +115,10 @@ export default function HomeScreen() {
           ) : null}
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
-            <MetricCard label="Vistas últimos 30 días" value={monthlyViews.toLocaleString('es-MX')} detail={showDemoBadge ? 'Dato de ejemplo' : (selectedCatalogue ? selectedCatalogue.name : 'Sin menú seleccionado')} emphasis={showDemoBadge} />
-            <MetricCard label="Escaneos QR" value={qrViews.toLocaleString('es-MX')} detail={showDemoBadge ? 'Dato de ejemplo' : 'Origen atribuido al código QR'} tone="cream" emphasis={showDemoBadge} />
-            <MetricCard label="Menús activos" value={publishedCount} detail={`${draftCount} en borrador`} tone="sand" />
-            <MetricCard label="Menús totales" value={catalogues.data?.catalogues.length ?? 0} detail="En este negocio" />
+            <MetricCard label="Vistas últimos 30 días" value={monthlyViews.toLocaleString('es-MX')} detail={showDemoBadge ? 'Dato de ejemplo' : (selectedCatalogue ? selectedCatalogue.name : 'Sin menú seleccionado')} emphasis={showDemoBadge} index={0} />
+            <MetricCard label="Escaneos QR" value={qrViews.toLocaleString('es-MX')} detail={showDemoBadge ? 'Dato de ejemplo' : 'Origen atribuido al código QR'} emphasis={showDemoBadge} index={1} />
+            <MetricCard label="Menús activos" value={publishedCount} detail={`${draftCount} en borrador`} index={2} />
+            <MetricCard label="Menús totales" value={catalogues.data?.catalogues.length ?? 0} detail="En este negocio" index={3} />
           </View>
 
           <View style={{ gap: 12 }}>
@@ -129,14 +127,12 @@ export default function HomeScreen() {
               <QuickAction
                 title="Agregar producto"
                 subtitle={selectedCatalogue ? `Súbelo a ${selectedCatalogue.name}` : 'Crea un menú primero'}
-                tone="primary"
                 icon={<PlusIcon color={theme.onYellow} size={18} />}
                 onPress={() => selectedCatalogue ? router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/products', params: { catalogueId: selectedCatalogue.id } }) : router.push('/(tabs)/(menus)')}
               />
               <QuickAction
                 title="Descargar QR"
                 subtitle="Para imprimir y pegar en mesa"
-                tone="secondary"
                 icon={<QrIcon color={theme.onYellow} size={17} />}
                 onPress={() => selectedCatalogue ? router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/publication', params: { catalogueId: selectedCatalogue.id } }) : router.push('/(tabs)/(menus)')}
               />

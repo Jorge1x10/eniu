@@ -14,8 +14,8 @@ from app.modules.products.model import Product
 from werkzeug.utils import secure_filename
 
 
-CREATE_FIELDS = {"name", "description", "price", "category_id"}
-UPDATE_FIELDS = CREATE_FIELDS | {"is_available"}
+CREATE_FIELDS = {"name", "description", "price", "category_id", "is_available"}
+UPDATE_FIELDS = CREATE_FIELDS
 MAX_PRICE = Decimal("99999999.99")
 CENT = Decimal("0.01")
 MAX_IMAGES = 5
@@ -279,6 +279,7 @@ def create_product(owner_id, business_id, catalogue_id, data, images=None):
         description, _ = _description(content_data)
         price, _ = _price(content_data)
         category, _ = _category(content_data, catalogue.id)
+        availability, has_availability = _availability(content_data)
         saved_pictures = _new_picture_data(images, data.get("default_image_index"))
         next_order = (
             db.session.query(func.coalesce(func.max(Product.display_order), -1))
@@ -293,7 +294,7 @@ def create_product(owner_id, business_id, catalogue_id, data, images=None):
             description=description,
             price=price,
             display_order=next_order,
-            is_available=True,
+            is_available=availability if has_availability else True,
             pictures=json.dumps(saved_pictures) if saved_pictures else None,
         )
         db.session.add(product)

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { ScrollView, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
@@ -18,7 +17,6 @@ function shortDate(value: string) { const date = new Date(`${value}T00:00:00`); 
 
 export default function AnalyticsScreen() {
   const theme = useEniuTheme();
-  const insets = useSafeAreaInsets();
   const { selectedBusiness } = useBusiness();
   const menus = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
   const selected = menus.data?.catalogues[0];
@@ -31,7 +29,7 @@ export default function AnalyticsScreen() {
   const sourcesTotal = Math.max(1, sources.reduce((sum, source) => sum + Number(source.views || 0), 0));
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: insets.top + 10, paddingBottom: 120, gap: 18 }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: 8, paddingBottom: 120, gap: 18 }}>
       <View style={{ gap: 5 }}>
         <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>Analíticas</Text>
         <Text style={{ color: theme.muted, lineHeight: 20 }}>Cómo se está viendo tu menú.</Text>

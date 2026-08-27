@@ -186,6 +186,38 @@ class CategoryProductApiTestCase(unittest.TestCase):
         with self.app.app_context():
             self.assertIsNotNone(db.session.get(Product, UUID(product_id)))
 
+    def test_create_product_accepts_is_available(self):
+        # El onboarding manda is_available al sembrar el menú de arranque; antes
+        # sólo se aceptaba al editar y el alta fallaba con "Campos no permitidos".
+        available = self.client.post(
+            self.product_url(),
+            headers=self.headers(),
+            json={"name": "Disponible", "price": 50, "is_available": True},
+        )
+        self.assertEqual(available.status_code, 201)
+        self.assertTrue(available.get_json()["product"]["is_available"])
+
+        sold_out = self.client.post(
+            self.product_url(),
+            headers=self.headers(),
+            json={"name": "Agotado", "price": 50, "is_available": False},
+        )
+        self.assertEqual(sold_out.status_code, 201)
+        self.assertFalse(sold_out.get_json()["product"]["is_available"])
+
+    def test_create_product_defaults_to_available(self):
+        response = self.create_product()
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.get_json()["product"]["is_available"])
+
+    def test_create_product_rejects_non_boolean_is_available(self):
+        response = self.client.post(
+            self.product_url(),
+            headers=self.headers(),
+            json={"name": "Raro", "is_available": "quizas"},
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_create_products_with_and_without_category(self):
         response = self.create_product()
         self.assertEqual(response.status_code, 201)

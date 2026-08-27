@@ -1,6 +1,7 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -10,34 +11,32 @@ import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { useOnboarding } from '@/features/onboarding/onboarding-context';
 import { businessTypes, type BusinessType } from '@/features/onboarding/starter-menus';
-import { api } from '@/lib/api';
-import type { Business } from '@/types/models';
 
 export default function OnboardingBusinessScreen() {
   const theme = useEniuTheme();
   const insets = useSafeAreaInsets();
-  const { businesses, addBusiness } = useBusiness();
-  const { setBusiness, setBusinessType } = useOnboarding();
-  const [name, setName] = useState('');
-  const [type, setType] = useState<BusinessType>('taqueria');
+  const { businesses } = useBusiness();
+  const { draft, setBusinessDraft } = useOnboarding();
+  const [name, setName] = useState(draft.businessName);
+  const [type, setType] = useState<BusinessType>(draft.businessType);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [alreadyOnboarded] = useState(() => businesses.length > 0);
 
   if (alreadyOnboarded) return <Redirect href="/(tabs)/(home)" />;
 
-  async function submit() {
+  // Sólo se guarda en memoria: el negocio se crea de verdad en el paso 3.
+  function submit() {
     if (!name.trim()) { setError('Escribe el nombre de tu negocio.'); return; }
-    setLoading(true); setError('');
-    try {
-      const data = await api.post<{ business: Business }>('businesses', { name: name.trim() });
-      addBusiness(data.business);
-      setBusiness(data.business);
-      setBusinessType(type);
-      router.push('/(onboarding)/menu');
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'No fue posible crear el negocio.');
-    } finally { setLoading(false); }
+    setError('');
+    setBusinessDraft(name.trim(), type);
+    router.push('/(onboarding)/menu');
+  }
+
+  // Si el usuario se salta el onboarding no se crea nada; lo capturado queda
+  // en memoria por si vuelve.
+  function skip() {
+    if (name.trim()) setBusinessDraft(name.trim(), type);
+    router.replace('/(tabs)/(home)');
   }
 
   return (
@@ -46,7 +45,7 @@ export default function OnboardingBusinessScreen() {
         <View style={{ gap: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ color: theme.yellowPressed, fontWeight: '700', fontSize: 14 }}>Paso 1 de 3</Text>
-            <Pressable onPress={() => router.replace('/(tabs)/(home)')}><Text style={{ color: theme.muted, fontWeight: '700', fontSize: 14 }}>Saltar</Text></Pressable>
+            <Pressable onPress={skip}><Text style={{ color: theme.muted, fontWeight: '700', fontSize: 14 }}>Saltar</Text></Pressable>
           </View>
           <View style={{ flexDirection: 'row', gap: 5 }}>
             <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.yellow }} />
@@ -55,29 +54,31 @@ export default function OnboardingBusinessScreen() {
           </View>
         </View>
 
-        <View style={{ gap: 8 }}>
+        <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 8 }}>
           <Text style={{ color: theme.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.6, lineHeight: 36 }}>¿Cómo se llama tu negocio?</Text>
           <Text style={{ color: theme.muted, fontSize: 14, lineHeight: 21 }}>Así lo verán tus clientes en el menú.</Text>
-        </View>
+        </Animated.View>
 
         <Feedback message={error} />
-        <FormField label="Nombre" value={name} onChangeText={setName} maxLength={64} placeholder="Taquería Doña Mague" />
+        <Animated.View entering={FadeInDown.duration(320).delay(60)}>
+          <FormField label="Nombre" value={name} onChangeText={setName} maxLength={64} placeholder="Taquería Doña Mague" />
+        </Animated.View>
 
-        <View style={{ gap: 10 }}>
+        <Animated.View entering={FadeInDown.duration(320).delay(120)} style={{ gap: 10 }}>
           <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>Tipo de negocio</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{businessTypes.map((option) => {
             const selected = option.key === type;
-            return <Pressable key={option.key} onPress={() => setType(option.key)} style={({ pressed }) => ({ minHeight: 40, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 99, backgroundColor: selected ? theme.yellow : theme.surface, borderWidth: 1, borderColor: selected ? theme.yellowPressed : theme.border, opacity: pressed ? 0.75 : 1 })}><Text style={{ color: selected ? '#111111' : theme.text, fontSize: 13, fontWeight: selected ? '700' : '600' }}>{option.label}</Text></Pressable>;
+            return <Animated.View key={option.key} layout={LinearTransition.duration(180)}><Pressable onPress={() => setType(option.key)} style={({ pressed }) => ({ minHeight: 40, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 99, backgroundColor: selected ? theme.yellow : theme.surface, borderWidth: 1, borderColor: selected ? theme.yellowPressed : theme.border, opacity: pressed ? 0.75 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}><Text style={{ color: selected ? theme.onYellow : theme.text, fontSize: 13, fontWeight: selected ? '700' : '600' }}>{option.label}</Text></Pressable></Animated.View>;
           })}</View>
-        </View>
+        </Animated.View>
 
-        <View style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, padding: 16, gap: 6 }}>
+        <Animated.View entering={FadeIn.duration(320).delay(180)} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, padding: 16, gap: 6 }}>
           <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>Te armamos el menú de arranque</Text>
           <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>Cargamos categorías y productos de ejemplo según tu tipo de negocio. Cambias los nombres y precios y listo.</Text>
-        </View>
+        </Animated.View>
 
         <View style={{ flex: 1, minHeight: 12 }} />
-        <Button loading={loading} onPress={submit}>Continuar</Button>
+        <Button onPress={submit}>Continuar</Button>
       </ScrollView>
     </KeyboardAvoidingView>
   );

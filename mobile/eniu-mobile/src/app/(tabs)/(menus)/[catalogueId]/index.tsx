@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { MenuSkeleton } from '@/components/menu-skeleton';
 import { ChevronRightIcon, GridIcon, LinkIcon, PaletteIcon, TagIcon } from '@/components/ui/icons';
@@ -8,16 +10,16 @@ import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, getCatalogue } from '@/features/catalogues/catalogue-api';
-import { api } from '@/lib/api';
+import { ApiError, api } from '@/lib/api';
 import type { Catalogue, Category, Product } from '@/types/models';
 
 // Cada acción se identifica por su icono; el conteo va como etiqueta al lado del
 // título, no dentro del cuadro (un número suelto no decía de qué era).
 const actions = [
-  { route: 'products', title: 'Productos', description: 'Precios, disponibilidad e imágenes', tone: 'yellow', Icon: TagIcon },
-  { route: 'categories', title: 'Categorías', description: 'Organiza el contenido del menú', tone: 'cream', Icon: GridIcon },
-  { route: 'template', title: 'Diseño y plantilla', description: 'Estilo, colores y visibilidad', tone: 'sand', Icon: PaletteIcon },
-  { route: 'publication', title: 'Publicar y compartir', description: 'Enlace público y código QR', tone: 'yellow', Icon: LinkIcon },
+  { route: 'products', title: 'Productos', description: 'Precios, disponibilidad e imágenes', Icon: TagIcon },
+  { route: 'categories', title: 'Categorías', description: 'Organiza el contenido del menú', Icon: GridIcon },
+  { route: 'template', title: 'Diseño y plantilla', description: 'Estilo, colores y visibilidad', Icon: PaletteIcon },
+  { route: 'publication', title: 'Publicar y compartir', description: 'Enlace público y código QR', Icon: LinkIcon },
 ] as const;
 
 export default function CatalogueDetailScreen() {
@@ -32,6 +34,18 @@ export default function CatalogueDetailScreen() {
   const categories = useQuery({ queryKey: ['categories', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ categories: Category[] }>(`${base}/categories`), enabled: Boolean(selectedBusiness && catalogueId) });
   const counts: Record<string, number | undefined> = { products: products.data?.products.length, categories: categories.data?.categories.length };
 
+  // Esta pantalla queda montada en el stack de Menús. Si el usuario cambia de
+  // negocio desde otra pestaña, el menú abierto ya no pertenece al negocio
+  // activo y la API responde 404; regresar a la lista evita ese callejón.
+  const lastBusinessId = useRef(selectedBusiness?.id);
+  useEffect(() => {
+    const current = selectedBusiness?.id;
+    if (lastBusinessId.current && current && lastBusinessId.current !== current) router.replace('/(tabs)/(menus)');
+    lastBusinessId.current = current;
+  }, [selectedBusiness?.id]);
+
+  const notFound = query.isError && query.error instanceof ApiError && query.error.status === 404;
+
   async function togglePublication() {
     if (!selectedBusiness || !catalogue) return;
     const path = `businesses/${selectedBusiness.id}/catalogues/${catalogue.id}/${catalogue.is_published ? 'unpublish' : 'publish'}`;
@@ -42,7 +56,7 @@ export default function CatalogueDetailScreen() {
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 16, backgroundColor: theme.background }}>
-      {query.isLoading ? <LoadingState /> : query.isError || !catalogue ? <ErrorState message="No pudimos cargar este menú." onRetry={() => query.refetch()} /> : <>
+      {query.isLoading ? <LoadingState /> : notFound ? <ErrorState message="Este menú ya no existe o pertenece a otro negocio." action="Volver a Menús" onAction={() => router.replace('/(tabs)/(menus)')} /> : query.isError || !catalogue ? <ErrorState message="No pudimos cargar este menú." onRetry={() => query.refetch()} /> : <>
         <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: '#111111', padding: 20, gap: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <View style={{ minHeight: 26, justifyContent: 'center', borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : 'rgba(255,255,255,0.12)', paddingHorizontal: 10 }}><Text style={{ color: catalogue.is_published ? '#111111' : '#C7C7C7', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 }}>{catalogue.is_published ? 'PUBLICADO' : 'BORRADOR'}</Text></View>
@@ -63,13 +77,13 @@ export default function CatalogueDetailScreen() {
           </View>
         </View>
 
-        <View style={{ gap: 14 }}>{actions.map((action) => {
+        <View style={{ gap: 20 }}>{actions.map((action, index) => {
           const count = counts[action.route];
-          const badgeBg = action.tone === 'yellow' ? theme.yellow : action.tone === 'cream' ? theme.cream : theme.sand;
           return (
-            <Link key={action.route} href={{ pathname: `/(tabs)/(menus)/[catalogueId]/${action.route}`, params: { catalogueId } }} asChild>
-              <Pressable style={({ pressed }) => ({ minHeight: 72, backgroundColor: theme.surface, borderRadius: 18, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, paddingHorizontal: 16, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 14, opacity: pressed ? 0.7 : 1 })}>
-                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: badgeBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><action.Icon color={theme.onYellow} size={20} /></View>
+            <Animated.View key={action.route} entering={FadeInDown.duration(300).delay(index * 70)}>
+            <Link href={{ pathname: `/(tabs)/(menus)/[catalogueId]/${action.route}`, params: { catalogueId } }} asChild>
+              <Pressable style={({ pressed }) => ({ minHeight: 80, backgroundColor: theme.surface, borderRadius: 18, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, paddingHorizontal: 16, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', gap: 14, opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] })}>
+                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><action.Icon color={theme.onYellow} size={20} /></View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Text style={{ color: theme.text, fontSize: 15, fontWeight: '900' }}>{action.title}</Text>
@@ -80,6 +94,7 @@ export default function CatalogueDetailScreen() {
                 <ChevronRightIcon color={theme.yellowPressed} size={13} />
               </Pressable>
             </Link>
+            </Animated.View>
           );
         })}</View>
       </>}

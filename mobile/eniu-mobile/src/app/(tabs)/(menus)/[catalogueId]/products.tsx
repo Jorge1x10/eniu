@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
 
 import { MAX_PICTURES, ProductImagePicker, type DefaultKey, type PickedPicture } from '@/components/product-images';
 import { Button } from '@/components/ui/button';
@@ -127,13 +128,13 @@ export default function ProductsScreen() {
       </ScrollView> : null}
 
       <Button onPress={() => formOpen ? setFormOpen(false) : startEdit()}>{formOpen ? 'Cerrar formulario' : 'Crear producto'}</Button>
-      {formOpen ? <View style={{ padding: 18, gap: 14, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous' }}><Text style={{ color: theme.text, fontSize: 19, fontWeight: '900' }}>{editing ? 'Editar producto' : 'Nuevo producto'}</Text><FormField label="Nombre" value={name} onChangeText={setName} maxLength={64} placeholder="Hamburguesa clásica" /><FormField label="Descripción" value={description} onChangeText={setDescription} multiline placeholder="Ingredientes y detalles" /><FormField label="Precio" value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholder="129.00" /><ProductImagePicker existing={existingPictures} picked={pickedPictures} defaultKey={defaultKey} onChangeExisting={setExistingPictures} onChangePicked={setPickedPictures} onChangeDefault={setDefaultKey} disabled={saving} /><View style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text style={{ color: theme.text, fontWeight: '700' }}>Disponible</Text><Switch value={available} onValueChange={setAvailable} trackColor={{ true: theme.yellowPressed }} /></View><Feedback message={error} /><Button loading={saving} onPress={save}>Guardar producto</Button></View> : null}
+      {formOpen ? <Animated.View entering={FadeIn.duration(220)} style={{ padding: 18, gap: 14, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous' }}><Text style={{ color: theme.text, fontSize: 19, fontWeight: '900' }}>{editing ? 'Editar producto' : 'Nuevo producto'}</Text><FormField label="Nombre" value={name} onChangeText={setName} maxLength={64} placeholder="Hamburguesa clásica" /><FormField label="Descripción" value={description} onChangeText={setDescription} multiline placeholder="Ingredientes y detalles" /><FormField label="Precio" value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholder="129.00" /><ProductImagePicker existing={existingPictures} picked={pickedPictures} defaultKey={defaultKey} onChangeExisting={setExistingPictures} onChangePicked={setPickedPictures} onChangeDefault={setDefaultKey} disabled={saving} /><View style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text style={{ color: theme.text, fontWeight: '700' }}>Disponible</Text><Switch value={available} onValueChange={setAvailable} trackColor={{ true: theme.yellowPressed }} /></View><Feedback message={error} /><Button loading={saving} onPress={save}>Guardar producto</Button></Animated.View> : null}
 
       {products.length ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>Toca un producto para editarlo, mantén presionado para eliminarlo.</Text> : null}
       {query.isLoading ? <LoadingState /> : query.isError ? <ErrorState message="No pudimos cargar los productos." onRetry={() => query.refetch()} /> : products.length ? <View style={{ gap: 18 }}>
         {groups.map((group) => <View key={group.id} style={{ gap: 10 }}>
           <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{group.name}</Text>
-          <View style={{ gap: 10 }}>{group.items.map((product) => <ProductRow key={product.id} product={product} currency={currency} theme={theme} onPress={() => startEdit(product)} onLongPress={() => remove(product)} />)}</View>
+          <View style={{ gap: 10 }}>{group.items.map((product, index) => <Animated.View key={product.id} entering={FadeInDown.duration(280).delay(index * 50)} layout={LinearTransition.duration(200)}><ProductRow product={product} currency={currency} theme={theme} onPress={() => startEdit(product)} onLongPress={() => remove(product)} /></Animated.View>)}</View>
         </View>)}
       </View> : <EmptyState title="Sin productos" description="Agrega el primer producto de este menú." action="Crear producto" onAction={() => startEdit()} />}
     </ScrollView>
