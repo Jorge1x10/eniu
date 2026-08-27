@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { AuthShell } from '@/components/auth-shell';
-import { AppleAuthButton } from '@/components/apple-auth-button';
 import { GoogleAuthButton } from '@/components/google-auth-button';
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
@@ -38,7 +37,6 @@ export default function LoginScreen() {
       <Link href="/(auth)/forgot-password" style={{ alignSelf: 'flex-end', color: theme.text, fontWeight: '700', textDecorationLine: 'underline' }}>¿Olvidaste tu contraseña?</Link>
       <Button onPress={submit} loading={loading}>Iniciar sesión</Button>
       <GoogleAuthButton mode="login" />
-      <AppleAuthButton mode="login" />
       <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 5 }}>
         <Text style={{ color: theme.muted }}>¿Todavía no tienes cuenta?</Text>
         <Link href="/(auth)/register" style={{ color: theme.text, fontWeight: '800', textDecorationLine: 'underline' }}>Regístrate</Link>
