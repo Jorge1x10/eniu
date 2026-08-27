@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
@@ -17,6 +18,7 @@ function shortDate(value: string) { const date = new Date(`${value}T00:00:00`); 
 
 export default function AnalyticsScreen() {
   const theme = useEniuTheme();
+  const insets = useSafeAreaInsets();
   const { selectedBusiness } = useBusiness();
   const menus = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
   const selected = menus.data?.catalogues[0];
@@ -29,7 +31,7 @@ export default function AnalyticsScreen() {
   const sourcesTotal = Math.max(1, sources.reduce((sum, source) => sum + Number(source.views || 0), 0));
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 18, backgroundColor: theme.background }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingTop: process.env.EXPO_OS === 'android' ? insets.top + 18 : 18, paddingBottom: 120, gap: 18, backgroundColor: theme.background }}>
       <BusinessSwitcher />
       {!selectedBusiness ? <EmptyState title="Sin negocio seleccionado" description="Crea un negocio desde Inicio." /> : menus.isLoading || analytics.isLoading ? <LoadingState label="Calculando analíticas…" /> : menus.isError || analytics.isError ? <ErrorState message="No pudimos cargar las analíticas." onRetry={() => { menus.refetch(); analytics.refetch(); }} /> : !selected ? <EmptyState title="Sin datos todavía" description="Crea un menú para comenzar a registrar visitas." /> : <>
         <Text style={{ color: theme.muted }}>Menú: <Text style={{ color: theme.text, fontWeight: '900' }}>{selected.name}</Text></Text>
