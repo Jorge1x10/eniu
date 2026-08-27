@@ -12,12 +12,37 @@ import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys } from '@/features/catalogues/catalogue-api';
 import { useOnboarding } from '@/features/onboarding/onboarding-context';
 import { getStarterMenu } from '@/features/onboarding/starter-menus';
-import { api } from '@/lib/api';
+import { ApiError, api } from '@/lib/api';
 import type { Business, Catalogue, Category, Product } from '@/types/models';
 
 type Publication = { is_published: boolean; public_url?: string | null };
 
 const STEP_LABELS = ['Creando tu negocio…', 'Armando tu menú…', 'Publicándolo…'];
+const CATALOGUE_NAME = 'Menú principal';
+
+/**
+ * Crea el recurso reutilizando el que ya exista si el nombre choca.
+ *
+ * Un intento anterior pudo haber creado el menú o la categoría y fallado
+ * después (una respuesta perdida, por ejemplo). Sin esto, "Reintentar" chocaba
+ * para siempre contra el nombre único y no había forma de avanzar.
+ */
+async function createOrReuse<T extends { name: string }>(
+  create: () => Promise<T>,
+  list: () => Promise<T[]>,
+  name: string,
+): Promise<T> {
+  try {
+    return await create();
+  } catch (requestError) {
+    if (requestError instanceof ApiError && requestError.status === 409) {
+      const existing = await list();
+      const match = existing.find((item) => item.name === name) ?? existing[0];
+      if (match) return match;
+    }
+    throw requestError;
+  }
+}
 
 export default function OnboardingReadyScreen() {
   const theme = useEniuTheme();
@@ -29,25 +54,45 @@ export default function OnboardingReadyScreen() {
   const [error, setError] = useState('');
   // Evita que StrictMode o un re-render dispare el alta dos veces.
   const startedRef = useRef(false);
+  // Si el alta falla a la mitad, el reintento reutiliza el negocio ya creado en
+  // lugar de dejar uno duplicado por cada intento.
+  const businessRef = useRef<Business | null>(null);
 
   const provision = useCallback(async () => {
     setError('');
     try {
       setStep(0);
-      const businessResponse = await api.post<{ business: Business }>('businesses', { name: draft.businessName });
-      const createdBusiness = businessResponse.business;
-      addBusiness(createdBusiness);
+      let createdBusiness = businessRef.current;
+      if (!createdBusiness) {
+        createdBusiness = (await api.post<{ business: Business }>('businesses', { name: draft.businessName })).business;
+        businessRef.current = createdBusiness;
+        addBusiness(createdBusiness);
+      }
 
       setStep(1);
-      const catalogueResponse = await api.post<{ catalogue: Catalogue }>(`businesses/${createdBusiness.id}/catalogues`, { name: 'Menú principal' });
-      const createdCatalogue = catalogueResponse.catalogue;
+      const cataloguesPath = `businesses/${createdBusiness.id}/catalogues`;
+      const createdCatalogue = await createOrReuse<Catalogue>(
+        async () => (await api.post<{ catalogue: Catalogue }>(cataloguesPath, { name: CATALOGUE_NAME })).catalogue,
+        async () => (await api.get<{ catalogues: Catalogue[] }>(cataloguesPath)).catalogues,
+        CATALOGUE_NAME,
+      );
 
       if (draft.menuChoice === 'starter') {
         const starter = getStarterMenu(draft.businessType);
-        const categoryResponse = await api.post<{ category: Category }>(`businesses/${createdBusiness.id}/catalogues/${createdCatalogue.id}/categories`, { name: starter.category });
+        const categoriesPath = `${cataloguesPath}/${createdCatalogue.id}/categories`;
+        const productsPath = `${cataloguesPath}/${createdCatalogue.id}/products`;
+        const category = await createOrReuse<Category>(
+          async () => (await api.post<{ category: Category }>(categoriesPath, { name: starter.category })).category,
+          async () => (await api.get<{ categories: Category[] }>(categoriesPath)).categories,
+          starter.category,
+        );
+        // Un reintento no debe duplicar los productos que ya se sembraron.
+        const existing = await api.get<{ products: Product[] }>(productsPath);
+        const alreadyCreated = new Set(existing.products.map((product) => product.name));
         for (const product of starter.products) {
-          await api.post<{ product: Product }>(`businesses/${createdBusiness.id}/catalogues/${createdCatalogue.id}/products`, {
-            name: product.name, description: product.description, price: product.price, category_id: categoryResponse.category.id,
+          if (alreadyCreated.has(product.name)) continue;
+          await api.post<{ product: Product }>(productsPath, {
+            name: product.name, description: product.description, price: product.price, category_id: category.id,
           });
         }
       }
