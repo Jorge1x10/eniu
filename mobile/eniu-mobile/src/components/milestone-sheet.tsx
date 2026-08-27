@@ -1,4 +1,5 @@
 import { Modal, Pressable, Share, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckIcon } from '@/components/ui/icons';
 import { upcomingMilestone } from '@/features/milestones/milestone-store';
@@ -26,10 +27,11 @@ function Check({ done, label }: { done: boolean; label: string }) {
 
 export function MilestoneSheet({ visible, milestone, catalogueName, isPublished, hasScans, publicUrl, onDismiss }: Props) {
   const next = upcomingMilestone(milestone);
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onDismiss}>
       <View style={{ flex: 1, backgroundColor: 'rgba(17,17,17,0.42)', justifyContent: 'flex-end' }}>
-        <View style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, borderCurve: 'continuous', backgroundColor: '#FFE05A', padding: 26, paddingBottom: 40, gap: 0 }}>
+        <View style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, borderCurve: 'continuous', backgroundColor: '#FFE05A', padding: 26, paddingBottom: Math.max(24, insets.bottom) + 16, gap: 0 }}>
           <View style={{ width: 44, height: 5, borderRadius: 99, backgroundColor: 'rgba(17,17,17,0.22)', alignSelf: 'center', marginBottom: 26 }} />
           <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.6, textTransform: 'uppercase', color: '#8A7420' }}>Nuevo logro</Text>
           <Text style={{ fontWeight: '900', fontSize: 72, lineHeight: 76, letterSpacing: -3, color: '#111111', fontVariant: ['tabular-nums'], marginTop: 12 }}>{milestone.toLocaleString('es-MX')}</Text>

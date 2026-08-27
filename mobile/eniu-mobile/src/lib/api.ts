@@ -18,6 +18,17 @@ async function parseResponse(response: Response) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
+function extractErrorMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const message = (payload as { message?: unknown }).message ?? (payload as { error?: unknown }).error;
+  if (typeof message === 'string' && message.trim()) return message;
+  if (message && typeof message === 'object') {
+    const nested = (message as { message?: unknown }).message;
+    if (typeof nested === 'string' && nested.trim()) return nested;
+  }
+  return null;
+}
+
 let refreshPromise: Promise<string | null> | null = null;
 
 async function refreshAccessToken() {
@@ -60,8 +71,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, all
 
   const data = await parseResponse(response);
   if (!response.ok) {
-    const payload = data as { message?: string; error?: string } | null;
-    throw new ApiError(payload?.message || payload?.error || 'No fue posible completar la solicitud.', response.status, data);
+    throw new ApiError(extractErrorMessage(data) || 'No fue posible completar la solicitud.', response.status, data);
   }
   return data as T;
 }

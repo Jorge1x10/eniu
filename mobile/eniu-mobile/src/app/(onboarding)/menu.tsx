@@ -1,6 +1,7 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
@@ -12,6 +13,7 @@ import type { Catalogue, Category, Product } from '@/types/models';
 
 export default function OnboardingMenuScreen() {
   const theme = useEniuTheme();
+  const insets = useSafeAreaInsets();
   const { business, businessType, setCatalogue } = useOnboarding();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState<'starter' | 'blank' | null>(null);
@@ -52,7 +54,7 @@ export default function OnboardingMenuScreen() {
   }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 24, paddingTop: 64, gap: 24, flexGrow: 1, backgroundColor: theme.background }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, gap: 24, flexGrow: 1, backgroundColor: theme.background }}>
       <View style={{ gap: 10 }}>
         <Text style={{ color: theme.yellowPressed, fontWeight: '700', fontSize: 14 }}>Paso 2 de 3</Text>
         <View style={{ flexDirection: 'row', gap: 5 }}>

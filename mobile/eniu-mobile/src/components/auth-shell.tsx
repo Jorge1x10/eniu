@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { PropsWithChildren } from 'react';
 import { KeyboardAvoidingView, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useEniuTheme } from '@/constants/eniu-theme';
 
@@ -10,9 +11,10 @@ const logoDark = require('../../assets/brand/app-icon-dark.png');
 export function AuthShell({ title, subtitle, children }: PropsWithChildren<{ title: string; subtitle: string }>) {
   const theme = useEniuTheme();
   const isDark = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: theme.background }}>
-      <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24, gap: 28 }}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24, paddingTop: Math.max(24, insets.top + 16), paddingBottom: Math.max(24, insets.bottom + 16), gap: 28 }}>
         <View style={{ gap: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <Image source={isDark ? logoDark : logoLight} style={{ width: 56, height: 56, borderRadius: 16 }} contentFit="cover" />

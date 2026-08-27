@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Redirect, router } from 'expo-router';
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/ui/screen-state';
@@ -13,6 +14,7 @@ type Publication = { is_published: boolean; public_url?: string | null };
 
 export default function OnboardingReadyScreen() {
   const theme = useEniuTheme();
+  const insets = useSafeAreaInsets();
   const { business, catalogue } = useOnboarding();
   const query = useQuery({
     queryKey: ['onboarding-publication', business?.id, catalogue?.id],
@@ -24,7 +26,7 @@ export default function OnboardingReadyScreen() {
   if (!business || !catalogue) return <Redirect href="/(onboarding)/business" />;
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 24, paddingTop: 64, gap: 24, flexGrow: 1, backgroundColor: '#111111' }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, gap: 24, flexGrow: 1, backgroundColor: '#111111' }}>
       <View style={{ gap: 10 }}>
         <Text style={{ color: theme.yellow, fontWeight: '700', fontSize: 14 }}>Paso 3 de 3</Text>
         <View style={{ flexDirection: 'row', gap: 5 }}>

@@ -34,10 +34,11 @@ def register():
         }), 400
     
     user, error = register_user(data)
-    
+
     if error:
         return jsonify({
-            "message": error
+            "message": error.get("message", "No fue posible registrar al usuario"),
+            "code": error.get("code"),
         }), 400 if error.get("code") == "invalid_password" else 409
     
     access_token = create_access_token(
@@ -164,7 +165,8 @@ def google_auth():
 
     if error:
         return jsonify({
-            "message": error
+            "message": error.get("message", "No fue posible autenticar con Google"),
+            "code": error.get("code"),
         }), 401
 
     access_token = create_access_token(
