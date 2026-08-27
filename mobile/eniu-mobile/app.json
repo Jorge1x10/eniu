@@ -56,7 +56,7 @@
       [
         "react-native-nitro-google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.366455277593-n4oms8920un3540rbbq0g9lg6p45rr84"
+          "iosUrlScheme": "com.googleusercontent.apps.366455277593-pu0vhubu01ga7ema31jqa047gd9pc1t6"
         }
       ]
     ],
@@ -68,7 +68,8 @@
       "router": {},
       "eas": {
         "projectId": "fd686569-d168-4eee-9202-727e64ef73b2"
-      }
+      },
+      "googleIosClientId": "366455277593-pu0vhubu01ga7ema31jqa047gd9pc1t6.apps.googleusercontent.com"
     },
     "owner": "jorge1x10"
   }

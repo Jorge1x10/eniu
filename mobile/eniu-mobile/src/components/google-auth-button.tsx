@@ -22,10 +22,16 @@ export function GoogleAuthButton({ mode }: { mode: 'login' | 'register' }) {
     if (!webClientId) { setError('Falta configurar EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID.'); return; }
     setLoading(true); setError('');
     try {
+      // El client id de iOS no es secreto (viaja en el Info.plist como URL
+      // scheme), así que vive en app.json junto al scheme para que ambos no
+      // puedan quedar desincronizados.
+      const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+        || (Constants.expoConfig?.extra?.googleIosClientId as string | undefined)
+        || null;
       const { GoogleOneTapSignIn } = await import('react-native-nitro-google-signin');
       GoogleOneTapSignIn.configure({
         webClientId,
-        iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || null,
+        iosClientId,
         autoSelectOnSignIn: false,
       });
       await GoogleOneTapSignIn.checkPlayServices(true);
