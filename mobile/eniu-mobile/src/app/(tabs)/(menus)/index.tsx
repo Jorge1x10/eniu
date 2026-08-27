@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { CatalogueCard } from '@/components/catalogue-card';
@@ -17,6 +18,7 @@ import type { Catalogue } from '@/types/models';
 
 export default function MenusScreen() {
   const theme = useEniuTheme();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { selectedBusiness } = useBusiness();
   const query = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
@@ -39,7 +41,7 @@ export default function MenusScreen() {
 
   const menus = query.data?.catalogues ?? [];
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 18, backgroundColor: theme.background }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingTop: process.env.EXPO_OS === 'android' ? insets.top + 18 : 18, paddingBottom: 120, gap: 18, backgroundColor: theme.background }}>
       <BusinessSwitcher />
       {!selectedBusiness ? <EmptyState title="Primero crea un negocio" description="Ve a Inicio para crear el negocio que contendrá tus menús." /> : <>
         {creating ? <View style={{ padding: 18, gap: 14, borderRadius: 20, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}><Text style={{ color: theme.text, fontSize: 20, fontWeight: '900' }}>Nuevo menú</Text><FormField label="Nombre" value={name} onChangeText={setName} maxLength={64} placeholder="Menú principal" /><FormField label="Descripción" value={description} onChangeText={setDescription} multiline placeholder="Nuestro menú general" /><Feedback message={error} /><View style={{ flexDirection: 'row', gap: 10 }}><Button style={{ flex: 1 }} onPress={create} loading={saving}>Guardar menú</Button><Button style={{ flex: 1 }} variant="secondary" onPress={() => { setCreating(false); setError(''); }}>Cancelar</Button></View></View> : null}

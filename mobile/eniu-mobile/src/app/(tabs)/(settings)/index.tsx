@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, Switch, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ function Section({ label, children }: React.PropsWithChildren<{ label: string }>
 
 export default function SettingsScreen() {
   const theme = useEniuTheme();
+  const insets = useSafeAreaInsets();
   const { user, setUser, logout } = useAuth();
   const { selectedBusiness, updateBusiness } = useBusiness();
   const [profile, setProfile] = useState({ name: user?.name || '', username: user?.username || '', phone_number: user?.phone_number || '' });
@@ -50,7 +52,7 @@ export default function SettingsScreen() {
   async function toggleMilestoneNotifications(value: boolean) { setMilestoneNotifications(value); await setMilestoneNotificationsEnabled(value); }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 20, backgroundColor: theme.background }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, paddingTop: process.env.EXPO_OS === 'android' ? insets.top + 18 : 18, paddingBottom: 120, gap: 20, backgroundColor: theme.background }}>
       <Feedback message={error} /><Feedback message={success} tone="success" />
 
       <View style={{ borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 15 }}>
