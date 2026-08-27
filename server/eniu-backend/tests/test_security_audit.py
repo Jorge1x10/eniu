@@ -109,7 +109,16 @@ class SecurityAuditTestCase(unittest.TestCase):
         url = f"/api/businesses/{self.business_id}/catalogues"
         self.assertEqual(self.client.get(url).status_code, 401)
         self.assertEqual(self.client.get(url, headers=self.headers("not-a-jwt")).status_code, 401)
-        tampered = self.owner_token[:-1] + ("a" if self.owner_token[-1] != "a" else "b")
+        # Flip the *first* character of the signature segment rather than the
+        # last: base64url's trailing character for a 32-byte HMAC-SHA256
+        # digest only encodes 4 meaningful bits (the other 2 are padding
+        # dropped on decode), so ~6% of the time a last-character flip
+        # decodes to the exact same signature bytes and the "tampered"
+        # token is still valid. The first character always encodes a full
+        # 6 meaningful bits, so mutating it reliably invalidates the token.
+        header_part, payload_part, signature_part = self.owner_token.split(".")
+        tampered_first_char = "a" if signature_part[0] != "a" else "b"
+        tampered = f"{header_part}.{payload_part}.{tampered_first_char}{signature_part[1:]}"
         self.assertEqual(self.client.get(url, headers=self.headers(tampered)).status_code, 401)
         self.assertEqual(
             self.client.get(url, headers=self.headers(self.outsider_token)).status_code,
