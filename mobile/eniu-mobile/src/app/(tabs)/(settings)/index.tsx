@@ -52,7 +52,8 @@ export default function SettingsScreen() {
   async function toggleMilestoneNotifications(value: boolean) { setMilestoneNotifications(value); await setMilestoneNotificationsEnabled(value); }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, paddingTop: process.env.EXPO_OS === 'android' ? insets.top + 18 : 18, paddingBottom: 120, gap: 20, backgroundColor: theme.background }}>
+    <ScrollView contentInsetAdjustmentBehavior="never" keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: insets.top + 10, paddingBottom: 120, gap: 20 }}>
+      <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>Ajustes</Text>
       <Feedback message={error} /><Feedback message={success} tone="success" />
 
       <View style={{ borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 15 }}>

@@ -3,7 +3,7 @@ import { Link, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import { MenuSkeleton } from '@/components/menu-skeleton';
-import { ChevronRightIcon } from '@/components/ui/icons';
+import { ChevronRightIcon, GridIcon, LinkIcon, PaletteIcon, TagIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
@@ -11,11 +11,13 @@ import { catalogueKeys, getCatalogue } from '@/features/catalogues/catalogue-api
 import { api } from '@/lib/api';
 import type { Catalogue, Category, Product } from '@/types/models';
 
+// Cada acción se identifica por su icono; el conteo va como etiqueta al lado del
+// título, no dentro del cuadro (un número suelto no decía de qué era).
 const actions = [
-  { route: 'products', title: 'Productos', description: 'Precios, disponibilidad e imágenes', tone: 'yellow' },
-  { route: 'categories', title: 'Categorías', description: 'Organiza el contenido del menú', tone: 'cream' },
-  { route: 'template', title: 'Diseño y plantilla', description: 'Estilo, colores y visibilidad', tone: 'sand' },
-  { route: 'publication', title: 'Publicar y compartir', description: 'Enlace público y código QR', tone: 'yellow' },
+  { route: 'products', title: 'Productos', description: 'Precios, disponibilidad e imágenes', tone: 'yellow', Icon: TagIcon },
+  { route: 'categories', title: 'Categorías', description: 'Organiza el contenido del menú', tone: 'cream', Icon: GridIcon },
+  { route: 'template', title: 'Diseño y plantilla', description: 'Estilo, colores y visibilidad', tone: 'sand', Icon: PaletteIcon },
+  { route: 'publication', title: 'Publicar y compartir', description: 'Enlace público y código QR', tone: 'yellow', Icon: LinkIcon },
 ] as const;
 
 export default function CatalogueDetailScreen() {
@@ -61,16 +63,19 @@ export default function CatalogueDetailScreen() {
           </View>
         </View>
 
-        <View style={{ gap: 9 }}>{actions.map((action) => {
+        <View style={{ gap: 14 }}>{actions.map((action) => {
           const count = counts[action.route];
           const badgeBg = action.tone === 'yellow' ? theme.yellow : action.tone === 'cream' ? theme.cream : theme.sand;
           return (
             <Link key={action.route} href={{ pathname: `/(tabs)/(menus)/[catalogueId]/${action.route}`, params: { catalogueId } }} asChild>
-              <Pressable style={({ pressed }) => ({ minHeight: 66, backgroundColor: theme.surface, borderRadius: 18, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 14, opacity: pressed ? 0.7 : 1 })}>
-                <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: badgeBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{count != null ? <Text style={{ color: '#111111', fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{count}</Text> : null}</View>
+              <Pressable style={({ pressed }) => ({ minHeight: 72, backgroundColor: theme.surface, borderRadius: 18, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, paddingHorizontal: 16, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 14, opacity: pressed ? 0.7 : 1 })}>
+                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: badgeBg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><action.Icon color={theme.onYellow} size={20} /></View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '900' }}>{action.title}</Text>
-                  <Text style={{ color: theme.muted, fontSize: 12, marginTop: 2 }}>{action.description}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ color: theme.text, fontSize: 15, fontWeight: '900' }}>{action.title}</Text>
+                    {count != null ? <View style={{ minWidth: 22, height: 20, paddingHorizontal: 7, borderRadius: 999, backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: theme.muted, fontSize: 11, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{count}</Text></View> : null}
+                  </View>
+                  <Text style={{ color: theme.muted, fontSize: 12, marginTop: 3 }}>{action.description}</Text>
                 </View>
                 <ChevronRightIcon color={theme.yellowPressed} size={13} />
               </Pressable>

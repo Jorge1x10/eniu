@@ -31,7 +31,11 @@ export default function AnalyticsScreen() {
   const sourcesTotal = Math.max(1, sources.reduce((sum, source) => sum + Number(source.views || 0), 0));
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingTop: process.env.EXPO_OS === 'android' ? insets.top + 18 : 18, paddingBottom: 120, gap: 18, backgroundColor: theme.background }}>
+    <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: insets.top + 10, paddingBottom: 120, gap: 18 }}>
+      <View style={{ gap: 5 }}>
+        <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>Analíticas</Text>
+        <Text style={{ color: theme.muted, lineHeight: 20 }}>Cómo se está viendo tu menú.</Text>
+      </View>
       <BusinessSwitcher />
       {!selectedBusiness ? <EmptyState title="Sin negocio seleccionado" description="Crea un negocio desde Inicio." /> : menus.isLoading || analytics.isLoading ? <LoadingState label="Calculando analíticas…" /> : menus.isError || analytics.isError ? <ErrorState message="No pudimos cargar las analíticas." onRetry={() => { menus.refetch(); analytics.refetch(); }} /> : !selected ? <EmptyState title="Sin datos todavía" description="Crea un menú para comenzar a registrar visitas." /> : <>
         <Text style={{ color: theme.muted }}>Menú: <Text style={{ color: theme.text, fontWeight: '900' }}>{selected.name}</Text></Text>

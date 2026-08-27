@@ -9,7 +9,7 @@ type Props = PropsWithChildren<{ onPress?: () => void; loading?: boolean; disabl
 export function Button({ children, onPress, loading, disabled, variant = 'primary', style }: Props) {
   const theme = useEniuTheme();
   const backgroundColor = variant === 'primary' ? theme.yellow : variant === 'danger' ? theme.danger : theme.surface;
-  const color = variant === 'danger' ? '#FFFFFF' : theme.text;
+  const color = variant === 'primary' ? theme.onYellow : variant === 'danger' ? '#FFFFFF' : theme.text;
   return (
     <Pressable
       accessibilityRole="button"

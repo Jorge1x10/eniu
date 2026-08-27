@@ -1,6 +1,11 @@
-import { fetch } from 'expo/fetch';
+import { fetch as expoFetch } from 'expo/fetch';
 
 import { sessionStore } from '@/lib/session-store';
+
+// expo/fetch no acepta el archivo con la forma `{ uri, name, type }` de React
+// Native, así que las subidas multipart van por el fetch nativo de RN.
+const pickFetch = (body: BodyInit | null | undefined) =>
+  (body instanceof FormData ? globalThis.fetch : expoFetch) as typeof globalThis.fetch;
 
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:5000/api').replace(/\/$/, '');
 const PUBLIC_ROUTES = new Set(['auth/login', 'auth/register', 'auth/forgot-password', 'auth/reset-password']);
@@ -36,7 +41,7 @@ async function refreshAccessToken() {
   refreshPromise = (async () => {
     const refreshToken = await sessionStore.getRefreshToken();
     if (!refreshToken) return null;
-    const response = await fetch(`${API_URL}/auth/refresh`, {
+    const response = await expoFetch(`${API_URL}/auth/refresh`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${refreshToken}` },
     });
@@ -58,7 +63,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, all
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL}/${normalizedPath}`, { ...options, headers });
+    response = await pickFetch(options.body)(`${API_URL}/${normalizedPath}`, { ...options, headers });
   } catch (error) {
     throw new ApiError(error instanceof Error ? error.message : 'No hay conexión con el servidor.', 0);
   }
@@ -81,6 +86,16 @@ export const api = {
   post: <T>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) }),
   patch: <T>(path: string, body: unknown) => apiRequest<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(path: string) => apiRequest<T>(path, { method: 'DELETE' }),
+  postForm: <T>(path: string, body: FormData) => apiRequest<T>(path, { method: 'POST', body }),
+  patchForm: <T>(path: string, body: FormData) => apiRequest<T>(path, { method: 'PATCH', body }),
 };
+
+/** La API sirve las imágenes con rutas relativas (`/api/products/…`); las vuelve absolutas. */
+export function resolveMediaUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (/^https?:\/\//.test(url) || url.startsWith('file:') || url.startsWith('data:')) return url;
+  try { return `${new URL(API_URL).origin}${url.startsWith('/') ? '' : '/'}${url}`; }
+  catch { return url; }
+}
 
 export { API_URL };

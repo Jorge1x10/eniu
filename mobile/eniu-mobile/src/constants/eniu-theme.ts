@@ -7,6 +7,8 @@ const shared = {
   sand: '#E9DDB7',
   success: '#16803A',
   danger: '#C62828',
+  /** Text/icon color for anything sitting on yellow, cream or sand — always dark, in both schemes. */
+  onYellow: '#111111',
 };
 
 export const eniuLight = {

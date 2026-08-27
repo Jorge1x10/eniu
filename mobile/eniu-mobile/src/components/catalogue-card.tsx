@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { MenuSkeleton } from '@/components/menu-skeleton';
+import { ChevronRightIcon } from '@/components/ui/icons';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import type { Catalogue } from '@/types/models';
 
@@ -17,7 +18,10 @@ export function CatalogueCard({ catalogue }: { catalogue: Catalogue }) {
             <View style={{ borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : theme.surfaceAlt, paddingHorizontal: 9, paddingVertical: 4 }}><Text style={{ color: catalogue.is_published ? '#111111' : theme.muted, fontSize: 10, fontWeight: '800', letterSpacing: 0.3 }}>{catalogue.is_published ? 'PUBLICADO' : 'BORRADOR'}</Text></View>
           </View>
           <Text numberOfLines={2} style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{catalogue.description || 'Sin descripción'}</Text>
-          <Text style={{ color: theme.yellowPressed, fontSize: 11.5, fontWeight: '800' }}>Administrar →</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', minHeight: 34, paddingHorizontal: 14, borderRadius: 999, backgroundColor: theme.yellow, marginTop: 2 }}>
+            <Text style={{ color: theme.onYellow, fontSize: 12.5, fontWeight: '800' }}>Administrar</Text>
+            <ChevronRightIcon color={theme.onYellow} size={11} />
+          </View>
         </View>
       </Pressable>
     </Link>

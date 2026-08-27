@@ -31,13 +31,15 @@ export type Catalogue = {
 
 export type Category = { id: string; name: string; description?: string | null };
 
+/** Foto de producto tal como la devuelve la API: `url` puede venir relativa. */
+export type ProductPicture = { id: string; url: string; is_default: boolean };
+
 export type Product = {
   id: string;
   name: string;
   description?: string | null;
   price?: number | string | null;
-  image_url?: string | null;
-  image?: string | null;
+  pictures?: ProductPicture[];
   is_available: boolean;
   category_id?: string | null;
   category?: Category | null;

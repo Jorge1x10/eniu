@@ -48,6 +48,12 @@
       "expo-secure-store",
       "expo-dev-client",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Eniu necesita acceso a tus fotos para que puedas subir las imágenes de tus productos."
+        }
+      ],
+      [
         "react-native-nitro-google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.366455277593-n4oms8920un3540rbbq0g9lg6p45rr84"

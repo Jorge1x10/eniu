@@ -1,9 +1,23 @@
 import { Stack } from 'expo-router';
 
+import { useEniuTheme } from '@/constants/eniu-theme';
+
 export default function MenusLayout() {
+  const theme = useEniuTheme();
   return (
-    <Stack screenOptions={{ headerTransparent: true, headerShadowVisible: false, headerBackButtonDisplayMode: 'minimal' }}>
-      <Stack.Screen name="index" options={{ title: 'Menús', headerLargeTitle: true }} />
+    // Header opaco (no transparente): con el transparente el contenido se metía
+    // debajo de la barra y tapaba el estado del menú.
+    <Stack
+      screenOptions={{
+        headerShadowVisible: false,
+        headerBackButtonDisplayMode: 'minimal',
+        headerStyle: { backgroundColor: theme.background },
+        headerTintColor: theme.text,
+        headerTitleStyle: { color: theme.text },
+        contentStyle: { backgroundColor: theme.background },
+      }}
+    >
+      <Stack.Screen name="index" options={{ headerShown: false, title: 'Menús' }} />
       <Stack.Screen name="[catalogueId]/index" options={{ title: 'Menú' }} />
       <Stack.Screen name="[catalogueId]/products" options={{ title: 'Productos' }} />
       <Stack.Screen name="[catalogueId]/categories" options={{ title: 'Categorías' }} />
