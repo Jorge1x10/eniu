@@ -24,7 +24,7 @@ export default function OnboardingMenuScreen() {
   }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, gap: 24, flexGrow: 1, backgroundColor: theme.background }}>
+    <ScrollView contentInsetAdjustmentBehavior="never" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, gap: 24, flexGrow: 1, backgroundColor: theme.background }}>
       <View style={{ gap: 10 }}>
         <Text style={{ color: theme.yellowPressed, fontWeight: '700', fontSize: 14 }}>Paso 2 de 3</Text>
         <View style={{ flexDirection: 'row', gap: 5 }}>

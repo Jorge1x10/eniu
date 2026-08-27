@@ -11,6 +11,7 @@ import { FormField } from '@/components/ui/form-field';
 import { PlusIcon } from '@/components/ui/icons';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
+import { useScreenTopPadding } from '@/constants/layout';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, listCatalogues } from '@/features/catalogues/catalogue-api';
 import { api } from '@/lib/api';
@@ -18,6 +19,7 @@ import type { Catalogue } from '@/types/models';
 
 export default function MenusScreen() {
   const theme = useEniuTheme();
+  const topPadding = useScreenTopPadding();
   const queryClient = useQueryClient();
   const { selectedBusiness } = useBusiness();
   const query = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
@@ -40,7 +42,7 @@ export default function MenusScreen() {
 
   const menus = query.data?.catalogues ?? [];
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: 8, paddingBottom: 120, gap: 18 }}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: topPadding, paddingBottom: 120, gap: 18 }}>
       <View style={{ gap: 5 }}>
         <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>Menús</Text>
         <Text style={{ color: theme.muted, lineHeight: 20 }}>Administra los menús que compartes con tus clientes.</Text>

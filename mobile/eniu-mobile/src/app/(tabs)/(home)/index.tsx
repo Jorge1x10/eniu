@@ -11,6 +11,7 @@ import { MilestoneSheet } from '@/components/milestone-sheet';
 import { PlusIcon, QrIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
+import { useScreenTopPadding } from '@/constants/layout';
 import { useAuth } from '@/features/auth/auth-context';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, listCatalogues } from '@/features/catalogues/catalogue-api';
@@ -41,6 +42,7 @@ function QuickAction({ title, subtitle, icon, onPress }: { title: string; subtit
 
 export default function HomeScreen() {
   const theme = useEniuTheme();
+  const topPadding = useScreenTopPadding();
   const { width } = useWindowDimensions();
   const { user } = useAuth();
   const { selectedBusiness, isLoading: loadingBusinesses } = useBusiness();
@@ -84,7 +86,7 @@ export default function HomeScreen() {
         maxWidth: 760,
         alignSelf: 'center',
         paddingHorizontal: width < 380 ? 16 : 20,
-        paddingTop: process.env.EXPO_OS === 'web' ? 28 : 8,
+        paddingTop: topPadding,
         paddingBottom: 120,
         gap: 22,
       }}
