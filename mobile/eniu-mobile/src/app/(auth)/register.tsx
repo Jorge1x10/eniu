@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { AuthShell } from '@/components/auth-shell';
+import { AppleAuthButton } from '@/components/apple-auth-button';
 import { GoogleAuthButton } from '@/components/google-auth-button';
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
@@ -43,6 +44,7 @@ export default function RegisterScreen() {
       <FormField label="Confirmar contraseña" value={form.confirmation} onChangeText={update('confirmation')} secureTextEntry autoComplete="new-password" placeholder="Repite tu contraseña" />
       <Button onPress={submit} loading={loading}>Crear cuenta</Button>
       <GoogleAuthButton mode="register" />
+      <AppleAuthButton mode="register" />
       <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 5 }}>
         <Text style={{ color: theme.muted }}>¿Ya tienes una cuenta?</Text>
         <Link href="/(auth)/login" style={{ color: theme.text, fontWeight: '800', textDecorationLine: 'underline' }}>Inicia sesión</Link>
