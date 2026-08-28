@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpen, Plus, RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 
+import PlanBadge from "../../auth/components/PlanBadge";
+import { usePlan } from "../../auth/hooks/usePlan";
 import { useBusiness } from "../../Business/services/useBusiness";
 import CatalogueCard from "../components/CatalogueCard";
 import CreateCatalogueModal from "../components/CreateCatalogueModal";
@@ -29,11 +31,13 @@ export default function CataloguesPage() {
   const [actionError, setActionError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const { limits, isWithin } = usePlan();
   const [catalogueToDelete, setCatalogueToDelete] = useState(null);
   const [processingId, setProcessingId] = useState(null);
   const mountedRef = useRef(true);
 
   const business = businesses.find((item) => item.id === businessId);
+  const atMenuLimit = !isWithin(catalogues.length, limits.max_catalogues_per_business);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -144,14 +148,18 @@ export default function CataloguesPage() {
             Administra los menús que compartes con tus clientes.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsCreateOpen(true)}
-          disabled={isLoading || Boolean(loadError)}
-          className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold text-[#111111] hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Plus size={18} /> Crear menú
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {atMenuLimit && <PlanBadge label="Más menús en Esencial" />}
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            disabled={isLoading || Boolean(loadError) || atMenuLimit}
+            title={atMenuLimit ? `Tu plan actual permite ${limits.max_catalogues_per_business} menú por negocio.` : undefined}
+            className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold text-[#111111] hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus size={18} /> Crear menú
+          </button>
+        </div>
       </header>
 
       {successMessage && (
