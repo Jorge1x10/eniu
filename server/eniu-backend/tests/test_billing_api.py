@@ -1,12 +1,14 @@
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
+from uuid import UUID
 
+import stripe
 from flask_jwt_extended import create_access_token
+from stripe._stripe_object import StripeObject
 
 from app import create_app
 from app.database.db import db
-from stripe._stripe_object import StripeObject
 
 from app.modules.billing.model import BillingSubscription, StripeWebhookEvent
 from app.modules.users.model import User
@@ -134,6 +136,26 @@ class BillingApiTestCase(unittest.TestCase):
             self.assertEqual(record.stripe_price_id, "price_essential")
             self.assertEqual(StripeWebhookEvent.query.count(), 1)
             self.assertEqual(User.query.one().to_dict()["plan"]["name"], "Plan Esencial")
+
+    def test_portal_failure_is_logged_with_a_useful_detail(self):
+        # El error de "portal sin configurar" no trae `code`, y registrarlo a
+        # secas dejaba un «None» en el log en lugar del motivo real.
+        with self.app.app_context():
+            db.session.add(BillingSubscription(
+                user_id=UUID(self.user_id), stripe_customer_id="cus_owner",
+                stripe_subscription_id="sub_owner", plan_key="essential", status="active",
+            ))
+            db.session.commit()
+
+        failure = stripe.InvalidRequestError("your default configuration has not been created", None)
+        with patch("app.modules.billing.services.stripe.billing_portal.Session.create", side_effect=failure):
+            with self.assertLogs("app", level="WARNING") as logs:
+                response = self.client.post("/api/billing/portal", headers=self.headers, json={})
+
+        self.assertEqual(response.status_code, 502)
+        registro = " ".join(logs.output)
+        self.assertIn("default configuration has not been created", registro)
+        self.assertNotIn("Stripe portal error: None", registro)
 
     def test_billing_endpoints_require_authentication(self):
         self.assertEqual(self.client.get("/api/billing/subscription").status_code, 401)

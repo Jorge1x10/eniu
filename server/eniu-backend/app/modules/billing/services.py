@@ -124,7 +124,7 @@ def create_checkout(user_id):
         return {"message": str(error)}, 503
     except stripe.StripeError as error:
         db.session.rollback()
-        current_app.logger.warning("Stripe checkout error: %s", getattr(error, "code", type(error).__name__))
+        current_app.logger.warning("Stripe checkout error: %s", _error_detail(error))
         return {"message": "No fue posible iniciar la contratación"}, 502
     except SQLAlchemyError as error:
         db.session.rollback()
@@ -146,7 +146,7 @@ def create_portal(user_id):
         )
         return {"url": session.url}, 201
     except stripe.StripeError as error:
-        current_app.logger.warning("Stripe portal error: %s", getattr(error, "code", type(error).__name__))
+        current_app.logger.warning("Stripe portal error: %s", _error_detail(error))
         return {"message": "No fue posible abrir el portal de facturación"}, 502
 
 
@@ -247,6 +247,17 @@ def _sync_subscription(subscription, fallback_user_id=None):
         owner = db.session.get(User, record.user_id)
         if owner:
             apply_free_plan_state(owner)
+
+
+def _error_detail(error):
+    """Detalle útil de un error de Stripe para el registro.
+
+    `code` existe siempre pero llega vacío en los errores de configuración —el
+    portal de cliente sin configurar, por ejemplo—, y como `getattr` con valor
+    por defecto sólo cubre el atributo ausente, el log terminaba diciendo
+    «None» justo cuando hacía falta saber qué había pasado.
+    """
+    return getattr(error, "code", None) or str(error) or type(error).__name__
 
 
 def _plain(value):
