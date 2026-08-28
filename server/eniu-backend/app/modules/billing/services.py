@@ -317,3 +317,30 @@ def process_webhook(payload, signature):
         db.session.rollback()
         current_app.logger.exception(error)
         return {"message": "No fue posible procesar el webhook"}, 500
+
+def cancel_subscription_for_user(user):
+    """Cancela en Stripe la suscripción del usuario antes de borrar su cuenta.
+
+    Devuelve `(True, None)` cuando no queda nada cobrándose. Se corre **antes**
+    de borrar: si Stripe fallara y aun así elimináramos la cuenta, seguiríamos
+    cobrándole a alguien que ya no existe y que además perdió la forma de
+    entrar a cancelarlo.
+    """
+    record = getattr(user, "billing_subscription", None)
+    if not record or not record.stripe_subscription_id:
+        return True, None
+    if not _stripe_configured():
+        return False, "Stripe no está configurado"
+    try:
+        _configure_stripe()
+        subscription = stripe.Subscription.retrieve(record.stripe_subscription_id)
+        if _plain(subscription).get("status") not in {"canceled", "incomplete_expired"}:
+            subscription.cancel()
+        return True, None
+    except stripe.InvalidRequestError as error:
+        # Si Stripe ya no la conoce, no hay nada que cancelar.
+        if "No such subscription" in str(error):
+            return True, None
+        return False, _error_detail(error)
+    except stripe.StripeError as error:
+        return False, _error_detail(error)
