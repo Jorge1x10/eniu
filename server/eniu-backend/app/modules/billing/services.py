@@ -9,9 +9,11 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.database.db import db
 from app.modules.billing.model import BillingSubscription, StripeWebhookEvent
+from app.modules.billing import plans
 from app.modules.billing.plans import FREE, plan_payload
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
+from app.modules.template.model import CatalogueTemplate
 from app.modules.users.model import User
 
 
@@ -153,15 +155,41 @@ def _period_end(subscription):
     return datetime.fromtimestamp(timestamp, timezone.utc) if timestamp else None
 
 
+def _deactivate_paid_template_features(catalogue_ids):
+    """Apaga en la base las funciones de plantilla que el plan gratuito no incluye.
+
+    No basta con ajustar el menú al dibujarlo: si la configuración guardada
+    contradice al plan, el usuario queda con una plantilla que su plan no
+    permite y cualquier intento de guardar tropieza con ella. Las imágenes se
+    conservan, así que volver a pagar sólo requiere reactivarlas.
+    """
+    if not catalogue_ids:
+        return
+    free = plans.limits_for(plans.FREE)
+    configs = CatalogueTemplate.query.filter(
+        CatalogueTemplate.catalogue_id.in_(catalogue_ids)
+    ).all()
+    for config in configs:
+        if not plans.allows_template(plans.FREE, config.template_key):
+            config.template_key = plans.DEFAULT_TEMPLATE_KEY
+        if not plans.allows_font(plans.FREE, config.font_key):
+            config.font_key = plans.DEFAULT_FONT_KEY
+        if not free["allow_cover"]:
+            config.show_cover = False
+        if not free["allow_background"]:
+            config.background_opacity = plans.DEFAULT_BACKGROUND_OPACITY
+        if not free["allow_splash"]:
+            config.splash_enabled = False
+
+
 def apply_free_plan_state(user):
     """Deja la cuenta como la ve el plan gratuito tras perder el de pago.
 
-    Despublica todos los menús y desactiva todos los negocios salvo el más
-    reciente. No borra nada: el `public_slug` de cada menú se conserva, así que
+    Despublica todos los menús, desactiva todos los negocios salvo el más
+    reciente y apaga las funciones de plantilla que el plan gratuito no
+    incluye. No borra nada: el `public_slug` de cada menú se conserva —así que
     volver a publicar recupera la misma URL y los códigos QR ya impresos siguen
-    sirviendo. La plantilla tampoco se toca en la base; el menú público se
-    dibuja con los límites del plan, de modo que vuelve sola al recuperar la
-    suscripción.
+    sirviendo— y las imágenes subidas se quedan donde estaban.
     """
     businesses = (
         Business.query
@@ -174,9 +202,15 @@ def apply_free_plan_state(user):
     if not businesses:
         return
     kept = businesses[0]
-    Catalogue.query.filter(
-        Catalogue.business_id.in_([business.id for business in businesses])
-    ).update({"is_published": False, "published_at": None}, synchronize_session=False)
+    business_ids = [business.id for business in businesses]
+    catalogue_ids = [
+        row[0] for row in
+        db.session.query(Catalogue.id).filter(Catalogue.business_id.in_(business_ids)).all()
+    ]
+    Catalogue.query.filter(Catalogue.business_id.in_(business_ids)).update(
+        {"is_published": False, "published_at": None}, synchronize_session=False
+    )
+    _deactivate_paid_template_features(catalogue_ids)
     for business in businesses:
         business.is_active = business.id == kept.id
 

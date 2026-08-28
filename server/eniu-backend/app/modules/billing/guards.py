@@ -84,42 +84,52 @@ def ensure_analytics_access(owner_id):
 
 
 def ensure_template_allowed(owner_id, template_key=None, theme=None, cover_upload=False,
-                            background_upload=False, splash=None, splash_upload=False):
+                            background_upload=False, splash=None, splash_upload=False,
+                            current=None):
     """Valida los cambios de plantilla que el plan permite.
 
-    Sólo se revisan los campos que el cliente mandó, no el tema ya guardado:
-    alguien que bajó de plan conservando una tipografía de pago debe poder
-    seguir cambiando sus colores sin toparse con un bloqueo.
+    Se compara contra la configuración guardada y sólo se rechaza el cambio que
+    **enciende** una función de pago. Los clientes reenvían la plantilla
+    completa en cada guardado, así que juzgar por el valor recibido dejaba sin
+    guardar a quien no intentaba nada: alguien en plan gratuito con la portada
+    activada no podía ni cambiar sus colores. Apagar una función siempre se
+    permite, venga del plan que venga.
     """
     plan_key = plan_key_for(owner_id)
     limits = plans.limits_for(plan_key)
     theme = theme if isinstance(theme, dict) else {}
+    current = current or {}
+    current_theme = current.get("theme") or {}
+    current_splash = current.get("splash") or {}
+    requested_splash = splash if isinstance(splash, dict) else {}
 
-    if template_key is not None and not plans.allows_template(plan_key, template_key):
+    def changed(value, stored):
+        return value is not None and value != stored
+
+    # Subir una imagen sí es siempre un intento de usar la función.
+    if cover_upload and not limits["allow_cover"]:
+        return _blocked("Tu plan actual no incluye portada en el menú.")
+    if background_upload and not limits["allow_background"]:
+        return _blocked("Tu plan actual no incluye imagen de fondo en el menú.")
+    if splash_upload and not limits["allow_splash"]:
+        return _blocked("Tu plan actual no incluye la pantalla de bienvenida del menú.")
+
+    if changed(template_key, current.get("template_key")) and not plans.allows_template(plan_key, template_key):
         return _blocked("Tu plan actual sólo incluye la plantilla básica.")
 
     font_key = theme.get("font_key")
-    if font_key is not None and not plans.allows_font(plan_key, font_key):
+    if changed(font_key, current_theme.get("font_key")) and not plans.allows_font(plan_key, font_key):
         return _blocked("Tu plan actual sólo incluye la tipografía básica.")
 
-    if not limits["allow_cover"]:
-        if cover_upload:
-            return _blocked("Tu plan actual no incluye portada en el menú.")
-        if theme.get("show_cover") is True:
-            return _blocked("Tu plan actual no incluye portada en el menú.")
+    if not limits["allow_cover"] and theme.get("show_cover") is True and current_theme.get("show_cover") is not True:
+        return _blocked("Tu plan actual no incluye portada en el menú.")
 
-    if not limits["allow_background"]:
-        if background_upload:
-            return _blocked("Tu plan actual no incluye imagen de fondo en el menú.")
-        if "background_opacity" in theme:
-            return _blocked("Tu plan actual no incluye la personalización del fondo.")
+    if not limits["allow_background"] and changed(theme.get("background_opacity"), current_theme.get("background_opacity")):
+        return _blocked("Tu plan actual no incluye la personalización del fondo.")
 
-    # Los clientes mandan el bloque de bienvenida en cada guardado, así que sólo
-    # se bloquea encenderla o subirle imagen: recibirla apagada no es un intento
-    # de usar la función y no debe impedir guardar un cambio de color.
     if not limits["allow_splash"]:
-        requested = splash if isinstance(splash, dict) else {}
-        if splash_upload or requested.get("enabled") is True:
+        turning_on = requested_splash.get("enabled") is True and current_splash.get("enabled") is not True
+        if turning_on or changed(requested_splash.get("duration"), current_splash.get("duration")):
             return _blocked("Tu plan actual no incluye la pantalla de bienvenida del menú.")
 
     return None
