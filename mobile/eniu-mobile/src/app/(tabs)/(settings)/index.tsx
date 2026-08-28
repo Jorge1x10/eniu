@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, Switch, Text, View } from 'react-native';
 
+import { BusinessPhotoField } from '@/components/business-photo';
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
@@ -66,7 +67,7 @@ export default function SettingsScreen() {
 
       <Section label="Mi perfil"><FormField label="Nombre visible" value={profile.name} onChangeText={updateProfile('name')} /><FormField label="Nombre de usuario" value={profile.username} onChangeText={updateProfile('username')} autoCapitalize="none" /><FormField label="Teléfono" value={profile.phone_number} onChangeText={updateProfile('phone_number')} keyboardType="phone-pad" /><FormField label="Correo electrónico" value={user?.email || ''} editable={false} /><Button loading={saving === 'profile'} onPress={saveProfile}>Guardar perfil</Button></Section>
 
-      <Section label="Mi negocio"><BusinessSwitcher />{business ? <><FormField label="Nombre" value={business.name} onChangeText={updateBusinessField('name')} /><FormField label="Descripción" value={business.description} onChangeText={updateBusinessField('description')} multiline /><FormField label="Teléfono" value={business.phone} onChangeText={updateBusinessField('phone')} keyboardType="phone-pad" /><FormField label="WhatsApp" value={business.whatsapp} onChangeText={updateBusinessField('whatsapp')} keyboardType="phone-pad" /><FormField label="Dirección" value={business.address} onChangeText={updateBusinessField('address')} /><FormField label="Moneda" value={business.currency} onChangeText={updateBusinessField('currency')} autoCapitalize="characters" maxLength={3} /><Button loading={saving === 'business'} onPress={saveBusiness}>Guardar negocio</Button></> : <Text style={{ color: theme.muted }}>Crea un negocio desde Inicio para configurarlo.</Text>}</Section>
+      <Section label="Mi negocio"><BusinessSwitcher />{business ? <><BusinessPhotoField onError={setError} /><FormField label="Nombre" value={business.name} onChangeText={updateBusinessField('name')} /><FormField label="Descripción" value={business.description} onChangeText={updateBusinessField('description')} multiline /><FormField label="Teléfono" value={business.phone} onChangeText={updateBusinessField('phone')} keyboardType="phone-pad" /><FormField label="WhatsApp" value={business.whatsapp} onChangeText={updateBusinessField('whatsapp')} keyboardType="phone-pad" /><FormField label="Dirección" value={business.address} onChangeText={updateBusinessField('address')} /><FormField label="Moneda" value={business.currency} onChangeText={updateBusinessField('currency')} autoCapitalize="characters" maxLength={3} /><Button loading={saving === 'business'} onPress={saveBusiness}>Guardar negocio</Button></> : <Text style={{ color: theme.muted }}>Crea un negocio desde Inicio para configurarlo.</Text>}</Section>
 
       <Section label="Aplicación">
         <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>Apariencia</Text><Text style={{ color: theme.muted, fontSize: 12.5 }}>Automática</Text></View>

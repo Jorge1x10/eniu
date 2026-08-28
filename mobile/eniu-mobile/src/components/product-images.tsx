@@ -1,27 +1,20 @@
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { CloseIcon, ImageIcon, StarIcon } from '@/components/ui/icons';
+import { ImageQualitySelector } from '@/components/ui/image-field';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { resolveMediaUrl } from '@/lib/api';
+import { pickImages, type ImageQuality, type PickedPicture } from '@/lib/image-file';
 import type { ProductPicture } from '@/types/models';
 
 export const MAX_PICTURES = 5;
-const MAX_BYTES = 5 * 1024 * 1024;
 
-/** Foto recién elegida en el teléfono, todavía no subida. */
-export type PickedPicture = { uri: string; name: string; type: string };
+export type { PickedPicture };
 
 /** Clave de la foto principal: el id de una existente, o `new:<índice>`. */
 export type DefaultKey = string | null;
-
-function extensionOf(uri: string, mimeType?: string | null) {
-  const fromMime = mimeType?.split('/')[1];
-  const fromUri = uri.split('?')[0].split('.').pop();
-  const extension = (fromMime || fromUri || 'jpg').toLowerCase();
-  return extension === 'jpeg' ? 'jpg' : extension;
-}
 
 function Thumb({ uri, isDefault, onMakeDefault, onRemove }: { uri: string; isDefault: boolean; onMakeDefault: () => void; onRemove: () => void }) {
   const theme = useEniuTheme();
@@ -60,33 +53,32 @@ type Props = {
   onChangeExisting: (pictures: ProductPicture[]) => void;
   onChangePicked: (pictures: PickedPicture[]) => void;
   onChangeDefault: (key: DefaultKey) => void;
+  onError: (message: string) => void;
   disabled?: boolean;
 };
 
-export function ProductImagePicker({ existing, picked, defaultKey, onChangeExisting, onChangePicked, onChangeDefault, disabled }: Props) {
+export function ProductImagePicker({ existing, picked, defaultKey, onChangeExisting, onChangePicked, onChangeDefault, onError, disabled }: Props) {
   const theme = useEniuTheme();
+  const [quality, setQuality] = useState<ImageQuality>('alta');
+  const [working, setWorking] = useState(false);
   const total = existing.length + picked.length;
 
   async function add() {
     const remaining = MAX_PICTURES - total;
     if (remaining <= 0) { Alert.alert('Límite de fotos', `Puedes agregar máximo ${MAX_PICTURES} imágenes por producto.`); return; }
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) { Alert.alert('Permiso necesario', 'Permite el acceso a tus fotos para subir imágenes de los productos.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: remaining,
-      quality: 0.8,
-    });
-    if (result.canceled) return;
-    const tooBig = result.assets.find((asset) => (asset.fileSize ?? 0) > MAX_BYTES);
-    if (tooBig) { Alert.alert('Imagen muy pesada', 'Cada imagen debe pesar máximo 5 MB.'); return; }
-    const next = result.assets.slice(0, remaining).map((asset, index) => {
-      const extension = extensionOf(asset.uri, asset.mimeType);
-      return { uri: asset.uri, name: asset.fileName || `foto-${Date.now()}-${index}.${extension}`, type: asset.mimeType || `image/${extension}` };
-    });
-    onChangePicked([...picked, ...next]);
-    if (!defaultKey && !existing.length && next.length) onChangeDefault('new:0');
+    setWorking(true);
+    try {
+      // `pickImages` ya convierte cada foto a un formato que la API acepta: la
+      // galería entrega HEIC en iOS y archivos de más de 5 MB en los dos.
+      const pictures = await pickImages({ limit: remaining, quality });
+      if (!pictures?.length) return;
+      onChangePicked([...picked, ...pictures]);
+      if (!defaultKey && !existing.length) onChangeDefault('new:0');
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'No fue posible preparar las imágenes.');
+    } finally {
+      setWorking(false);
+    }
   }
 
   function removeExisting(id: string) {
@@ -106,29 +98,32 @@ export function ProductImagePicker({ existing, picked, defaultKey, onChangeExist
   }
 
   return (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: 12 }}>
       <Text style={{ color: theme.text, fontSize: 13, fontWeight: '800' }}>Fotos</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
         {existing.map((picture) => (
           <Thumb key={picture.id} uri={resolveMediaUrl(picture.url) || picture.url} isDefault={defaultKey === picture.id} onMakeDefault={() => onChangeDefault(picture.id)} onRemove={() => removeExisting(picture.id)} />
         ))}
         {picked.map((picture, index) => (
-          <Thumb key={`${picture.uri}-${index}`} uri={picture.uri} isDefault={defaultKey === `new:${index}`} onMakeDefault={() => onChangeDefault(`new:${index}`)} onRemove={() => removePicked(index)} />
+          <Thumb key={picture.uri} uri={picture.uri} isDefault={defaultKey === `new:${index}`} onMakeDefault={() => onChangeDefault(`new:${index}`)} onRemove={() => removePicked(index)} />
         ))}
         {total < MAX_PICTURES ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Agregar fotos"
-            disabled={disabled}
+            disabled={disabled || working}
             onPress={add}
-            style={({ pressed }) => ({ width: 92, height: 92, borderRadius: 16, borderCurve: 'continuous', borderWidth: 1.5, borderStyle: 'dashed', borderColor: theme.yellowPressed, alignItems: 'center', justifyContent: 'center', gap: 6, opacity: disabled ? 0.5 : pressed ? 0.7 : 1 })}
+            style={({ pressed }) => ({ width: 92, height: 92, borderRadius: 16, borderCurve: 'continuous', borderWidth: 1.5, borderStyle: 'dashed', borderColor: theme.yellowPressed, alignItems: 'center', justifyContent: 'center', gap: 6, opacity: disabled || working ? 0.5 : pressed ? 0.7 : 1 })}
           >
-            <ImageIcon color={theme.yellowPressed} size={22} />
-            <Text style={{ color: theme.yellowPressed, fontSize: 11, fontWeight: '800' }}>Agregar</Text>
+            {working ? <ActivityIndicator color={theme.yellowPressed} /> : <>
+              <ImageIcon color={theme.yellowPressed} size={22} />
+              <Text style={{ color: theme.yellowPressed, fontSize: 11, fontWeight: '800' }}>Agregar</Text>
+            </>}
           </Pressable>
         ) : null}
       </ScrollView>
-      <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17 }}>JPG, PNG o WebP. Máximo 5 MB por imagen y {MAX_PICTURES} por producto. Toca la estrella para elegir la principal.</Text>
+      <ImageQualitySelector value={quality} onChange={setQuality} />
+      <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17 }}>Se convierten solas al formato que acepta el menú. Máximo {MAX_PICTURES} por producto. Toca la estrella para elegir la principal.</Text>
     </View>
   );
 }

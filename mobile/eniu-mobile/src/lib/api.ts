@@ -2,10 +2,11 @@ import { fetch as expoFetch } from 'expo/fetch';
 
 import { sessionStore } from '@/lib/session-store';
 
-// expo/fetch no acepta el archivo con la forma `{ uri, name, type }` de React
-// Native, así que las subidas multipart van por el fetch nativo de RN.
-const pickFetch = (body: BodyInit | null | undefined) =>
-  (body instanceof FormData ? globalThis.fetch : expoFetch) as typeof globalThis.fetch;
+// Desde SDK 54 `expo/fetch` es también el `fetch` global en Android e iOS, así
+// que no queda un fetch de React Native al que caer para las subidas: la forma
+// `{ uri, name, type }` falla con «Invalid FormData» en los dos. Las imágenes
+// se adjuntan como Blob estándar desde `@/lib/image-file`.
+const request = expoFetch as unknown as typeof globalThis.fetch;
 
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:5000/api').replace(/\/$/, '');
 const PUBLIC_ROUTES = new Set(['auth/login', 'auth/register', 'auth/forgot-password', 'auth/reset-password']);
@@ -63,7 +64,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, all
 
   let response: Response;
   try {
-    response = await pickFetch(options.body)(`${API_URL}/${normalizedPath}`, { ...options, headers });
+    response = await request(`${API_URL}/${normalizedPath}`, { ...options, headers });
   } catch (error) {
     throw new ApiError(error instanceof Error ? error.message : 'No hay conexión con el servidor.', 0);
   }

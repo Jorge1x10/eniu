@@ -17,6 +17,7 @@ export type Business = {
   address?: string | null;
   currency?: string;
   timezone?: string;
+  photo_url?: string | null;
 };
 
 export type Catalogue = {
@@ -44,6 +45,31 @@ export type Product = {
   category_id?: string | null;
   category?: Category | null;
 };
+
+export const TEMPLATE_KEYS = ['modern', 'minimal', 'elegant', 'bistro', 'bold', 'natural', 'retro', 'luxury'] as const;
+export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
+
+export const FONT_KEYS = ['inter', 'poppins', 'montserrat', 'playfair', 'lora'] as const;
+export type FontKey = (typeof FONT_KEYS)[number];
+
+/** Colores editables del menú; el resto del tema no se puede enviar al PATCH. */
+export type ThemeColor = 'background_color' | 'primary_color' | 'accent_color' | 'text_color';
+
+export type MenuTheme = {
+  background_color: string;
+  primary_color: string;
+  accent_color: string;
+  text_color: string;
+  font_key: FontKey;
+  show_cover: boolean;
+  show_product_images: boolean;
+  background_opacity: number;
+  /** Rutas relativas que sirve la API; sólo de lectura, no se envían de vuelta. */
+  cover_image_url?: string | null;
+  background_image_url?: string | null;
+};
+
+export type TemplateConfig = { template_key: TemplateKey; theme: MenuTheme };
 
 export type Analytics = {
   summary?: { menu_views?: { value?: number } };
