@@ -5,6 +5,7 @@ import { BusinessSwitcher } from '@/components/business-switcher';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useScreenTopPadding } from '@/constants/layout';
+import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, listCatalogues } from '@/features/catalogues/catalogue-api';
 import { api } from '@/lib/api';
@@ -20,9 +21,10 @@ export default function AnalyticsScreen() {
   const theme = useEniuTheme();
   const topPadding = useScreenTopPadding();
   const { selectedBusiness } = useBusiness();
+  const { limits } = usePlan();
   const menus = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
   const selected = menus.data?.catalogues[0];
-  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, selected?.id, 30], queryFn: () => api.get<Analytics>(`businesses/${selectedBusiness!.id}/catalogues/${selected!.id}/analytics?${queryRange()}`), enabled: Boolean(selectedBusiness && selected) });
+  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, selected?.id, 30], queryFn: () => api.get<Analytics>(`businesses/${selectedBusiness!.id}/catalogues/${selected!.id}/analytics?${queryRange()}`), enabled: Boolean(selectedBusiness && selected) && limits.allow_analytics });
   const points = analytics.data?.visits_over_time ?? [];
   const max = Math.max(1, ...points.map((point) => Number(point.views || 0)));
   const total = points.reduce((sum, point) => sum + Number(point.views || 0), 0);
@@ -37,7 +39,7 @@ export default function AnalyticsScreen() {
         <Text style={{ color: theme.muted, lineHeight: 20 }}>Cómo se está viendo tu menú.</Text>
       </View>
       <BusinessSwitcher />
-      {!selectedBusiness ? <EmptyState title="Sin negocio seleccionado" description="Crea un negocio desde Inicio." /> : menus.isLoading || analytics.isLoading ? <LoadingState label="Calculando analíticas…" /> : menus.isError || analytics.isError ? <ErrorState message="No pudimos cargar las analíticas." onRetry={() => { menus.refetch(); analytics.refetch(); }} /> : !selected ? <EmptyState title="Sin datos todavía" description="Crea un menú para comenzar a registrar visitas." /> : <>
+      {!selectedBusiness ? <EmptyState title="Sin negocio seleccionado" description="Crea un negocio desde Inicio." /> : !limits.allow_analytics ? <EmptyState title="Tu plan actual no incluye analíticas" description="Las visitas de tu menú se siguen registrando mientras tanto, así que al activarlas no empiezas de cero." /> : menus.isLoading || analytics.isLoading ? <LoadingState label="Calculando analíticas…" /> : menus.isError || analytics.isError ? <ErrorState message="No pudimos cargar las analíticas." onRetry={() => { menus.refetch(); analytics.refetch(); }} /> : !selected ? <EmptyState title="Sin datos todavía" description="Crea un menú para comenzar a registrar visitas." /> : <>
         <Text style={{ color: theme.muted }}>Menú: <Text style={{ color: theme.text, fontWeight: '900' }}>{selected.name}</Text></Text>
 
         <View style={{ minHeight: 260, padding: 20, gap: 16, backgroundColor: '#111111', borderRadius: 24, borderCurve: 'continuous' }}>

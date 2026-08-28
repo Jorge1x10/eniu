@@ -3,7 +3,7 @@ import { Text, View, type GestureResponderEvent } from 'react-native';
 
 import { useEniuTheme } from '@/constants/eniu-theme';
 
-type Props = { label: string; value: number; onChange: (value: number) => void; step?: number };
+type Props = { label: string; value: number; onChange: (value: number) => void; step?: number; disabled?: boolean };
 
 /**
  * Control deslizante mínimo para la opacidad del fondo.
@@ -12,7 +12,7 @@ type Props = { label: string; value: number; onChange: (value: number) => void; 
  * `@react-native-community/slider`; con el sistema de responders de la propia
  * `View` basta, y evita añadir un módulo nativo sólo por esta barra.
  */
-export function Slider({ label, value, onChange, step = 0.05 }: Props) {
+export function Slider({ label, value, onChange, step = 0.05, disabled = false }: Props) {
   const theme = useEniuTheme();
   const [width, setWidth] = useState(0);
   const percent = Math.round(Math.min(1, Math.max(0, value)) * 100);
@@ -23,7 +23,7 @@ export function Slider({ label, value, onChange, step = 0.05 }: Props) {
   }
 
   function slideTo(event: GestureResponderEvent) {
-    if (!width) return;
+    if (!width || disabled) return;
     const ratio = event.nativeEvent.locationX / width;
     onChange(clamp(Math.round(ratio / step) * step));
   }
@@ -39,16 +39,17 @@ export function Slider({ label, value, onChange, step = 0.05 }: Props) {
         accessibilityLabel={label}
         accessibilityValue={{ min: 0, max: 100, now: percent }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-        onAccessibilityAction={(event) => onChange(clamp(value + (event.nativeEvent.actionName === 'increment' ? step : -step)))}
+        accessibilityState={{ disabled }}
+        onAccessibilityAction={(event) => { if (!disabled) onChange(clamp(value + (event.nativeEvent.actionName === 'increment' ? step : -step))); }}
         onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
         // Tomamos el responder al tocar para que el ScrollView de la pantalla no
         // se quede con el gesto en cuanto el dedo se mueve.
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
+        onStartShouldSetResponder={() => !disabled}
+        onMoveShouldSetResponder={() => !disabled}
         onResponderGrant={slideTo}
         onResponderMove={slideTo}
         // El área táctil real es de 44 px aunque la barra se vea de 8.
-        style={{ height: 44, justifyContent: 'center' }}
+        style={{ height: 44, justifyContent: 'center', opacity: disabled ? 0.5 : 1 }}
       >
         <View style={{ height: 8, borderRadius: 99, backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, overflow: 'hidden' }}>
           <View style={{ width: `${percent}%`, height: '100%', backgroundColor: theme.yellow }} />

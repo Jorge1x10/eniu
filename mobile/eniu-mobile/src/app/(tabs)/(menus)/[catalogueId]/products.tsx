@@ -10,8 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
 import { ImageIcon } from '@/components/ui/icons';
+import { PlanNotice } from '@/components/ui/plan-notice';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
+import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
 import { api, resolveMediaUrl } from '@/lib/api';
 import { appendImage } from '@/lib/image-file';
@@ -88,6 +90,7 @@ function CategorySelector({ categories, value, onChange, theme }: { categories: 
 export default function ProductsScreen() {
   const theme = useEniuTheme();
   const queryClient = useQueryClient();
+  const { limits, isWithin } = usePlan();
   const { catalogueId } = useLocalSearchParams<{ catalogueId: string }>();
   const { selectedBusiness } = useBusiness();
   const key = ['products', selectedBusiness?.id, catalogueId] as const;
@@ -153,6 +156,7 @@ export default function ProductsScreen() {
   }
 
   const products = query.data?.products ?? [];
+  const atProductLimit = !isWithin(products.length, limits.max_products_per_catalogue);
   const categories = categoriesQuery.data?.categories ?? [];
   const currency = new Intl.NumberFormat('es-MX', { style: 'currency', currency: selectedBusiness?.currency || 'MXN' });
   const filtered = filter ? products.filter((product) => (product.category_id ?? UNCATEGORIZED) === filter) : products;
@@ -170,7 +174,8 @@ export default function ProductsScreen() {
       </ScrollView> : null}
       {categories.length ? <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17, marginTop: -6 }}>Las secciones sólo filtran esta lista. La categoría de cada producto se elige en el formulario.</Text> : null}
 
-      <Button onPress={() => formOpen ? setFormOpen(false) : startEdit()}>{formOpen ? 'Cerrar formulario' : 'Crear producto'}</Button>
+      {atProductLimit && !formOpen ? <PlanNotice message={`Tu plan actual permite hasta ${limits.max_products_per_catalogue} productos por menú.`} /> : null}
+      <Button disabled={atProductLimit && !formOpen} onPress={() => formOpen ? setFormOpen(false) : startEdit()}>{formOpen ? 'Cerrar formulario' : 'Crear producto'}</Button>
       {formOpen ? (
         <Animated.View entering={FadeIn.duration(220)} style={{ padding: 18, gap: 14, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous' }}>
           <Text style={{ color: theme.text, fontSize: 19, fontWeight: '900' }}>{editing ? 'Editar producto' : 'Nuevo producto'}</Text>

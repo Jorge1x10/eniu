@@ -8,11 +8,13 @@ import { BusinessPhotoField } from '@/components/business-photo';
 import { Button } from '@/components/ui/button';
 import { ColorField } from '@/components/ui/color-picker';
 import { Feedback } from '@/components/ui/feedback';
-import { CloseIcon, EyeIcon } from '@/components/ui/icons';
+import { CloseIcon, EyeIcon, LockIcon } from '@/components/ui/icons';
 import { ImageField, ImageQualitySelector } from '@/components/ui/image-field';
+import { PlanNotice } from '@/components/ui/plan-notice';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { Slider } from '@/components/ui/slider';
 import { useEniuTheme } from '@/constants/eniu-theme';
+import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
 import { getCatalogue } from '@/features/catalogues/catalogue-api';
 import { MenuPreview } from '@/features/templates/menu-preview';
@@ -55,6 +57,12 @@ export default function TemplateScreen() {
   const queryClient = useQueryClient();
   const { catalogueId } = useLocalSearchParams<{ catalogueId: string }>();
   const { selectedBusiness } = useBusiness();
+  const { limits, allowsTemplate, allowsFont } = usePlan();
+  const templatesLocked = TEMPLATE_OPTIONS.some((option) => !allowsTemplate(option.key));
+  const fontsLocked = FONT_OPTIONS.some((option) => !allowsFont(option.key));
+  const coverLocked = !limits.allow_cover;
+  const backgroundLocked = !limits.allow_background;
+  const productImagesLocked = !limits.allow_product_images;
   const enabled = Boolean(selectedBusiness && catalogueId);
   const base = `businesses/${selectedBusiness?.id}/catalogues/${catalogueId}`;
   const key = ['template', selectedBusiness?.id, catalogueId] as const;
@@ -188,21 +196,27 @@ export default function TemplateScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
           {TEMPLATE_OPTIONS.map((option) => {
             const on = draft.template_key === option.key;
+            const locked = !allowsTemplate(option.key);
             return (
               <Pressable
                 key={option.key}
                 accessibilityRole="button"
-                accessibilityState={{ selected: on }}
+                accessibilityState={{ selected: on, disabled: locked }}
+                disabled={locked}
                 onPress={() => updateTemplate(option.key)}
-                style={({ pressed }) => ({ width: 152, padding: 12, gap: 8, borderRadius: 17, borderCurve: 'continuous', backgroundColor: on ? appTheme.surfaceAlt : appTheme.background, borderWidth: on ? 2 : 1, borderColor: on ? appTheme.yellowPressed : appTheme.border, opacity: pressed ? 0.75 : 1 })}
+                style={({ pressed }) => ({ width: 152, padding: 12, gap: 8, borderRadius: 17, borderCurve: 'continuous', backgroundColor: on ? appTheme.surfaceAlt : appTheme.background, borderWidth: on ? 2 : 1, borderColor: on ? appTheme.yellowPressed : appTheme.border, opacity: locked ? 0.5 : pressed ? 0.75 : 1 })}
               >
                 <TemplateThumb templateKey={option.key} theme={draft.theme} />
-                <Text style={{ color: appTheme.text, fontSize: 14, fontWeight: '800' }}>{option.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {locked ? <LockIcon color={appTheme.muted} size={13} /> : null}
+                  <Text style={{ color: appTheme.text, fontSize: 14, fontWeight: '800' }}>{option.name}</Text>
+                </View>
                 <Text style={{ color: appTheme.muted, fontSize: 11, lineHeight: 16 }}>{option.description}</Text>
               </Pressable>
             );
           })}
         </ScrollView>
+        {templatesLocked ? <PlanNotice message="Tu plan actual sólo incluye la plantilla básica." /> : null}
       </Section>
 
       <Section title="Colores" description="Toca un color para elegirlo de la paleta o escribe el código de tu marca.">
@@ -223,19 +237,23 @@ export default function TemplateScreen() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {FONT_OPTIONS.map((option) => {
             const on = draft.theme.font_key === option.key;
+            const locked = !allowsFont(option.key);
             return (
               <Pressable
                 key={option.key}
                 accessibilityRole="button"
-                accessibilityState={{ selected: on }}
+                accessibilityState={{ selected: on, disabled: locked }}
+                disabled={locked}
                 onPress={() => updateTheme('font_key', option.key)}
-                style={({ pressed }) => ({ minHeight: 42, justifyContent: 'center', paddingHorizontal: 15, borderRadius: 999, backgroundColor: on ? appTheme.yellow : appTheme.background, borderWidth: 1, borderColor: on ? appTheme.yellowPressed : appTheme.border, opacity: pressed ? 0.75 : 1 })}
+                style={({ pressed }) => ({ minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 15, borderRadius: 999, backgroundColor: on ? appTheme.yellow : appTheme.background, borderWidth: 1, borderColor: on ? appTheme.yellowPressed : appTheme.border, opacity: locked ? 0.5 : pressed ? 0.75 : 1 })}
               >
+                {locked ? <LockIcon color={appTheme.muted} size={12} /> : null}
                 <Text style={{ color: on ? appTheme.onYellow : appTheme.text, fontSize: 13.5, fontWeight: on ? '800' : '600' }}>{option.label}</Text>
               </Pressable>
             );
           })}
         </View>
+        {fontsLocked ? <PlanNotice message="Tu plan actual sólo incluye la tipografía básica." /> : null}
       </Section>
 
       <Section title="Imágenes del menú" description="La foto del negocio te identifica; la portada encabeza el menú que ven tus clientes.">
@@ -243,19 +261,25 @@ export default function TemplateScreen() {
         <BusinessPhotoField quality={quality} onError={setError} />
         <View style={{ gap: 9 }}>
           <Text style={{ color: appTheme.text, fontSize: 13, fontWeight: '700' }}>Portada del menú</Text>
-          <ImageField title="portada" emptyText="Sin portada" source={cover} quality={quality} onPicked={pickCover} onRemove={dropCover} onError={setError} note="Se muestra arriba del menú. Se guarda al tocar «Guardar»." />
+          {coverLocked
+            ? <PlanNotice message="Tu plan actual no incluye portada en el menú." />
+            : <ImageField title="portada" emptyText="Sin portada" source={cover} quality={quality} onPicked={pickCover} onRemove={dropCover} onError={setError} note="Se muestra arriba del menú. Se guarda al tocar «Guardar»." />}
         </View>
-        {([['show_cover', 'Mostrar portada'], ['show_product_images', 'Mostrar imágenes de productos']] as const).map(([field, label]) => (
-          <View key={field} style={{ minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <Text style={{ color: appTheme.text, fontWeight: '700', fontSize: 14 }}>{label}</Text>
-            <Switch value={draft.theme[field]} onValueChange={(value) => updateTheme(field, value)} trackColor={{ true: appTheme.yellowPressed }} />
-          </View>
-        ))}
+        {([['show_cover', 'Mostrar portada'], ['show_product_images', 'Mostrar imágenes de productos']] as const).map(([field, label]) => {
+          const locked = field === 'show_cover' ? coverLocked : productImagesLocked;
+          return (
+            <View key={field} style={{ minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, opacity: locked ? 0.5 : 1 }}>
+              <Text style={{ color: appTheme.text, fontWeight: '700', fontSize: 14 }}>{label}</Text>
+              <Switch value={draft.theme[field]} disabled={locked} onValueChange={(value) => updateTheme(field, value)} trackColor={{ true: appTheme.yellowPressed }} />
+            </View>
+          );
+        })}
       </Section>
 
       <Section title="Fondo del menú" description="La imagen queda detrás del contenido y no reemplaza la portada.">
-        <ImageField title="fondo" emptyText="Sin imagen de fondo" source={background} quality={quality} onPicked={pickBackground} onRemove={dropBackground} onError={setError} note="Baja la opacidad para que el texto siga leyéndose." />
-        <Slider label="Opacidad del fondo" value={draft.theme.background_opacity} onChange={(value) => updateTheme('background_opacity', value)} />
+        {backgroundLocked ? <PlanNotice message="Tu plan actual no incluye imagen de fondo en el menú." /> : null}
+        <ImageField title="fondo" emptyText="Sin imagen de fondo" source={background} quality={quality} onPicked={pickBackground} onRemove={dropBackground} onError={setError} disabled={backgroundLocked} note="Baja la opacidad para que el texto siga leyéndose." />
+        <Slider label="Opacidad del fondo" value={draft.theme.background_opacity} disabled={backgroundLocked} onChange={(value) => updateTheme('background_opacity', value)} />
       </Section>
 
       <Button loading={saving} disabled={!dirty} onPress={save}>Guardar personalización</Button>

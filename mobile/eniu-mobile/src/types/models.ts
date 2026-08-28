@@ -1,3 +1,29 @@
+export type PlanLimits = {
+  max_businesses: number | null;
+  max_catalogues_per_business: number | null;
+  max_products_per_catalogue: number | null;
+  /** null significa que el plan no restringe la lista. */
+  template_keys: string[] | null;
+  font_keys: string[] | null;
+  allow_cover: boolean;
+  allow_background: boolean;
+  allow_product_images: boolean;
+  allow_analytics: boolean;
+  allow_splash: boolean;
+  show_eniu_badge: boolean;
+};
+
+export type Plan = {
+  key: string;
+  name: string;
+  status: string;
+  has_access: boolean;
+  cancel_at_period_end: boolean;
+  current_period_end?: string | null;
+  effective_key: string;
+  limits: PlanLimits;
+};
+
 export type User = {
   id: string;
   name?: string | null;
@@ -6,6 +32,7 @@ export type User = {
   phone_number?: string | null;
   profile_picture?: string | null;
   auth_methods?: { password?: boolean; google?: boolean };
+  plan?: Plan;
 };
 
 export type Business = {
