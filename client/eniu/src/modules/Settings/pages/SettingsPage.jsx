@@ -16,7 +16,12 @@ const TABS = [
 ];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("profile");
+  // Permite enlazar directo a una pestaña, por ejemplo desde el candado de una
+  // función que el plan no incluye.
+  const [activeTab, setActiveTab] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    return TABS.some((tab) => tab.id === requested) ? requested : "profile";
+  });
   const { user, setUser, logout } = useAuth();
   const { selectedBusiness, updateBusiness, isLoadingBusinesses } = useBusiness();
   const navigate = useNavigate();

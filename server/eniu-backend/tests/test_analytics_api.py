@@ -11,6 +11,7 @@ from app.modules.catalogue.model import Catalogue
 from app.modules.category.model import Category
 from app.modules.products.model import Product
 from app.modules.users.model import User
+from tests.plan_helpers import grant_plan
 
 
 class AnalyticsApiTestCase(unittest.TestCase):
@@ -45,6 +46,7 @@ class AnalyticsApiTestCase(unittest.TestCase):
             product = Product(name="Latte", catalogue_id=catalogue.id, category_id=category.id, price=55)
             other_product = Product(name="Taco", catalogue_id=second.id, category_id=other_category.id)
             db.session.add_all([product, other_product]); db.session.commit()
+            grant_plan(owner.id); grant_plan(outsider.id)
             self.owner_token = create_access_token(identity=str(owner.id)); self.outsider_token = create_access_token(identity=str(outsider.id))
             self.business_id = str(business.id); self.foreign_business_id = str(foreign_business.id)
             self.catalogue_id = str(catalogue.id); self.second_catalogue_id = str(second.id); self.foreign_catalogue_id = str(foreign.id)

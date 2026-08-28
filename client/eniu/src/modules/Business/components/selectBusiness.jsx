@@ -4,9 +4,11 @@ import {
   Building2,
   Check,
   ChevronDown,
+  Lock,
   Plus,
 } from "lucide-react";
 
+import { usePlan } from "../../auth/hooks/usePlan";
 import { useBusiness } from "../services/useBusiness";
 
 function resolvePhotoUrl(photoUrl) {
@@ -41,6 +43,7 @@ function BusinessAvatar({ business, className, iconSize = 18 }) {
 
 export default function BusinessSelector({ onCreateBusiness }) {
   const [isOpen, setIsOpen] = useState(false);
+  const { limits, isWithin } = usePlan();
   const dropdownRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -186,14 +189,21 @@ export default function BusinessSelector({ onCreateBusiness }) {
 
           <div className="my-1 border-t border-[#444444]" />
 
-          <button
-            type="button"
-            onClick={handleCreateBusiness}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-[#FFE05A] transition hover:bg-[#3A3A3A] cursor-pointer"
-          >
-            <Plus size={16} />
-            Crear otro negocio
-          </button>
+          {isWithin(businesses.length, limits.max_businesses) ? (
+            <button
+              type="button"
+              onClick={handleCreateBusiness}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-[#FFE05A] transition hover:bg-[#3A3A3A] cursor-pointer"
+            >
+              <Plus size={16} />
+              Crear otro negocio
+            </button>
+          ) : (
+            <p className="flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#AAAAAA]">
+              <Lock size={16} className="mt-0.5 shrink-0" />
+              Tu plan actual permite {limits.max_businesses === 1 ? "un negocio" : `${limits.max_businesses} negocios`}.
+            </p>
+          )}
         </div>
       )}
     </div>

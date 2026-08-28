@@ -24,6 +24,7 @@ export function adaptPublicMenu(menu) {
   const configuration = normalizeConfiguration({
     template_key: menu?.template?.key,
     theme: menu?.template?.theme,
+    splash: menu?.splash,
   });
   return {
     business: menu?.business || { name: "", description: null },
@@ -32,6 +33,8 @@ export function adaptPublicMenu(menu) {
     products: [...categorizedProducts, ...uncategorizedProducts],
     templateKey: configuration.template_key,
     theme: configuration.theme,
+    showEniuBadge: Boolean(menu?.branding?.show_eniu_badge),
+    splash: configuration.splash,
     coverUrl: configuration.theme.cover_image_url,
     backgroundUrl: configuration.theme.background_image_url,
   };

@@ -10,6 +10,8 @@ from app.extensions import bcrypt
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 from app.modules.users.model import User
+from tests.plan_helpers import grant_plan
+from tests.token_helpers import tamper_signature
 
 
 class SecurityAuditTestCase(unittest.TestCase):
@@ -42,6 +44,8 @@ class SecurityAuditTestCase(unittest.TestCase):
             foreign_catalogue = Catalogue(name="Privado", business_id=foreign_business.id)
             db.session.add_all([owned_catalogue, foreign_catalogue])
             db.session.commit()
+            grant_plan(owner.id)
+            grant_plan(outsider.id)
             self.owner_token = create_access_token(identity=str(owner.id))
             self.outsider_token = create_access_token(identity=str(outsider.id))
             self.business_id = str(owned_business.id)
@@ -109,8 +113,7 @@ class SecurityAuditTestCase(unittest.TestCase):
         url = f"/api/businesses/{self.business_id}/catalogues"
         self.assertEqual(self.client.get(url).status_code, 401)
         self.assertEqual(self.client.get(url, headers=self.headers("not-a-jwt")).status_code, 401)
-        tampered = self.owner_token[:-1] + ("a" if self.owner_token[-1] != "a" else "b")
-        self.assertEqual(self.client.get(url, headers=self.headers(tampered)).status_code, 401)
+        self.assertEqual(self.client.get(url, headers=self.headers(tamper_signature(self.owner_token))).status_code, 401)
         self.assertEqual(
             self.client.get(url, headers=self.headers(self.outsider_token)).status_code,
             403,

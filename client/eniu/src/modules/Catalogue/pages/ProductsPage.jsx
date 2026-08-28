@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Image, PackageOpen, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Link, useParams } from "react-router";
 
+import PlanBadge from "../../auth/components/PlanBadge";
+import { usePlan } from "../../auth/hooks/usePlan";
 import { useBusiness } from "../../Business/services/useBusiness";
 import DeleteContentModal from "../components/DeleteContentModal";
 import ProductFormModal from "../components/ProductFormModal";
@@ -25,6 +27,8 @@ export default function ProductsPage() {
   const { list: listCategories } = useCategoryService(businessId, catalogueId);
   const { getOne } = useCatalogueService(businessId, catalogueId);
   const [products, setProducts] = useState([]);
+  const { limits, isWithin } = usePlan();
+  const atProductLimit = !isWithin(products.length, limits.max_products_per_catalogue);
   const [categories, setCategories] = useState([]);
   const [catalogue, setCatalogue] = useState(null);
   const [filter, setFilter] = useState(ALL);
@@ -108,7 +112,7 @@ export default function ProductsPage() {
       </div>
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-sm font-semibold text-[#8A7420]">{catalogue?.name || "Menú"}</p><h1 className="mt-1 text-3xl font-bold">Productos</h1><p className="mt-1 text-sm text-[#666666]">Administra todos los productos del menú.</p></div>
-        <button type="button" onClick={() => setIsCreating(true)} disabled={isLoading || Boolean(loadError)} className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"><Plus size={18} /> Crear producto</button>
+        <div className="flex flex-wrap items-center gap-2">{atProductLimit && <PlanBadge label="Productos ilimitados en Esencial" />}<button type="button" onClick={() => setIsCreating(true)} disabled={isLoading || Boolean(loadError) || atProductLimit} title={atProductLimit ? `Tu plan actual permite hasta ${limits.max_products_per_catalogue} productos por menú.` : undefined} className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"><Plus size={18} /> Crear producto</button></div>
       </header>
       {success && <p role="status" className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">{success}</p>}
 

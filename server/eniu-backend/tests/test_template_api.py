@@ -15,6 +15,7 @@ from app.modules.category.model import Category
 from app.modules.products.model import Product
 from app.modules.template.model import CatalogueTemplate
 from app.modules.users.model import User
+from tests.plan_helpers import grant_plan
 
 JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"cover-one"
 WEBP_BYTES = b"RIFF\x08\x00\x00\x00WEBP" + b"background-one"
@@ -56,6 +57,8 @@ class TemplateApiTestCase(unittest.TestCase):
             product = Product(name="Agua", catalogue_id=first.id, price=20)
             db.session.add_all([category, product])
             db.session.commit()
+            grant_plan(owner.id)
+            grant_plan(outsider.id)
             self.owner_token = create_access_token(identity=str(owner.id))
             self.outsider_token = create_access_token(identity=str(outsider.id))
             self.business_id = str(business.id)

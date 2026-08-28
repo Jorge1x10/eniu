@@ -22,6 +22,9 @@ class CatalogueTemplate(BaseModel):
     cover_filename = db.Column(db.String(255), nullable=True)
     background_filename = db.Column(db.String(255), nullable=True)
     background_opacity = db.Column(db.Float, nullable=False, default=0.2, server_default="0.2")
+    splash_enabled = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    splash_filename = db.Column(db.String(255), nullable=True)
+    splash_duration = db.Column(db.Float, nullable=False, default=2.5, server_default="2.5")
 
     catalogue = db.relationship("Catalogue", back_populates="template_config")
 
@@ -50,5 +53,13 @@ class CatalogueTemplate(BaseModel):
                     if self.background_filename else None
                 ),
                 "background_opacity": self.background_opacity,
+            },
+            "splash": {
+                "enabled": self.splash_enabled,
+                "duration": self.splash_duration,
+                "image_url": (
+                    f"/api/catalogues/{self.catalogue_id}/splash"
+                    if self.splash_filename else None
+                ),
             },
         }

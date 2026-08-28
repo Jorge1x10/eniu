@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.database.db import db
 from app.modules.analytics.model import AnalyticsEvent
+from app.modules.billing.guards import ensure_analytics_access
 from app.modules.analytics.security import protected_value, secure_equal, tracking_key
 from app.modules.catalogue.model import Catalogue
 from app.modules.catalogue.services import catalogue_access
@@ -221,6 +222,9 @@ def get_analytics(owner_id, business_id, catalogue_id, args):
         catalogue, error = catalogue_access(owner_id, business_id, catalogue_id)
         if error:
             return error
+        blocked = ensure_analytics_access(owner_id)
+        if blocked:
+            return blocked
         zone, timezone_name, start_date, end_date, start_utc, end_utc, previous_start, previous_end, previous_start_utc = _parse_period(args)
         current = _count_summary(catalogue.id, start_utc, end_utc)
         previous = _count_summary(catalogue.id, previous_start_utc, start_utc)

@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import AnalitycsPage from "./AnalitycsPage";
 
-const mocks = vi.hoisted(() => ({ getAnalytics: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getAnalytics: vi.fn(), allowAnalytics: true }));
 vi.mock("../services/analyticsService", () => ({ useAnalyticsService: () => mocks.getAnalytics }));
+// El plan se simula para no montar toda la sesión: la página sólo consulta si lo incluye.
+vi.mock("../../auth/hooks/usePlan", () => ({ usePlan: () => ({ limits: { allow_analytics: mocks.allowAnalytics } }) }));
 
 const metric = (value, previous = 0, change = "new", percentage = null) => ({ value, previous_value: previous, percentage_change: percentage, change_status: change });
 const data = {
@@ -20,7 +22,14 @@ const data = {
 function renderPage() { return render(<MemoryRouter initialEntries={["/dashboard/businesses/business-1/catalogues/catalogue-1/analytics"]}><Routes><Route path="/dashboard/businesses/:businessId/catalogues/:catalogueId/analytics" element={<AnalitycsPage />} /></Routes></MemoryRouter>); }
 
 describe("AnalitycsPage", () => {
-  beforeEach(() => mocks.getAnalytics.mockReset());
+  beforeEach(() => { mocks.getAnalytics.mockReset(); mocks.allowAnalytics = true; });
+
+  it("bloquea las analíticas cuando el plan no las incluye y no consulta al backend", async () => {
+    mocks.allowAnalytics = false; renderPage();
+    expect(await screen.findByText("Tu plan actual no incluye analíticas")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Incluido en Esencial/ })).toBeInTheDocument();
+    expect(mocks.getAnalytics).not.toHaveBeenCalled();
+  });
 
   it("muestra carga y resultados agregados sin Infinity", async () => {
     mocks.getAnalytics.mockResolvedValue({ ok: true, data }); renderPage();

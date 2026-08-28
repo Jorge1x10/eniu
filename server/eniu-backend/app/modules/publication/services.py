@@ -118,6 +118,13 @@ def get_public_background(public_slug):
     return catalogue.template_config.background_filename
 
 
+def get_public_splash(public_slug):
+    catalogue = Catalogue.query.filter_by(public_slug=public_slug, is_published=True).first()
+    if not catalogue or not catalogue.template_config:
+        return None
+    return catalogue.template_config.splash_filename
+
+
 def get_public_product_image(public_slug, section_index, product_index):
     catalogue = Catalogue.query.filter_by(public_slug=public_slug, is_published=True).first()
     if not catalogue:

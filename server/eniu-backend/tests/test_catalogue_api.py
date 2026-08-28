@@ -8,6 +8,7 @@ from app.database.db import db
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 from app.modules.users.model import User
+from tests.plan_helpers import grant_plan
 
 
 class CatalogueApiTestCase(unittest.TestCase):
@@ -34,6 +35,9 @@ class CatalogueApiTestCase(unittest.TestCase):
             other_business = Business(name="Otro negocio", owner_id=outsider.id)
             db.session.add_all([business, other_business])
             db.session.commit()
+
+            grant_plan(owner.id)
+            grant_plan(outsider.id)
 
             self.owner_id = str(owner.id)
             self.outsider_id = str(outsider.id)

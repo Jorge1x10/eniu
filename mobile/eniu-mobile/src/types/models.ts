@@ -1,3 +1,29 @@
+export type PlanLimits = {
+  max_businesses: number | null;
+  max_catalogues_per_business: number | null;
+  max_products_per_catalogue: number | null;
+  /** null significa que el plan no restringe la lista. */
+  template_keys: string[] | null;
+  font_keys: string[] | null;
+  allow_cover: boolean;
+  allow_background: boolean;
+  allow_product_images: boolean;
+  allow_analytics: boolean;
+  allow_splash: boolean;
+  show_eniu_badge: boolean;
+};
+
+export type Plan = {
+  key: string;
+  name: string;
+  status: string;
+  has_access: boolean;
+  cancel_at_period_end: boolean;
+  current_period_end?: string | null;
+  effective_key: string;
+  limits: PlanLimits;
+};
+
 export type User = {
   id: string;
   name?: string | null;
@@ -6,6 +32,7 @@ export type User = {
   phone_number?: string | null;
   profile_picture?: string | null;
   auth_methods?: { password?: boolean; google?: boolean };
+  plan?: Plan;
 };
 
 export type Business = {
@@ -17,6 +44,7 @@ export type Business = {
   address?: string | null;
   currency?: string;
   timezone?: string;
+  photo_url?: string | null;
 };
 
 export type Catalogue = {
@@ -44,6 +72,38 @@ export type Product = {
   category_id?: string | null;
   category?: Category | null;
 };
+
+export const TEMPLATE_KEYS = ['modern', 'minimal', 'elegant', 'bistro', 'bold', 'natural', 'retro', 'luxury'] as const;
+export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
+
+export const FONT_KEYS = ['inter', 'poppins', 'montserrat', 'playfair', 'lora'] as const;
+export type FontKey = (typeof FONT_KEYS)[number];
+
+/** Colores editables del menú; el resto del tema no se puede enviar al PATCH. */
+export type ThemeColor = 'background_color' | 'primary_color' | 'accent_color' | 'text_color';
+
+export type MenuTheme = {
+  background_color: string;
+  primary_color: string;
+  accent_color: string;
+  text_color: string;
+  font_key: FontKey;
+  show_cover: boolean;
+  show_product_images: boolean;
+  background_opacity: number;
+  /** Rutas relativas que sirve la API; sólo de lectura, no se envían de vuelta. */
+  cover_image_url?: string | null;
+  background_image_url?: string | null;
+};
+
+export type MenuSplash = {
+  enabled: boolean;
+  /** Segundos que la bienvenida tapa el menú antes de desvanecerse. */
+  duration: number;
+  image_url?: string | null;
+};
+
+export type TemplateConfig = { template_key: TemplateKey; theme: MenuTheme; splash: MenuSplash };
 
 export type Analytics = {
   summary?: { menu_views?: { value?: number } };

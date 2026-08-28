@@ -11,6 +11,14 @@ export const DEFAULT_THEME = Object.freeze({
   background_opacity: 0.2,
 });
 
+export const DEFAULT_SPLASH = Object.freeze({
+  enabled: false,
+  duration: 2.5,
+  image_url: null,
+});
+
+export const SPLASH_RANGE = Object.freeze({ min: 1, max: 4, step: 0.5 });
+
 export const DEFAULT_TEMPLATE = "modern";
 
 export const FONT_REGISTRY = Object.freeze({
@@ -28,5 +36,6 @@ export function normalizeConfiguration(configuration) {
   return {
     template_key: templateKey,
     theme: { ...DEFAULT_THEME, ...(configuration?.theme || {}) },
+    splash: { ...DEFAULT_SPLASH, ...(configuration?.splash || {}) },
   };
 }
