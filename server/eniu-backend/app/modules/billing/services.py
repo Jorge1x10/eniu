@@ -249,6 +249,18 @@ def _sync_subscription(subscription, fallback_user_id=None):
             apply_free_plan_state(owner)
 
 
+def _plain(value):
+    """Convierte un objeto del SDK de Stripe en un diccionario de Python.
+
+    Desde stripe 15, `StripeObject` dejó de heredar de `dict`: no tiene `.get()`
+    y cualquier intento de usarlo como diccionario revienta con
+    `KeyError: 'get'`. Todo el manejo del webhook está escrito sobre `.get()`
+    encadenado, así que se convierte una vez en la frontera y el resto sigue
+    siendo código sobre diccionarios normales.
+    """
+    return value.to_dict() if hasattr(value, "to_dict") else value
+
+
 def _invoice_subscription_id(invoice):
     return invoice.get("subscription") or (
         invoice.get("parent", {}).get("subscription_details", {}).get("subscription")
@@ -260,7 +272,9 @@ def process_webhook(payload, signature):
         return {"message": "Stripe no está configurado"}, 503
     _configure_stripe()
     try:
-        event = stripe.Webhook.construct_event(payload, signature, current_app.config["STRIPE_WEBHOOK_SECRET"])
+        event = _plain(
+            stripe.Webhook.construct_event(payload, signature, current_app.config["STRIPE_WEBHOOK_SECRET"])
+        )
     except (ValueError, stripe.SignatureVerificationError):
         return {"message": "Webhook inválido"}, 400
 
@@ -274,13 +288,13 @@ def process_webhook(payload, signature):
         if event_type == "checkout.session.completed":
             subscription_id = data_object.get("subscription")
             if subscription_id:
-                _sync_subscription(stripe.Subscription.retrieve(subscription_id), data_object.get("client_reference_id"))
+                _sync_subscription(_plain(stripe.Subscription.retrieve(subscription_id)), data_object.get("client_reference_id"))
         elif event_type in {"customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"}:
             _sync_subscription(data_object)
         elif event_type in {"invoice.paid", "invoice.payment_failed"}:
             subscription_id = _invoice_subscription_id(data_object)
             if subscription_id:
-                _sync_subscription(stripe.Subscription.retrieve(subscription_id))
+                _sync_subscription(_plain(stripe.Subscription.retrieve(subscription_id)))
 
         db.session.add(StripeWebhookEvent(event_id=event_id, event_type=event_type))
         db.session.commit()
