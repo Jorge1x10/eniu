@@ -6,6 +6,8 @@ from flask_jwt_extended import create_access_token
 
 from app import create_app
 from app.database.db import db
+from stripe._stripe_object import StripeObject
+
 from app.modules.billing.model import BillingSubscription, StripeWebhookEvent
 from app.modules.users.model import User
 
@@ -116,7 +118,10 @@ class BillingApiTestCase(unittest.TestCase):
                 "items": {"data": [{"price": {"id": "price_essential"}}]},
             }},
         }
-        with patch("app.modules.billing.services.stripe.Webhook.construct_event", return_value=event) as verify:
+        # Se simula con el tipo real del SDK, no con un diccionario: `StripeObject`
+        # no tiene `.get()`, y con un diccionario esta prueba pasaba mientras
+        # producción respondía 500 en cada entrega.
+        with patch("app.modules.billing.services.stripe.Webhook.construct_event", return_value=StripeObject.construct_from(event, "sk_test")) as verify:
             first = self.client.post("/api/billing/webhook", data=b"signed-body", headers={"Stripe-Signature": "signed"})
             second = self.client.post("/api/billing/webhook", data=b"signed-body", headers={"Stripe-Signature": "signed"})
         self.assertEqual(first.status_code, 200)
