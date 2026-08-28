@@ -166,7 +166,9 @@ def apply_free_plan_state(user):
     businesses = (
         Business.query
         .filter_by(owner_id=user.id)
-        .order_by(Business.created_at.desc())
+        # El desempate por id evita que dos negocios creados en el mismo
+        # instante hagan que "el más reciente" cambie entre consultas.
+        .order_by(Business.created_at.desc(), Business.id.desc())
         .all()
     )
     if not businesses:

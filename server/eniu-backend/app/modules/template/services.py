@@ -23,6 +23,12 @@ THEME_FIELDS = {
     "background_color", "primary_color", "accent_color", "text_color",
     "font_key", "show_cover", "show_product_images", "background_opacity",
 }
+# La pantalla de bienvenida del menú público. La duración se acota para que
+# nadie deje a sus comensales cinco segundos mirando un logo.
+SPLASH_FIELDS = {"enabled", "duration"}
+MIN_SPLASH_SECONDS = 1.0
+MAX_SPLASH_SECONDS = 4.0
+DEFAULT_SPLASH = {"enabled": False, "duration": 2.5, "image_url": None}
 DEFAULT_THEME = {
     "background_color": "#FFFDF5",
     "primary_color": "#FFE05A",
@@ -42,7 +48,7 @@ HEX_PATTERN = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 
 def default_configuration():
-    return {"template_key": "modern", "theme": dict(DEFAULT_THEME)}
+    return {"template_key": "modern", "theme": dict(DEFAULT_THEME), "splash": dict(DEFAULT_SPLASH)}
 
 
 def _normalize_hex(value):
@@ -98,6 +104,27 @@ def _validate_theme(theme, current):
     return normalized
 
 
+def _validate_splash(splash, current):
+    if not isinstance(splash, dict):
+        raise ValueError("La pantalla de bienvenida no es válida")
+    unknown = set(splash) - SPLASH_FIELDS
+    if unknown:
+        raise ValueError(f"Campos de bienvenida no permitidos: {', '.join(sorted(unknown))}")
+    normalized = {"enabled": current["enabled"], "duration": current["duration"]}
+    if "enabled" in splash:
+        if not isinstance(splash["enabled"], bool):
+            raise ValueError("enabled debe ser verdadero o falso")
+        normalized["enabled"] = splash["enabled"]
+    if "duration" in splash:
+        value = splash["duration"]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError("La duración de la bienvenida debe ser un número")
+        if value < MIN_SPLASH_SECONDS or value > MAX_SPLASH_SECONDS:
+            raise ValueError(f"La duración de la bienvenida debe estar entre {MIN_SPLASH_SECONDS:g} y {MAX_SPLASH_SECONDS:g} segundos")
+        normalized["duration"] = round(float(value), 1)
+    return normalized
+
+
 def _image_size(image):
     position = image.stream.tell()
     image.stream.seek(0, 2)
@@ -145,6 +172,12 @@ def _delete_background(filename):
     storage.delete_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], filename)
 
 
+def _delete_splash(filename):
+    if not filename:
+        return
+    storage.delete_file(current_app.config["CATALOGUE_SPLASH_FOLDER"], filename)
+
+
 def get_template(owner_id, business_id, catalogue_id):
     try:
         catalogue, error = catalogue_access(owner_id, business_id, catalogue_id)
@@ -157,22 +190,25 @@ def get_template(owner_id, business_id, catalogue_id):
         return {"message": "No fue posible consultar la plantilla"}, 500
 
 
-def update_template(owner_id, business_id, catalogue_id, data, cover=None, background=None):
+def update_template(owner_id, business_id, catalogue_id, data, cover=None, background=None, splash=None):
     new_filename = None
     new_background_filename = None
+    new_splash_filename = None
     try:
         catalogue, error = catalogue_access(owner_id, business_id, catalogue_id)
         if error:
             return error
         if not isinstance(data, dict):
             return {"message": "La configuración no es válida"}, 400
-        unknown = set(data) - {"template_key", "theme", "remove_cover", "remove_background"}
+        unknown = set(data) - {"template_key", "theme", "splash", "remove_cover", "remove_background", "remove_splash"}
         if unknown:
             return {"message": f"Campos no permitidos: {', '.join(sorted(unknown))}"}, 400
         if "remove_cover" in data and not isinstance(data["remove_cover"], bool):
             return {"message": "remove_cover debe ser verdadero o falso"}, 400
         if "remove_background" in data and not isinstance(data["remove_background"], bool):
             return {"message": "remove_background debe ser verdadero o falso"}, 400
+        if "remove_splash" in data and not isinstance(data["remove_splash"], bool):
+            return {"message": "remove_splash debe ser verdadero o falso"}, 400
 
         config = CatalogueTemplate.query.filter_by(catalogue_id=catalogue.id).first()
         current = config.to_dict() if config else default_configuration()
@@ -185,19 +221,25 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
             theme=data.get("theme"),
             cover_upload=bool(cover and cover.filename),
             background_upload=bool(background and background.filename),
+            splash=data.get("splash"),
+            splash_upload=bool(splash and splash.filename),
         )
         if blocked:
             return blocked
         theme = _validate_theme(data.get("theme", {}), current["theme"])
+        splash_config = _validate_splash(data.get("splash", {}), current.get("splash", DEFAULT_SPLASH))
 
         if not config:
             config = CatalogueTemplate(catalogue_id=catalogue.id)
             db.session.add(config)
         old_filename = config.cover_filename
         old_background_filename = config.background_filename
+        old_splash_filename = config.splash_filename
         config.template_key = template_key
         for field in THEME_FIELDS:
             setattr(config, field, theme[field])
+        config.splash_enabled = splash_config["enabled"]
+        config.splash_duration = splash_config["duration"]
 
         if cover and cover.filename:
             extension = _validate_image(cover, "La portada")
@@ -215,26 +257,39 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         elif data.get("remove_background") is True:
             config.background_filename = None
 
+        if splash and splash.filename:
+            extension = _validate_image(splash, "La pantalla de bienvenida")
+            new_splash_filename = f"{uuid4().hex}.{extension}"
+            storage.save_file(current_app.config["CATALOGUE_SPLASH_FOLDER"], new_splash_filename, splash)
+            config.splash_filename = new_splash_filename
+        elif data.get("remove_splash") is True:
+            config.splash_filename = None
+
         db.session.commit()
         if old_filename != config.cover_filename:
             _delete_cover(old_filename)
         if old_background_filename != config.background_filename:
             _delete_background(old_background_filename)
+        if old_splash_filename != config.splash_filename:
+            _delete_splash(old_splash_filename)
         return {"message": "Plantilla actualizada correctamente", "template": config.to_dict()}, 200
     except ValueError as error:
         db.session.rollback()
         _delete_cover(new_filename)
         _delete_background(new_background_filename)
+        _delete_splash(new_splash_filename)
         return {"message": str(error)}, 400
     except IntegrityError:
         db.session.rollback()
         _delete_cover(new_filename)
         _delete_background(new_background_filename)
+        _delete_splash(new_splash_filename)
         return {"message": "No fue posible guardar la plantilla"}, 409
     except SQLAlchemyError as error:
         db.session.rollback()
         _delete_cover(new_filename)
         _delete_background(new_background_filename)
+        _delete_splash(new_splash_filename)
         current_app.logger.exception(error)
         return {"message": "No fue posible guardar la plantilla"}, 500
 
@@ -257,6 +312,10 @@ def _get_private_asset(owner_id, catalogue_id, field):
 
 def get_cover(owner_id, catalogue_id):
     return _get_private_asset(owner_id, catalogue_id, "cover_filename")
+
+
+def get_splash(owner_id, catalogue_id):
+    return _get_private_asset(owner_id, catalogue_id, "splash_filename")
 
 
 def get_background(owner_id, catalogue_id):

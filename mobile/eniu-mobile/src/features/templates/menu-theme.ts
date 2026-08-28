@@ -1,6 +1,11 @@
 import { Platform } from 'react-native';
 
-import { FONT_KEYS, TEMPLATE_KEYS, type FontKey, type MenuTheme, type TemplateConfig, type TemplateKey, type ThemeColor } from '@/types/models';
+import { FONT_KEYS, TEMPLATE_KEYS, type FontKey, type MenuSplash, type MenuTheme, type TemplateConfig, type TemplateKey, type ThemeColor } from '@/types/models';
+
+export const DEFAULT_SPLASH: MenuSplash = { enabled: false, duration: 2.5, image_url: null };
+
+/** El backend acota la duración a este rango; la app no ofrece más. */
+export const SPLASH_RANGE = { min: 1, max: 4, step: 0.5 };
 
 export const DEFAULT_THEME: MenuTheme = {
   background_color: '#FFFDF5',
@@ -102,7 +107,13 @@ export function normalizeConfiguration(configuration?: Partial<TemplateConfig> |
   const templateKey = TEMPLATE_KEYS.includes(configuration?.template_key as TemplateKey) ? configuration!.template_key! : 'modern';
   const theme = { ...DEFAULT_THEME, ...(configuration?.theme ?? {}) };
   if (!FONT_KEYS.includes(theme.font_key)) theme.font_key = 'inter';
-  return { template_key: templateKey, theme };
+  const splash = { ...DEFAULT_SPLASH, ...(configuration?.splash ?? {}) };
+  return { template_key: templateKey, theme, splash };
+}
+
+/** Sólo los campos que el PATCH acepta: la URL de la bienvenida es de lectura. */
+export function splashPayload(splash: MenuSplash) {
+  return { enabled: splash.enabled, duration: splash.duration };
 }
 
 /** Sólo los campos que el PATCH acepta: las URLs de portada y fondo son de lectura. */

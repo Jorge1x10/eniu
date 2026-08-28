@@ -130,6 +130,13 @@ def plan_payload(plan_key, effective_key=None, status="inactive", has_access=Fal
 DEFAULT_BACKGROUND_OPACITY = 0.2
 
 
+def sanitize_public_splash(plan_key, splash):
+    """Apaga la pantalla de bienvenida en los planes que no la incluyen."""
+    if limits_for(plan_key)["allow_splash"]:
+        return dict(splash)
+    return {**splash, "enabled": False, "image_url": None}
+
+
 def sanitize_public_theme(plan_key, template_key, theme):
     """Ajusta la plantilla de un menú público a lo que el plan permite.
 

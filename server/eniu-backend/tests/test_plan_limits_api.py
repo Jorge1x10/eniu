@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timezone
 from uuid import UUID
 
 from flask_jwt_extended import create_access_token
@@ -154,6 +155,40 @@ class PlanLimitsApiTestCase(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_splash_screen_is_reserved_for_paid_plans(self):
+        blocked = self.client.patch(
+            self.template_url(self.free_business_id, self.free_catalogue_id),
+            json={"splash": {"enabled": True}},
+            headers=self.headers(self.free_token),
+        )
+        self.assertEqual(blocked.status_code, 403)
+        self.assertEqual(blocked.get_json()["code"], "plan_limit")
+
+        allowed = self.client.patch(
+            self.template_url(self.paid_business_id, self.paid_catalogue_id),
+            json={"splash": {"enabled": True, "duration": 3}},
+            headers=self.headers(self.paid_token),
+        )
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(allowed.get_json()["template"]["splash"], {"enabled": True, "duration": 3.0, "image_url": None})
+
+    def test_free_plan_can_still_save_while_the_client_sends_the_splash_block(self):
+        # Los clientes mandan `splash` en cada guardado; recibirlo apagado no
+        # puede impedir que un usuario gratuito cambie sus colores.
+        response = self.client.patch(
+            self.template_url(self.free_business_id, self.free_catalogue_id),
+            json={"theme": {"primary_color": "#FFD166"}, "splash": {"enabled": False, "duration": 2.5}},
+            headers=self.headers(self.free_token),
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_splash_duration_stays_within_a_sane_range(self):
+        url = self.template_url(self.paid_business_id, self.paid_catalogue_id)
+        for duration in (0.5, 9):
+            with self.subTest(duration=duration):
+                response = self.client.patch(url, json={"splash": {"duration": duration}}, headers=self.headers(self.paid_token))
+                self.assertEqual(response.status_code, 400)
+
     # --- menu publico --------------------------------------------------------
 
     def test_public_menu_falls_back_to_the_basic_design_on_the_free_plan(self):
@@ -167,10 +202,12 @@ class PlanLimitsApiTestCase(unittest.TestCase):
                 font_key="playfair",
                 show_cover=True,
                 cover_filename="portada.png",
+                splash_enabled=True,
             ))
             db.session.commit()
 
         menu = self.client.get("/api/public/menus/cafe-gratuito").get_json()["menu"]
+        self.assertFalse(menu["splash"]["enabled"])
         self.assertEqual(menu["template"]["key"], "modern")
         self.assertEqual(menu["template"]["theme"]["font_key"], "inter")
         self.assertFalse(menu["template"]["theme"]["show_cover"])
@@ -199,7 +236,8 @@ class PlanLimitsApiTestCase(unittest.TestCase):
     def test_downgrade_unpublishes_everything_and_keeps_only_the_last_business(self):
         with self.app.app_context():
             owner = db.session.get(User, self.free_user_id)
-            newest = Business(name="El mas reciente", owner_id=owner.id)
+            # Fecha explícita: el orden de creación es justo lo que se prueba.
+            newest = Business(name="El mas reciente", owner_id=owner.id, created_at=datetime(2030, 1, 1, tzinfo=timezone.utc))
             db.session.add(newest)
             db.session.flush()
             newest_catalogue = Catalogue(

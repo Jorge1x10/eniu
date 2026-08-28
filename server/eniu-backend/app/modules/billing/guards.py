@@ -84,7 +84,7 @@ def ensure_analytics_access(owner_id):
 
 
 def ensure_template_allowed(owner_id, template_key=None, theme=None, cover_upload=False,
-                            background_upload=False):
+                            background_upload=False, splash=None, splash_upload=False):
     """Valida los cambios de plantilla que el plan permite.
 
     Sólo se revisan los campos que el cliente mandó, no el tema ya guardado:
@@ -113,6 +113,14 @@ def ensure_template_allowed(owner_id, template_key=None, theme=None, cover_uploa
             return _blocked("Tu plan actual no incluye imagen de fondo en el menú.")
         if "background_opacity" in theme:
             return _blocked("Tu plan actual no incluye la personalización del fondo.")
+
+    # Los clientes mandan el bloque de bienvenida en cada guardado, así que sólo
+    # se bloquea encenderla o subirle imagen: recibirla apagada no es un intento
+    # de usar la función y no debe impedir guardar un cambio de color.
+    if not limits["allow_splash"]:
+        requested = splash if isinstance(splash, dict) else {}
+        if splash_upload or requested.get("enabled") is True:
+            return _blocked("Tu plan actual no incluye la pantalla de bienvenida del menú.")
 
     return None
 

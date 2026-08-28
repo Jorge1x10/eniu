@@ -111,3 +111,8 @@ class Config:
         "uploads",
         "catalogue-backgrounds"
     )
+    CATALOGUE_SPLASH_FOLDER = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "uploads",
+        "catalogue-splashes"
+    )

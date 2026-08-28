@@ -18,11 +18,11 @@ import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
 import { getCatalogue } from '@/features/catalogues/catalogue-api';
 import { MenuPreview } from '@/features/templates/menu-preview';
-import { COLOR_FIELDS, FONT_OPTIONS, TEMPLATE_OPTIONS, normalizeConfiguration, themePayload, validateTheme } from '@/features/templates/menu-theme';
+import { COLOR_FIELDS, FONT_OPTIONS, SPLASH_RANGE, TEMPLATE_OPTIONS, normalizeConfiguration, splashPayload, themePayload, validateTheme } from '@/features/templates/menu-theme';
 import { api } from '@/lib/api';
 import { appendImage, type ImageQuality, type PickedPicture } from '@/lib/image-file';
 import { usePrivateImage } from '@/lib/private-image';
-import type { Category, MenuTheme, Product, TemplateConfig, TemplateKey } from '@/types/models';
+import type { Category, MenuSplash, MenuTheme, Product, TemplateConfig, TemplateKey } from '@/types/models';
 
 function Section({ title, description, children }: React.PropsWithChildren<{ title: string; description?: string }>) {
   const theme = useEniuTheme();
@@ -62,6 +62,7 @@ export default function TemplateScreen() {
   const fontsLocked = FONT_OPTIONS.some((option) => !allowsFont(option.key));
   const coverLocked = !limits.allow_cover;
   const backgroundLocked = !limits.allow_background;
+  const splashLocked = !limits.allow_splash;
   const productImagesLocked = !limits.allow_product_images;
   const enabled = Boolean(selectedBusiness && catalogueId);
   const base = `businesses/${selectedBusiness?.id}/catalogues/${catalogueId}`;
@@ -78,6 +79,8 @@ export default function TemplateScreen() {
   const [removeCover, setRemoveCover] = useState(false);
   const [backgroundPicked, setBackgroundPicked] = useState<PickedPicture | null>(null);
   const [removeBackground, setRemoveBackground] = useState(false);
+  const [splashPicked, setSplashPicked] = useState<PickedPicture | null>(null);
+  const [removeSplash, setRemoveSplash] = useState(false);
   const [assetVersion, setAssetVersion] = useState(0);
   const [quality, setQuality] = useState<ImageQuality>('alta');
   const [expanded, setExpanded] = useState(false);
@@ -97,9 +100,12 @@ export default function TemplateScreen() {
   const storedCover = !removeCover && !coverPicked ? draft?.theme.cover_image_url : null;
   const storedBackground = !removeBackground && !backgroundPicked ? draft?.theme.background_image_url : null;
   const privateCover = usePrivateImage(storedCover, assetVersion);
+  const storedSplash = !removeSplash && !splashPicked ? draft?.splash.image_url : null;
   const privateBackground = usePrivateImage(storedBackground, assetVersion);
+  const privateSplash = usePrivateImage(storedSplash, assetVersion);
   const cover = coverPicked ? { uri: coverPicked.uri } : privateCover;
   const background = backgroundPicked ? { uri: backgroundPicked.uri } : privateBackground;
+  const splash = splashPicked ? { uri: splashPicked.uri } : privateSplash;
 
   function updateTheme<K extends keyof MenuTheme>(field: K, value: MenuTheme[K]) {
     setDraft((current) => (current ? { ...current, theme: { ...current.theme, [field]: value } } : current));
@@ -117,8 +123,15 @@ export default function TemplateScreen() {
   function dropCover() { setCoverPicked(null); setRemoveCover(true); setError(''); setSuccess(''); }
   function pickBackground(picture: PickedPicture) { setBackgroundPicked(picture); setRemoveBackground(false); setError(''); setSuccess(''); }
   function dropBackground() { setBackgroundPicked(null); setRemoveBackground(true); setError(''); setSuccess(''); }
+  function updateSplash<K extends keyof MenuSplash>(field: K, value: MenuSplash[K]) {
+    setDraft((current) => (current ? { ...current, splash: { ...current.splash, [field]: value } } : current));
+    setError(''); setSuccess('');
+  }
+  function pickSplash(picture: PickedPicture) { setSplashPicked(picture); setRemoveSplash(false); setError(''); setSuccess(''); }
+  function dropSplash() { setSplashPicked(null); setRemoveSplash(true); setError(''); setSuccess(''); }
   function discard() {
     setDraft(saved); setCoverPicked(null); setRemoveCover(false); setBackgroundPicked(null); setRemoveBackground(false);
+    setSplashPicked(null); setRemoveSplash(false);
     setError(''); setSuccess('');
   }
 
@@ -130,19 +143,23 @@ export default function TemplateScreen() {
     setSaving(true); setError(''); setSuccess('');
     try {
       const theme = themePayload(draft.theme);
-      const touchesImages = Boolean(coverPicked || removeCover || backgroundPicked || removeBackground);
+      const splashData = splashPayload(draft.splash);
+      const touchesImages = Boolean(coverPicked || removeCover || backgroundPicked || removeBackground || splashPicked || removeSplash);
       let data: { template: TemplateConfig };
       if (touchesImages) {
         const form = new FormData();
         form.append('template_key', draft.template_key);
         form.append('theme', JSON.stringify(theme));
+        form.append('splash', JSON.stringify(splashData));
         form.append('remove_cover', String(removeCover));
         form.append('remove_background', String(removeBackground));
+        form.append('remove_splash', String(removeSplash));
         if (coverPicked) appendImage(form, 'cover', coverPicked);
         if (backgroundPicked) appendImage(form, 'background', backgroundPicked);
+        if (splashPicked) appendImage(form, 'splash', splashPicked);
         data = await api.patchForm<{ template: TemplateConfig }>(`${base}/template`, form);
       } else {
-        data = await api.patch<{ template: TemplateConfig }>(`${base}/template`, { template_key: draft.template_key, theme });
+        data = await api.patch<{ template: TemplateConfig }>(`${base}/template`, { template_key: draft.template_key, theme, splash: splashData });
       }
       const configuration = normalizeConfiguration(data.template);
       queryClient.setQueryData(key, { template: configuration });
@@ -161,7 +178,7 @@ export default function TemplateScreen() {
   if (query.isError || !draft || !saved) return <ErrorState message="No pudimos cargar la plantilla." onRetry={() => query.refetch()} />;
 
   const problems = validateTheme(draft.theme);
-  const dirty = JSON.stringify(saved) !== JSON.stringify(draft) || Boolean(coverPicked || removeCover || backgroundPicked || removeBackground);
+  const dirty = JSON.stringify(saved) !== JSON.stringify(draft) || Boolean(coverPicked || removeCover || backgroundPicked || removeBackground || splashPicked || removeSplash);
   const catalogue = catalogueQuery.data?.catalogue ?? { name: 'Tu menú', description: null };
   const categories = categoriesQuery.data?.categories ?? [];
   const products = productsQuery.data?.products ?? [];
@@ -280,6 +297,16 @@ export default function TemplateScreen() {
         {backgroundLocked ? <PlanNotice message="Tu plan actual no incluye imagen de fondo en el menú." /> : null}
         <ImageField title="fondo" emptyText="Sin imagen de fondo" source={background} quality={quality} onPicked={pickBackground} onRemove={dropBackground} onError={setError} disabled={backgroundLocked} note="Baja la opacidad para que el texto siga leyéndose." />
         <Slider label="Opacidad del fondo" value={draft.theme.background_opacity} disabled={backgroundLocked} onChange={(value) => updateTheme('background_opacity', value)} />
+      </Section>
+
+      <Section title="Pantalla de bienvenida" description="Aparece unos segundos al abrir el menú y se desvanece sola. Un toque la cierra antes.">
+        {splashLocked ? <PlanNotice message="Tu plan actual no incluye la pantalla de bienvenida del menú." /> : null}
+        <View style={{ minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, opacity: splashLocked ? 0.5 : 1 }}>
+          <Text style={{ color: appTheme.text, fontWeight: '700', fontSize: 14 }}>Mostrar bienvenida</Text>
+          <Switch value={draft.splash.enabled} disabled={splashLocked} onValueChange={(value) => updateSplash('enabled', value)} trackColor={{ true: appTheme.yellowPressed }} />
+        </View>
+        <ImageField title="bienvenida" emptyText="Sin imagen: se muestra el nombre del negocio" source={splash} quality={quality} onPicked={pickSplash} onRemove={dropSplash} onError={setError} disabled={splashLocked} note="Tu logo se ve mejor centrado y con fondo transparente." />
+        <Slider label="Duración" value={draft.splash.duration} min={SPLASH_RANGE.min} max={SPLASH_RANGE.max} step={SPLASH_RANGE.step} unit="s" disabled={splashLocked} onChange={(value) => updateSplash('duration', value)} />
       </Section>
 
       <Button loading={saving} disabled={!dirty} onPress={save}>Guardar personalización</Button>

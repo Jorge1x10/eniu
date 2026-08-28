@@ -96,7 +96,14 @@ export type MenuTheme = {
   background_image_url?: string | null;
 };
 
-export type TemplateConfig = { template_key: TemplateKey; theme: MenuTheme };
+export type MenuSplash = {
+  enabled: boolean;
+  /** Segundos que la bienvenida tapa el menú antes de desvanecerse. */
+  duration: number;
+  image_url?: string | null;
+};
+
+export type TemplateConfig = { template_key: TemplateKey; theme: MenuTheme; splash: MenuSplash };
 
 export type Analytics = {
   summary?: { menu_views?: { value?: number } };

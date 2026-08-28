@@ -72,10 +72,18 @@ def serialize_public_menu(catalogue):
         if slug and catalogue.is_published and catalogue.template_config and catalogue.template_config.background_filename
         else None
     )
+    splash = dict(configuration.get("splash") or {"enabled": False, "duration": 2.5})
+    splash["image_url"] = (
+        f"/api/public/menus/{slug}/splash"
+        if slug and catalogue.is_published and catalogue.template_config and catalogue.template_config.splash_filename
+        else None
+    )
+
     plan_key = plan_key_for_owner_id(catalogue.business.owner_id)
     template_key, theme = plans.sanitize_public_theme(
         plan_key, configuration["template_key"], theme
     )
+    splash = plans.sanitize_public_splash(plan_key, splash)
     return {
         "business": {
             "name": catalogue.business.name,
@@ -89,6 +97,7 @@ def serialize_public_menu(catalogue):
             "key": template_key,
             "theme": theme,
         },
+        "splash": splash,
         "branding": {
             "show_eniu_badge": plans.limits_for(plan_key)["show_eniu_badge"],
         },

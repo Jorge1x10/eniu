@@ -14,7 +14,7 @@ import TemplateSelector from "../components/TemplateSelector";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
 import { getTemplateErrorMessage, useTemplateService } from "../services/templateService";
 import { resolveTemplate } from "../templates/templateRegistry";
-import { DEFAULT_THEME, FONT_REGISTRY, normalizeConfiguration } from "../utils/themeDefaults";
+import { DEFAULT_THEME, FONT_REGISTRY, SPLASH_RANGE, normalizeConfiguration } from "../utils/themeDefaults";
 import { normalizeHex, validateTheme } from "../utils/themeValidation";
 
 const COLOR_CONTROLS = [
@@ -51,19 +51,24 @@ export default function TemplatesPage() {
   const [backgroundPreview, setBackgroundPreview] = useState(null);
   const [removeBackground, setRemoveBackground] = useState(false);
   const [backgroundVersion, setBackgroundVersion] = useState(0);
+  const [splashFile, setSplashFile] = useState(null);
+  const [splashPreview, setSplashPreview] = useState(null);
+  const [removeSplash, setRemoveSplash] = useState(false);
+  const [splashVersion, setSplashVersion] = useState(0);
   const [pendingPath, setPendingPath] = useState(null);
   const mountedRef = useRef(true);
   const savingRef = useRef(false);
 
   const business = businesses.find((item) => item.id === businessId) || selectedBusiness;
   const isDirty = Boolean(saved && draft) && (
-    JSON.stringify(saved) !== JSON.stringify(draft) || Boolean(coverFile) || removeCover || Boolean(backgroundFile) || removeBackground
+    JSON.stringify(saved) !== JSON.stringify(draft) || Boolean(coverFile) || removeCover || Boolean(backgroundFile) || removeBackground || Boolean(splashFile) || removeSplash
   );
   const validationErrors = draft ? validateTheme(draft.theme) : {};
   const fontsLocked = Object.keys(FONT_REGISTRY).some((key) => !allowsFont(key));
   const coverLocked = !limits.allow_cover;
   const backgroundLocked = !limits.allow_background;
   const productImagesLocked = !limits.allow_product_images;
+  const splashLocked = !limits.allow_splash;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -125,10 +130,36 @@ export default function TemplatesPage() {
 
   useEffect(() => () => { if (coverPreview) URL.revokeObjectURL(coverPreview); }, [coverPreview]);
   useEffect(() => () => { if (backgroundPreview) URL.revokeObjectURL(backgroundPreview); }, [backgroundPreview]);
+  useEffect(() => () => { if (splashPreview) URL.revokeObjectURL(splashPreview); }, [splashPreview]);
 
   function updateTheme(field, value) {
     setDraft((current) => ({ ...current, theme: { ...current.theme, [field]: value } }));
     setSaveError(""); setSuccess("");
+  }
+
+  function updateSplash(field, value) {
+    setDraft((current) => ({ ...current, splash: { ...current.splash, [field]: value } }));
+    setSaveError(""); setSuccess("");
+  }
+
+  function chooseSplash(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setSaveError("La bienvenida debe ser JPG, PNG o WebP."); return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveError("La bienvenida puede pesar máximo 5 MB."); return;
+    }
+    if (splashPreview) URL.revokeObjectURL(splashPreview);
+    setSplashFile(file); setSplashPreview(URL.createObjectURL(file)); setRemoveSplash(false);
+    setSaveError(""); setSuccess("");
+  }
+
+  function removeCurrentSplash() {
+    if (splashPreview) URL.revokeObjectURL(splashPreview);
+    setSplashFile(null); setSplashPreview(null); setRemoveSplash(true); setSaveError(""); setSuccess("");
   }
 
   function chooseCover(event) {
@@ -175,6 +206,7 @@ export default function TemplatesPage() {
     if (coverPreview) URL.revokeObjectURL(coverPreview);
     setDraft(saved); setCoverFile(null); setCoverPreview(null); setRemoveCover(false);
     setBackgroundFile(null); setBackgroundPreview(null); setRemoveBackground(false);
+    setSplashFile(null); setSplashPreview(null); setRemoveSplash(false);
     setSaveError(""); setSuccess("");
   }
 
@@ -182,15 +214,19 @@ export default function TemplatesPage() {
     if (savingRef.current || Object.keys(validationErrors).length) return;
     savingRef.current = true; setIsSaving(true); setSaveError(""); setSuccess("");
     const themePayload = Object.fromEntries(Object.entries(draft.theme).filter(([key]) => !["cover_image_url", "background_image_url"].includes(key)));
-    let payload = { template_key: draft.template_key, theme: themePayload };
-    if (coverFile || removeCover || backgroundFile || removeBackground) {
+    const splashPayload = { enabled: draft.splash.enabled, duration: draft.splash.duration };
+    let payload = { template_key: draft.template_key, theme: themePayload, splash: splashPayload };
+    if (coverFile || removeCover || backgroundFile || removeBackground || splashFile || removeSplash) {
       const formData = new FormData();
       formData.append("template_key", draft.template_key);
       formData.append("theme", JSON.stringify(themePayload));
+      formData.append("splash", JSON.stringify(splashPayload));
       formData.append("remove_cover", String(removeCover));
       formData.append("remove_background", String(removeBackground));
+      formData.append("remove_splash", String(removeSplash));
       if (coverFile) formData.append("cover", coverFile);
       if (backgroundFile) formData.append("background", backgroundFile);
+      if (splashFile) formData.append("splash", splashFile);
       payload = formData;
     }
     const response = await updateTemplate(payload);
@@ -205,6 +241,7 @@ export default function TemplatesPage() {
     if (coverPreview) URL.revokeObjectURL(coverPreview);
     setSaved(configuration); setDraft(configuration); setCoverFile(null); setCoverPreview(null);
     setBackgroundFile(null); setBackgroundPreview(null); setRemoveBackground(false);
+    setSplashFile(null); setSplashPreview(null); setRemoveSplash(false); setSplashVersion(Date.now());
     setRemoveCover(false); setCoverVersion(Date.now()); setBackgroundVersion(Date.now()); setSuccess("La plantilla se guardó correctamente.");
   }
 
@@ -220,13 +257,17 @@ export default function TemplatesPage() {
   const storedBackgroundPath = !removeBackground && draft?.theme.background_image_url
     ? `${draft.theme.background_image_url}${backgroundVersion ? `?v=${backgroundVersion}` : ""}` : null;
   const authenticatedCoverUrl = usePrivateAsset(storedCoverPath);
+  const storedSplashPath = !removeSplash && draft?.splash?.image_url
+    ? `${draft.splash.image_url}${splashVersion ? `?v=${splashVersion}` : ""}` : null;
   const authenticatedBackgroundUrl = usePrivateAsset(storedBackgroundPath);
+  const authenticatedSplashUrl = usePrivateAsset(storedSplashPath);
 
   if (isLoading) return <LoadingState />;
   if (loadError || !catalogue || !draft) return <ErrorState message={loadError} onRetry={() => loadData()} />;
 
   const coverUrl = coverPreview || authenticatedCoverUrl;
   const backgroundUrl = backgroundPreview || authenticatedBackgroundUrl;
+  const splashUrl = splashPreview || authenticatedSplashUrl;
   const previewTheme = { ...previewThemeBase, background_image_url: backgroundUrl };
 
   return <section className="mx-auto w-full max-w-[1500px] space-y-5">
@@ -241,6 +282,7 @@ export default function TemplatesPage() {
         <section><div className="flex flex-wrap items-center justify-between gap-2"><label htmlFor="theme-font" className="text-sm font-bold">Tipografía</label>{fontsLocked && <PlanBadge />}</div><select id="theme-font" value={draft.theme.font_key} disabled={fontsLocked} onChange={(event) => updateTheme("font_key", event.target.value)} className={`mt-2 min-h-11 w-full rounded-xl border border-[#D9D9D9] px-4 outline-none focus:border-[#E8C93D] ${fontsLocked ? "cursor-not-allowed bg-[#F7F3E4] opacity-60" : "cursor-pointer bg-white"}`}>{Object.entries(FONT_REGISTRY).map(([key, font]) => <option key={key} value={key} disabled={!allowsFont(key)}>{font.label}</option>)}</select></section>
         <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">Portada y productos</h2>{coverLocked && <PlanBadge />}</div><div className="mt-3 space-y-3"><Toggle label="Mostrar portada" checked={draft.theme.show_cover} disabled={coverLocked} onChange={(value) => updateTheme("show_cover", value)} /><Toggle label="Mostrar imágenes de productos" checked={draft.theme.show_product_images} disabled={productImagesLocked} onChange={(value) => updateTheme("show_product_images", value)} /></div><ImagePicker title="Portada" url={coverUrl} emptyText="Sin portada" disabled={coverLocked} onChange={chooseCover} onRemove={removeCurrentCover} /></section>
         <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">Fondo del menú</h2>{backgroundLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">La imagen queda detrás del contenido y no reemplaza la portada.</p><ImagePicker title="Fondo" url={backgroundUrl} emptyText="Sin imagen de fondo" disabled={backgroundLocked} onChange={chooseBackground} onRemove={removeCurrentBackground} /><label htmlFor="background-opacity" className="mt-4 block text-sm font-semibold">Opacidad del fondo: {Math.round(draft.theme.background_opacity * 100)}%</label><input id="background-opacity" type="range" min="0" max="1" step="0.05" disabled={backgroundLocked} value={draft.theme.background_opacity} onChange={(event) => updateTheme("background_opacity", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${backgroundLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
+        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">Pantalla de bienvenida</h2>{splashLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">Aparece unos segundos al abrir el menú y se desvanece sola. Un toque la cierra antes.</p><div className="mt-3"><Toggle label="Mostrar bienvenida" checked={draft.splash.enabled} disabled={splashLocked} onChange={(value) => updateSplash("enabled", value)} /></div><ImagePicker title="Bienvenida" url={splashUrl} emptyText="Sin imagen: se muestra el nombre del negocio" disabled={splashLocked} onChange={chooseSplash} onRemove={removeCurrentSplash} /><label htmlFor="splash-duration" className="mt-4 block text-sm font-semibold">Duración: {draft.splash.duration} s</label><input id="splash-duration" type="range" min={SPLASH_RANGE.min} max={SPLASH_RANGE.max} step={SPLASH_RANGE.step} disabled={splashLocked} value={draft.splash.duration} onChange={(event) => updateSplash("duration", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${splashLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
       </div>
       <aside className="rounded-2xl border border-[#E9DDB7] bg-[#F8E8AE]/35 p-4 sm:p-6 xl:sticky xl:top-4"><h2 className="mb-4 flex items-center gap-2 font-bold"><Eye size={18} /> Vista previa móvil</h2><MobilePreviewFrame>{createElement(resolveTemplate(draft.template_key), { business, catalogue, categories, products, theme: previewTheme, coverUrl, showEniuBadge: limits.show_eniu_badge })}</MobilePreviewFrame></aside>
     </div>

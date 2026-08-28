@@ -11,6 +11,7 @@ from .services import (
     get_public_background,
     get_public_menu,
     get_public_product_image,
+    get_public_splash,
     get_publication,
 )
 
@@ -69,6 +70,14 @@ def public_background(public_slug):
     if not filename:
         return jsonify({"message": "Imagen no encontrada"}), 404
     return storage.serve_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], filename)
+
+
+@publication_bp.get("/public/menus/<public_slug>/splash")
+def public_splash(public_slug):
+    filename = get_public_splash(public_slug)
+    if not filename:
+        return jsonify({"message": "Imagen no encontrada"}), 404
+    return storage.serve_file(current_app.config["CATALOGUE_SPLASH_FOLDER"], filename)
 
 
 @publication_bp.get("/public/menus/<public_slug>/product-images/<int:section_index>/<int:product_index>")
