@@ -32,6 +32,7 @@ export function adaptPublicMenu(menu) {
     products: [...categorizedProducts, ...uncategorizedProducts],
     templateKey: configuration.template_key,
     theme: configuration.theme,
+    showEniuBadge: Boolean(menu?.branding?.show_eniu_badge),
     coverUrl: configuration.theme.cover_image_url,
     backgroundUrl: configuration.theme.background_image_url,
   };

@@ -13,7 +13,7 @@ const VARIANTS = {
   luxury: { header: "text-center font-serif", card: "border-y border-current/30", grid: "space-y-5", eyebrow: "Una experiencia especial" },
 };
 
-function AdditionalTemplate({ variant, business, catalogue, categories, products, theme, coverUrl, onCategorySelect }) {
+function AdditionalTemplate({ variant, business, catalogue, categories, products, theme, coverUrl, onCategorySelect, showEniuBadge = false }) {
   const style = VARIANTS[variant];
   const sections = useMemo(() => buildSections(categories, products), [categories, products]);
   const [active, setActive] = useState("all");
@@ -32,7 +32,7 @@ function AdditionalTemplate({ variant, business, catalogue, categories, products
       <header className={`px-6 py-7 ${style.header}`}><p className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-60">{style.eyebrow}</p><h1 className="mt-2 text-3xl font-black">{catalogue.name}</h1><p className="mt-2 text-xs opacity-70">{catalogue.description || business?.name}</p></header>
       <CategoryNavigation sections={sections} active={active} onSelect={choose} rounded={variant !== "luxury"} />
       {!products.length ? <EmptyMenu /> : <main className="space-y-8 px-5 py-6">{visible.map((section) => <section key={section.id}><h2 className="mb-4 text-xl font-black">{section.name}</h2><div className={style.grid}>{section.products.map((product) => <ProductCard key={product.id} product={product} theme={theme} className={style.card} variant={variant} />)}</div></section>)}</main>}
-      <MenuFooter />
+      <MenuFooter show={showEniuBadge} />
     </div>
   </div>;
 }

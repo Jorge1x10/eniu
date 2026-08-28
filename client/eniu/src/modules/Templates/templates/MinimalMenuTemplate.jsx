@@ -5,7 +5,7 @@ import MenuBackground from "../components/MenuBackground";
 import { FONT_REGISTRY } from "../utils/themeDefaults";
 import { buildSections, mainProductImage, menuCurrency } from "./menuData";
 
-export default function MinimalMenuTemplate({ business, catalogue, categories, products, theme, coverUrl, onCategorySelect }) {
+export default function MinimalMenuTemplate({ business, catalogue, categories, products, theme, coverUrl, onCategorySelect, showEniuBadge = false }) {
   const sections = buildSections(categories, products);
   const [active, setActive] = useState("all");
   const visible = active === "all" ? sections : sections.filter((section) => section.id === active);
@@ -14,7 +14,7 @@ export default function MinimalMenuTemplate({ business, catalogue, categories, p
     <header className="border-b border-current/15 px-5 py-5"><div className="flex items-baseline justify-between gap-3"><h1 className="text-2xl font-semibold">{catalogue.name}</h1><span className="text-[10px] uppercase tracking-widest opacity-55">{business?.name}</span></div>{catalogue.description && <p className="mt-2 text-xs leading-5 opacity-65">{catalogue.description}</p>}</header>
     <CategoryNavigation sections={sections} active={active} onSelect={(id) => { setActive(id); if (id !== "all") onCategorySelect?.(sections.find((section) => section.id === id)?.tracking_key); }} rounded={false} />
     {!products.length ? <EmptyMenu /> : <main className="px-5">{visible.map((section) => <section key={section.id} className="py-4"><h2 className="mb-2 border-l-2 pl-2 text-xs font-bold uppercase tracking-[0.18em]" style={{ borderColor: "var(--menu-accent)" }}>{section.name}</h2><div>{section.products.map((product) => <MinimalProductRow key={product.id} product={product} theme={theme} />)}</div></section>)}</main>}
-    <MenuFooter />
+    <MenuFooter show={showEniuBadge} />
   </div></div>;
 }
 

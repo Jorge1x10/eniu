@@ -21,7 +21,15 @@ export function Availability({ available }) {
   return available ? null : <span className="inline-block rounded-full border border-current px-2 py-0.5 text-[10px] font-bold">Agotado</span>;
 }
 
-export function MenuFooter() {
+/**
+ * Marca de Eniu al pie del menú público.
+ *
+ * Sólo aparece en el plan gratuito. El valor por defecto es `false` a
+ * propósito: si algún día una plantilla nueva olvidara pasar la bandera, es
+ * preferible perder la marca que mostrársela a alguien que pagó por quitarla.
+ */
+export function MenuFooter({ show = false }) {
+  if (!show) return null;
   return <footer className="py-7 text-center text-[10px] opacity-60">Menú creado con ENIU</footer>;
 }
 

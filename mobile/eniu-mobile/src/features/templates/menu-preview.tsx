@@ -86,6 +86,7 @@ type Props = {
   cover?: PreviewImage;
   background?: PreviewImage;
   currency: Intl.NumberFormat;
+  showEniuBadge?: boolean;
 };
 
 /**
@@ -95,7 +96,7 @@ type Props = {
  * cambiar de plantilla no se notaba en el teléfono: era justo lo único que la
  * vista previa no enseñaba.
  */
-export function MenuPreview({ templateKey, theme, business, catalogue, categories, products, cover, background, currency }: Props) {
+export function MenuPreview({ templateKey, theme, business, catalogue, categories, products, cover, background, currency, showEniuBadge = false }: Props) {
   const variant = VARIANTS[templateKey];
   const fontFamily = fontFamilyFor(theme.font_key, templateKey);
   const text = theme.text_color;
@@ -169,7 +170,8 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
         </View>
       )}
 
-      <Text style={{ color: text, opacity: 0.55, fontSize: 9, textAlign: 'center', paddingVertical: 22, fontFamily }}>Menú creado con ENIU</Text>
+      {/* La marca sólo va en el plan gratuito, igual que en el menú publicado. */}
+      {showEniuBadge ? <Text style={{ color: text, opacity: 0.55, fontSize: 9, textAlign: 'center', paddingVertical: 22, fontFamily }}>Menú creado con ENIU</Text> : null}
     </View>
   );
 }

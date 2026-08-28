@@ -166,7 +166,7 @@ export default function TemplateScreen() {
   const categories = categoriesQuery.data?.categories ?? [];
   const products = productsQuery.data?.products ?? [];
   const currency = new Intl.NumberFormat('es-MX', { style: 'currency', currency: selectedBusiness?.currency || 'MXN' });
-  const preview = { templateKey: draft.template_key, theme: draft.theme, business: selectedBusiness, catalogue, categories, products, cover, background, currency };
+  const preview = { templateKey: draft.template_key, theme: draft.theme, business: selectedBusiness, catalogue, categories, products, cover, background, currency, showEniuBadge: limits.show_eniu_badge };
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: appTheme.background }} contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 16 }}>

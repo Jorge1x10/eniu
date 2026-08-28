@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
   toDataURL: vi.fn(() => Promise.resolve("data:image/png;base64,qr")),
 }));
 
+// El plan se simula: la pagina solo lo usa para decidir si la vista previa
+// lleva la marca de Eniu al pie.
+vi.mock("../../auth/hooks/usePlan", () => ({ usePlan: () => ({ limits: { show_eniu_badge: true } }) }));
 vi.mock("../../Business/services/useBusiness", () => ({
   useBusiness: () => ({ businesses: [], selectedBusiness: null, selectBusiness: vi.fn() }),
 }));

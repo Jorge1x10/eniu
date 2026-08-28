@@ -5,7 +5,7 @@ import MenuBackground from "../components/MenuBackground";
 import { FONT_REGISTRY } from "../utils/themeDefaults";
 import { buildSections, mainProductImage, menuCurrency } from "./menuData";
 
-export default function ModernMenuTemplate({ business, catalogue, categories, products, theme, coverUrl, onCategorySelect }) {
+export default function ModernMenuTemplate({ business, catalogue, categories, products, theme, coverUrl, onCategorySelect, showEniuBadge = false }) {
   const sections = buildSections(categories, products);
   const [active, setActive] = useState("all");
   const visible = active === "all" ? sections : sections.filter((section) => section.id === active);
@@ -14,7 +14,7 @@ export default function ModernMenuTemplate({ business, catalogue, categories, pr
     <header className="px-5 pb-3 pt-5"><p className="text-xs font-bold uppercase tracking-widest opacity-60">{business?.name || "Negocio"}</p><h1 className="mt-1 text-3xl font-black leading-tight">{catalogue.name}</h1>{catalogue.description && <p className="mt-2 text-sm opacity-70">{catalogue.description}</p>}</header>
     <CategoryNavigation sections={sections} active={active} onSelect={(id) => { setActive(id); if (id !== "all") onCategorySelect?.(sections.find((section) => section.id === id)?.tracking_key); }} />
     {!products.length ? <EmptyMenu /> : <main className="space-y-7 px-4 pb-4">{visible.map((section) => <section key={section.id}><h2 className="mb-3 text-xl font-extrabold">{section.name}</h2><div className="grid grid-cols-1 gap-3 min-[370px]:grid-cols-2">{section.products.map((product) => <ModernProductCard key={product.id} product={product} theme={theme} />)}</div></section>)}</main>}
-    <MenuFooter />
+    <MenuFooter show={showEniuBadge} />
   </MenuShell>;
 }
 
