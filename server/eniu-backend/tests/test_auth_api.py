@@ -43,6 +43,30 @@ class AuthApiTestCase(unittest.TestCase):
         self.assertIsInstance(response.json["message"], str)
         self.assertEqual(response.json["user"]["email"], "dueno1@example.com")
 
+    def test_register_without_username_derives_one_from_the_email(self):
+        # El alta de tres pasos ya no pide nombre de usuario.
+        response = self.client.post("/api/auth/register", json={
+            "email": "Ana.Lopez@example.com", "phone": "5511110000", "password": "ClaveSegura1",
+        })
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json["user"]["username"], "ana.lopez")
+
+    def test_two_accounts_with_the_same_email_prefix_get_different_usernames(self):
+        first = self.client.post("/api/auth/register", json={
+            "email": "ana@example.com", "phone": "5511110001", "password": "ClaveSegura1",
+        })
+        second = self.client.post("/api/auth/register", json={
+            "email": "ana@otro.com", "phone": "5511110002", "password": "ClaveSegura1",
+        })
+        self.assertEqual((first.status_code, second.status_code), (201, 201))
+        self.assertEqual(first.json["user"]["username"], "ana")
+        self.assertEqual(second.json["user"]["username"], "ana1")
+
+    def test_register_still_requires_the_rest_of_the_fields(self):
+        response = self.client.post("/api/auth/register", json={"email": "sin@telefono.com"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(sorted(response.json["fields"]), ["password", "phone"])
+
     def test_register_duplicate_email_returns_string_message(self):
         self.register()
         response = self.register(username="dueno2", phone="5599999999")

@@ -17,8 +17,35 @@ from app.modules.auth.mailer import build_password_reset_email, send_email
 from app.modules.auth.model import PasswordResetToken
 from app.modules.auth.validators import validate_password
 
+USERNAME_MAX_LENGTH = 50
+
+
+def derive_username(email):
+    """Inventa un nombre de usuario a partir del correo.
+
+    El alta ya no lo pide: son tres pasos —correo y contraseña, teléfono,
+    confirmar— y añadir un campo más sólo para satisfacer una restricción
+    interna estorbaría al usuario. Sigue siendo editable después desde
+    Configuración.
+    """
+    base = "".join(
+        character for character in email.split("@")[0].lower()
+        if character.isalnum() or character in {".", "_", "-"}
+    ).strip("._-")[:USERNAME_MAX_LENGTH - 5] or "usuario"
+
+    if not User.query.filter_by(username=base).first():
+        return base
+    # El sufijo evita chocar con quien ya tomó ese nombre.
+    for suffix in range(1, 1000):
+        candidate = f"{base}{suffix}"
+        if not User.query.filter_by(username=candidate).first():
+            return candidate
+    return f"{base}{uuid4().hex[:6]}"
+
+
 def register_user(data):
-    username = data["username"].strip()
+    email_for_username = (data.get("email") or "").strip().lower()
+    username = (data.get("username") or "").strip() or derive_username(email_for_username)
     email = data["email"].strip().lower()
     phone_number = data["phone"].strip()
 
