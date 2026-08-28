@@ -1,16 +1,16 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { MenuSkeleton } from '@/components/menu-skeleton';
 import { Divider } from '@/components/ui/divider';
-import { ChevronRightIcon, GridIcon, LinkIcon, PaletteIcon, TagIcon } from '@/components/ui/icons';
+import { ChevronRightIcon, GridIcon, LinkIcon, PaletteIcon, TagIcon, TrashIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
-import { catalogueKeys, getCatalogue } from '@/features/catalogues/catalogue-api';
+import { catalogueKeys, deleteCatalogue, getCatalogue } from '@/features/catalogues/catalogue-api';
 import { ApiError, api } from '@/lib/api';
 import type { Catalogue, Category, Product } from '@/types/models';
 
@@ -34,6 +34,7 @@ export default function CatalogueDetailScreen() {
   const products = useQuery({ queryKey: ['products', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ products: Product[] }>(`${base}/products`), enabled: Boolean(selectedBusiness && catalogueId) });
   const categories = useQuery({ queryKey: ['categories', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ categories: Category[] }>(`${base}/categories`), enabled: Boolean(selectedBusiness && catalogueId) });
   const counts: Record<string, number | undefined> = { products: products.data?.products.length, categories: categories.data?.categories.length };
+  const [deleting, setDeleting] = useState(false);
 
   // Esta pantalla queda montada en el stack de Menús. Si el usuario cambia de
   // negocio desde otra pestaña, el menú abierto ya no pertenece al negocio
@@ -53,6 +54,34 @@ export default function CatalogueDetailScreen() {
     const data = await api.post<{ catalogue: Catalogue }>(path);
     queryClient.setQueryData(catalogueKeys.detail(selectedBusiness.id, catalogue.id), data);
     queryClient.invalidateQueries({ queryKey: catalogueKeys.all(selectedBusiness.id) });
+  }
+
+  // El borrado va por pulsación larga y confirmación: se lleva por delante
+  // los productos y las categorías del menú, y no hay vuelta atrás.
+  function confirmDelete() {
+    if (!selectedBusiness || !catalogue || deleting) return;
+    Alert.alert(
+      `Eliminar «${catalogue.name}»`,
+      'También se eliminan sus productos y categorías. Esta acción no se puede deshacer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Eliminar', style: 'destructive', onPress: remove },
+      ],
+    );
+  }
+
+  async function remove() {
+    if (!selectedBusiness || !catalogue) return;
+    setDeleting(true);
+    try {
+      await deleteCatalogue(selectedBusiness.id, catalogue.id);
+      queryClient.removeQueries({ queryKey: catalogueKeys.detail(selectedBusiness.id, catalogue.id) });
+      queryClient.invalidateQueries({ queryKey: catalogueKeys.all(selectedBusiness.id) });
+      router.replace('/(tabs)/(menus)');
+    } catch (requestError) {
+      setDeleting(false);
+      Alert.alert('No se pudo eliminar', requestError instanceof Error ? requestError.message : 'Inténtalo de nuevo.');
+    }
   }
 
   return (
@@ -112,6 +141,24 @@ export default function CatalogueDetailScreen() {
             </Animated.View>
           );
         })}</View>
+
+        <View style={{ gap: 8, marginTop: 4 }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Eliminar el menú ${catalogue.name}`}
+            accessibilityHint="Mantén pulsado para eliminar este menú"
+            onLongPress={confirmDelete}
+            delayLongPress={600}
+            disabled={deleting}
+            style={({ pressed }) => ({ minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, borderRadius: 16, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface, opacity: deleting ? 0.6 : pressed ? 0.75 : 1 })}
+          >
+            {deleting ? <ActivityIndicator color={theme.danger} /> : <TrashIcon color={theme.danger} size={15} />}
+            <Text style={{ color: theme.danger, fontSize: 14, fontWeight: '800' }}>{deleting ? 'Eliminando…' : 'Eliminar menú'}</Text>
+          </Pressable>
+          <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 16, textAlign: 'center' }}>
+            Mantén pulsado para eliminarlo. Se borran también sus productos y categorías.
+          </Text>
+        </View>
       </>}
     </ScrollView>
   );

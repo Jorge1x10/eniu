@@ -135,16 +135,49 @@ class PlanLimitsApiTestCase(unittest.TestCase):
         colors = self.client.patch(url, json={"theme": {"primary_color": "#FFD166"}}, headers=self.headers(self.free_token))
         self.assertEqual(colors.status_code, 200)
 
+        # `show_cover` no va en esta lista: encenderla tiene su propia prueba,
+        # porque sólo se puede juzgar comparando contra lo que ya estaba guardado.
         for payload in (
             {"template_key": "luxury"},
             {"theme": {"font_key": "playfair"}},
-            {"theme": {"show_cover": True}},
             {"theme": {"background_opacity": 0.5}},
         ):
             with self.subTest(payload=payload):
                 blocked = self.client.patch(url, json=payload, headers=self.headers(self.free_token))
                 self.assertEqual(blocked.status_code, 403)
                 self.assertEqual(blocked.get_json()["code"], "plan_limit")
+
+    def test_free_plan_can_save_while_resending_its_stored_configuration(self):
+        # Los clientes reenvían el tema completo en cada guardado. Si el valor
+        # guardado ya trae la portada encendida —que es el valor por defecto—
+        # rechazarlo deja al usuario sin poder tocar ni sus colores.
+        url = self.template_url(self.free_business_id, self.free_catalogue_id)
+        response = self.client.patch(
+            url,
+            json={
+                "template_key": "modern",
+                "theme": {
+                    "primary_color": "#FFD166",
+                    "show_cover": True,
+                    "show_product_images": True,
+                    "font_key": "inter",
+                    "background_opacity": 0.2,
+                },
+            },
+            headers=self.headers(self.free_token),
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_free_plan_can_always_turn_a_locked_feature_off(self):
+        url = self.template_url(self.free_business_id, self.free_catalogue_id)
+        response = self.client.patch(url, json={"theme": {"show_cover": False}}, headers=self.headers(self.free_token))
+        self.assertEqual(response.status_code, 200)
+
+    def test_free_plan_still_cannot_turn_the_cover_on(self):
+        url = self.template_url(self.free_business_id, self.free_catalogue_id)
+        self.client.patch(url, json={"theme": {"show_cover": False}}, headers=self.headers(self.free_token))
+        response = self.client.patch(url, json={"theme": {"show_cover": True}}, headers=self.headers(self.free_token))
+        self.assertEqual(response.status_code, 403)
 
     def test_paid_plan_unlocks_the_whole_design(self):
         url = self.template_url(self.paid_business_id, self.paid_catalogue_id)
@@ -267,6 +300,55 @@ class PlanLimitsApiTestCase(unittest.TestCase):
                 {catalogue.public_slug for catalogue in catalogues},
                 {"menu-viejo", "menu-nuevo"},
             )
+
+    def test_downgrade_turns_off_the_features_the_free_plan_lacks(self):
+        with self.app.app_context():
+            catalogue = db.session.get(Catalogue, UUID(self.paid_catalogue_id))
+            db.session.add(CatalogueTemplate(
+                catalogue_id=catalogue.id,
+                template_key="luxury",
+                font_key="playfair",
+                show_cover=True,
+                cover_filename="portada.png",
+                background_filename="fondo.png",
+                background_opacity=0.6,
+                splash_enabled=True,
+            ))
+            db.session.commit()
+
+            owner = db.session.get(User, catalogue.business.owner_id)
+            apply_free_plan_state(owner)
+            db.session.commit()
+
+            config = CatalogueTemplate.query.filter_by(catalogue_id=catalogue.id).first()
+            self.assertEqual(config.template_key, "modern")
+            self.assertEqual(config.font_key, "inter")
+            self.assertFalse(config.show_cover)
+            self.assertFalse(config.splash_enabled)
+            self.assertEqual(config.background_opacity, 0.2)
+            # Las imágenes se conservan: volver a pagar sólo requiere reactivarlas.
+            self.assertEqual(config.cover_filename, "portada.png")
+            self.assertEqual(config.background_filename, "fondo.png")
+
+    def test_a_downgraded_user_can_still_save_the_template(self):
+        # El motivo de apagarlas: si la configuración guardada contradijera al
+        # plan, el guard rechazaría cualquier guardado posterior.
+        with self.app.app_context():
+            catalogue = db.session.get(Catalogue, UUID(self.paid_catalogue_id))
+            db.session.add(CatalogueTemplate(catalogue_id=catalogue.id, template_key="luxury", font_key="playfair", show_cover=True))
+            db.session.commit()
+            owner = db.session.get(User, catalogue.business.owner_id)
+            apply_free_plan_state(owner)
+            record = BillingSubscription.query.filter_by(user_id=owner.id).first()
+            record.status = "canceled"
+            db.session.commit()
+
+        response = self.client.patch(
+            self.template_url(self.paid_business_id, self.paid_catalogue_id),
+            json={"template_key": "modern", "theme": {"primary_color": "#FFD166", "show_cover": False, "font_key": "inter"}},
+            headers=self.headers(self.paid_token),
+        )
+        self.assertEqual(response.status_code, 200)
 
     def test_a_failed_payment_applies_free_limits(self):
         with self.app.app_context():

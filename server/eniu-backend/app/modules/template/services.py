@@ -223,6 +223,7 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
             background_upload=bool(background and background.filename),
             splash=data.get("splash"),
             splash_upload=bool(splash and splash.filename),
+            current=current,
         )
         if blocked:
             return blocked
