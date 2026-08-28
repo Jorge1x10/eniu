@@ -11,22 +11,7 @@ from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 from app.modules.users.model import User
 from tests.plan_helpers import grant_plan
-
-
-def tamper_signature(token):
-    """Altera un carácter del centro de la firma de un JWT.
-
-    Cambiar el último no sirve: en base64url el carácter final de una firma de
-    32 bytes sólo lleva dos bits significativos, así que uno de cada cuatro
-    reemplazos decodifica a la misma firma y el token «alterado» seguía siendo
-    válido. La prueba pasaba o fallaba según con qué carácter terminara el
-    token de ese arranque. Los caracteres centrales llevan sus seis bits, de
-    modo que cambiarlos invalida la firma siempre.
-    """
-    header, payload, signature = token.split(".")
-    middle = len(signature) // 2
-    replacement = "a" if signature[middle] != "a" else "b"
-    return f"{header}.{payload}.{signature[:middle]}{replacement}{signature[middle + 1:]}"
+from tests.token_helpers import tamper_signature
 
 
 class SecurityAuditTestCase(unittest.TestCase):

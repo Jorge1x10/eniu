@@ -14,6 +14,7 @@ from app.extensions import bcrypt
 from app.modules.auth.model import PasswordResetToken
 from app.modules.business.model import Business
 from app.modules.users.model import User
+from tests.token_helpers import tamper_signature
 
 
 class SettingsSecurityApiTestCase(unittest.TestCase):
@@ -259,10 +260,17 @@ class SettingsSecurityApiTestCase(unittest.TestCase):
             )
             self.assertEqual(response.status_code, 400)
 
-        altered = expired[:-1] + ("a" if expired[-1] != "a" else "b")
+        # Alterar el token vencido no probaba nada: el 400 llegaba por el
+        # vencimiento, con firma tocada o sin ella. Se altera uno que sí
+        # funcionaría, y después se comprueba que intacto funciona, para que el
+        # rechazo sólo pueda venir de la firma.
+        _, valid = self.request_reset()
         self.assertEqual(self.client.post(
-            "/api/auth/reset-password", json={"token": altered, "new_password": "RecoveredPass1"}
+            "/api/auth/reset-password", json={"token": tamper_signature(valid), "new_password": "RecoveredPass1"}
         ).status_code, 400)
+        self.assertEqual(self.client.post(
+            "/api/auth/reset-password", json={"token": valid, "new_password": "RecoveredPass1"}
+        ).status_code, 200)
 
     def test_reset_and_access_tokens_are_not_interchangeable(self):
         _, reset_token = self.request_reset()
