@@ -14,6 +14,9 @@
       "icon": {
         "light": "./assets/brand/app-icon-light.png",
         "dark": "./assets/brand/app-icon-dark.png"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
