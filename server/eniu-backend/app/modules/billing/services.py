@@ -103,6 +103,9 @@ def create_checkout(user_id):
         frontend_url = current_app.config["FRONTEND_URL"]
         session = stripe.checkout.Session.create(
             mode="subscription",
+            # Sin esto la pantalla de pago no ofrece dónde escribir un código,
+            # y los cupones de Stripe quedan imposibles de canjear.
+            allow_promotion_codes=True,
             customer=record.stripe_customer_id,
             client_reference_id=str(user.id),
             line_items=[{"price": price.id, "quantity": 1}],

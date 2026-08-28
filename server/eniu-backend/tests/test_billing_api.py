@@ -69,6 +69,8 @@ class BillingApiTestCase(unittest.TestCase):
         self.assertEqual(payload["subscription_data"]["billing_mode"], {"type": "flexible"})
         self.assertNotIn("payment_method_types", payload)
         self.assertRegex(payload["integration_identifier"], r"^eniu_checkout_[a-z]{8}$")
+        # Sin esta bandera el cliente no tiene dónde escribir un código promocional.
+        self.assertTrue(payload["allow_promotion_codes"])
 
         with self.app.app_context():
             record = BillingSubscription.query.one()
