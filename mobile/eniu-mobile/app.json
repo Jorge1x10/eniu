@@ -11,6 +11,7 @@
     "primaryColor": "#FFE05A",
     "ios": {
       "bundleIdentifier": "com.eniu.app",
+      "usesAppleSignIn": true,
       "icon": {
         "light": "./assets/brand/app-icon-light.png",
         "dark": "./assets/brand/app-icon-dark.png"
@@ -50,6 +51,7 @@
       ],
       "expo-secure-store",
       "expo-dev-client",
+      "expo-apple-authentication",
       [
         "expo-image-picker",
         {
