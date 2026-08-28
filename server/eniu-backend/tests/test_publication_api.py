@@ -16,6 +16,7 @@ from app.modules.category.model import Category
 from app.modules.products.model import Product
 from app.modules.template.model import CatalogueTemplate
 from app.modules.users.model import User
+from tests.plan_helpers import grant_plan
 
 
 FORBIDDEN_KEYS = {
@@ -87,6 +88,8 @@ class PublicationApiTestCase(unittest.TestCase):
             (Path(self.backgrounds.name) / "background.webp").write_bytes(
                 b"RIFF\x08\x00\x00\x00WEBPbackground"
             )
+            grant_plan(owner.id)
+            grant_plan(outsider.id)
             self.owner_token = create_access_token(identity=str(owner.id))
             self.outsider_token = create_access_token(identity=str(outsider.id))
             self.business_id = str(business.id)

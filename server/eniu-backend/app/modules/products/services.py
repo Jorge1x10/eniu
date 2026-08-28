@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app import storage
 from app.database.db import db
+from app.modules.billing.guards import ensure_can_create_product
 from app.modules.catalogue.services import catalogue_access
 from app.modules.category.model import Category
 from app.modules.products.model import Product
@@ -270,6 +271,9 @@ def create_product(owner_id, business_id, catalogue_id, data, images=None):
         catalogue, error = catalogue_access(owner_id, business_id, catalogue_id)
         if error:
             return error
+        blocked = ensure_can_create_product(owner_id, catalogue.id)
+        if blocked:
+            return blocked
         content_data = {key: value for key, value in data.items() if key in CREATE_FIELDS}
         invalid_fields = set(data) - CREATE_FIELDS - {"default_image_index"}
         if invalid_fields:

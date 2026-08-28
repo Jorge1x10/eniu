@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 
 from app import storage
 from app.database.db import db
+from app.modules.billing.guards import ensure_template_allowed
 from app.modules.catalogue.services import catalogue_access
 from app.modules.template.model import CatalogueTemplate
 from app.modules.catalogue.model import Catalogue
@@ -178,6 +179,15 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         template_key = data.get("template_key", current["template_key"])
         if template_key not in TEMPLATE_KEYS:
             return {"message": "La plantilla seleccionada no está permitida"}, 400
+        blocked = ensure_template_allowed(
+            owner_id,
+            template_key=data.get("template_key"),
+            theme=data.get("theme"),
+            cover_upload=bool(cover and cover.filename),
+            background_upload=bool(background and background.filename),
+        )
+        if blocked:
+            return blocked
         theme = _validate_theme(data.get("theme", {}), current["theme"])
 
         if not config:

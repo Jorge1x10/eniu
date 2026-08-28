@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.database.db import db
+from app.modules.billing.guards import ensure_can_create_catalogue
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 
@@ -135,6 +136,10 @@ def create_catalogue(owner_id, business_id, data):
         business, error = _business_access(owner_id, business_id)
         if error:
             return error
+
+        blocked = ensure_can_create_catalogue(owner_id, business.id)
+        if blocked:
+            return blocked
 
         name, _ = _name(data, required=True)
         description, _ = _description(data)

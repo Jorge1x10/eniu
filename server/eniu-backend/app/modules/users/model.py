@@ -1,5 +1,6 @@
 from app import db
 from app.database.basemodel import BaseModel
+from app.modules.billing.plans import FREE, plan_payload
 
 
 
@@ -44,14 +45,7 @@ class User(BaseModel):
                 "google": bool(self.google_id),
                 "apple": bool(self.apple_id),
             },
-            "plan": subscription.to_plan_dict() if subscription else {
-                "key": "free",
-                "name": "Plan gratuito",
-                "status": "inactive",
-                "has_access": False,
-                "cancel_at_period_end": False,
-                "current_period_end": None,
-            },
+            "plan": subscription.to_plan_dict() if subscription else plan_payload(FREE),
             "created_at": (
                 self.created_at.isoformat()
                 if self.created_at else None

@@ -1,3 +1,5 @@
+from app.modules.billing import plans
+from app.modules.billing.guards import plan_key_for_owner_id
 from app.modules.template.services import default_configuration
 from app.modules.analytics.security import tracking_key
 
@@ -70,6 +72,10 @@ def serialize_public_menu(catalogue):
         if slug and catalogue.is_published and catalogue.template_config and catalogue.template_config.background_filename
         else None
     )
+    plan_key = plan_key_for_owner_id(catalogue.business.owner_id)
+    template_key, theme = plans.sanitize_public_theme(
+        plan_key, configuration["template_key"], theme
+    )
     return {
         "business": {
             "name": catalogue.business.name,
@@ -80,8 +86,11 @@ def serialize_public_menu(catalogue):
             "description": catalogue.description,
         },
         "template": {
-            "key": configuration["template_key"],
+            "key": template_key,
             "theme": theme,
+        },
+        "branding": {
+            "show_eniu_badge": plans.limits_for(plan_key)["show_eniu_badge"],
         },
         "categories": category_payload,
         "uncategorized_products": uncategorized_payload,

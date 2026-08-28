@@ -9,10 +9,19 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.database.db import db
 from app.modules.billing.model import BillingSubscription, StripeWebhookEvent
+from app.modules.billing.plans import FREE, plan_payload
+from app.modules.business.model import Business
+from app.modules.catalogue.model import Catalogue
 from app.modules.users.model import User
 
 
 OPEN_SUBSCRIPTION_STATUSES = {"active", "trialing", "past_due", "unpaid", "incomplete", "paused"}
+
+# Estados de los que ya no se vuelve: sólo con estos se aplica la bajada de
+# plan. `past_due` queda fuera a propósito, porque Stripe sigue reintentando el
+# cobro y sería destructivo despublicar los menús de alguien cuya tarjeta se
+# recupera dos días después.
+TERMINAL_STATUSES = {"canceled", "unpaid", "incomplete_expired"}
 
 
 def _stripe_configured(require_webhook=False):
@@ -61,14 +70,7 @@ def get_subscription(user_id):
     user = _user(user_id)
     if not user:
         return {"message": "Usuario no encontrado"}, 404
-    plan = user.billing_subscription.to_plan_dict() if user.billing_subscription else {
-        "key": "free",
-        "name": "Plan gratuito",
-        "status": "inactive",
-        "has_access": False,
-        "cancel_at_period_end": False,
-        "current_period_end": None,
-    }
+    plan = user.billing_subscription.to_plan_dict() if user.billing_subscription else plan_payload(FREE)
     return {"plan": plan}, 200
 
 
@@ -151,6 +153,32 @@ def _period_end(subscription):
     return datetime.fromtimestamp(timestamp, timezone.utc) if timestamp else None
 
 
+def apply_free_plan_state(user):
+    """Deja la cuenta como la ve el plan gratuito tras perder el de pago.
+
+    Despublica todos los menús y desactiva todos los negocios salvo el más
+    reciente. No borra nada: el `public_slug` de cada menú se conserva, así que
+    volver a publicar recupera la misma URL y los códigos QR ya impresos siguen
+    sirviendo. La plantilla tampoco se toca en la base; el menú público se
+    dibuja con los límites del plan, de modo que vuelve sola al recuperar la
+    suscripción.
+    """
+    businesses = (
+        Business.query
+        .filter_by(owner_id=user.id)
+        .order_by(Business.created_at.desc())
+        .all()
+    )
+    if not businesses:
+        return
+    kept = businesses[0]
+    Catalogue.query.filter(
+        Catalogue.business_id.in_([business.id for business in businesses])
+    ).update({"is_published": False, "published_at": None}, synchronize_session=False)
+    for business in businesses:
+        business.is_active = business.id == kept.id
+
+
 def _sync_subscription(subscription, fallback_user_id=None):
     metadata = subscription.get("metadata") or {}
     user_id = metadata.get("eniu_user_id") or fallback_user_id
@@ -165,6 +193,7 @@ def _sync_subscription(subscription, fallback_user_id=None):
         current_app.logger.warning("Stripe subscription without matching ENIU user: %s", subscription.get("id"))
         return
 
+    had_access = record.has_access
     items = subscription.get("items", {}).get("data", [])
     price = items[0].get("price") if items else None
     record.stripe_customer_id = customer_id or record.stripe_customer_id
@@ -174,6 +203,11 @@ def _sync_subscription(subscription, fallback_user_id=None):
     record.status = subscription.get("status", "inactive")
     record.cancel_at_period_end = bool(subscription.get("cancel_at_period_end"))
     record.current_period_end = _period_end(subscription)
+
+    if had_access and record.status in TERMINAL_STATUSES:
+        owner = db.session.get(User, record.user_id)
+        if owner:
+            apply_free_plan_state(owner)
 
 
 def _invoice_subscription_id(invoice):

@@ -1,3 +1,4 @@
+from app.modules.billing.guards import ensure_can_create_business
 from app.modules.business.model import Business
 from flask import current_app
 from uuid import UUID, uuid4
@@ -40,6 +41,10 @@ def create_business(owner_id, data):
         return {
             "message": "El nombre del negocio es obligatorio"
         }, 400
+
+    blocked = ensure_can_create_business(owner_id)
+    if blocked:
+        return blocked
 
     existing_business = Business.query.filter_by(
         owner_id=UUID(owner_id),

@@ -1,5 +1,6 @@
 from app import db
 from app.database.basemodel import BaseModel, UUID, utc_now
+from app.modules.billing import plans
 
 
 ACCESS_STATUSES = {"active", "trialing"}
@@ -19,17 +20,25 @@ class BillingSubscription(BaseModel):
 
     user = db.relationship("User", back_populates="billing_subscription")
 
-    PLAN_NAMES = {"free": "Plan gratuito", "essential": "Plan Esencial"}
+    @property
+    def has_access(self):
+        return self.status in ACCESS_STATUSES
+
+    @property
+    def effective_plan_key(self):
+        if not self.has_access or self.plan_key not in plans.PLANS:
+            return plans.FREE
+        return self.plan_key
 
     def to_plan_dict(self):
-        return {
-            "key": self.plan_key,
-            "name": self.PLAN_NAMES.get(self.plan_key, self.plan_key.title()),
-            "status": self.status,
-            "has_access": self.status in ACCESS_STATUSES,
-            "cancel_at_period_end": self.cancel_at_period_end,
-            "current_period_end": self.current_period_end.isoformat() if self.current_period_end else None,
-        }
+        return plans.plan_payload(
+            self.plan_key if self.plan_key in plans.PLANS else plans.FREE,
+            effective_key=self.effective_plan_key,
+            status=self.status,
+            has_access=self.has_access,
+            cancel_at_period_end=self.cancel_at_period_end,
+            current_period_end=self.current_period_end.isoformat() if self.current_period_end else None,
+        )
 
 
 class StripeWebhookEvent(db.Model):

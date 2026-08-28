@@ -10,6 +10,7 @@ from app.extensions import bcrypt
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 from app.modules.users.model import User
+from tests.plan_helpers import grant_plan
 
 
 class SecurityAuditTestCase(unittest.TestCase):
@@ -42,6 +43,8 @@ class SecurityAuditTestCase(unittest.TestCase):
             foreign_catalogue = Catalogue(name="Privado", business_id=foreign_business.id)
             db.session.add_all([owned_catalogue, foreign_catalogue])
             db.session.commit()
+            grant_plan(owner.id)
+            grant_plan(outsider.id)
             self.owner_token = create_access_token(identity=str(owner.id))
             self.outsider_token = create_access_token(identity=str(outsider.id))
             self.business_id = str(owned_business.id)
