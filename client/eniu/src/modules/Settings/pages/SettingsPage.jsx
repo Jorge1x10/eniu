@@ -59,6 +59,10 @@ export default function SettingsPage() {
           {activeTab === "security" && <SecuritySettings user={user} onLogout={handleLogout} />}
         </div>
       </div>
+
+      <p className="text-center text-xs text-[#777777]">
+        <Link to="/privacidad" className="font-semibold underline underline-offset-4 hover:text-[#111111]">Aviso de privacidad</Link>
+      </p>
     </section>
   );
 }
