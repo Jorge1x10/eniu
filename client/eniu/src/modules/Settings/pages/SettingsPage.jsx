@@ -186,6 +186,51 @@ function PrimaryButton({ loading, children }) {
   return <button type="submit" disabled={loading} className="min-h-11 cursor-pointer rounded-xl bg-[#FFE05A] px-5 py-3 font-bold text-[#111111] transition hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-60">{loading ? "Guardando..." : children}</button>;
 }
 
+function DeleteAccountCard({ user, onLogout }) {
+  const { request, loading } = useApi("users/me");
+  const hasPassword = Boolean((user.auth_methods || {}).password);
+  const [value, setValue] = useState("");
+  const [error, setError] = useState("");
+
+  // Con contraseña se pide la contraseña; quien entró con Google o Apple no
+  // tiene ninguna, y exigírsela lo dejaría sin poder borrar su cuenta.
+  const ready = hasPassword ? value.length > 0 : value.trim().toUpperCase() === "ELIMINAR";
+
+  async function submit(event) {
+    event.preventDefault();
+    if (loading || !ready) return;
+    setError("");
+    const response = await request({
+      method: "DELETE",
+      data: hasPassword ? { password: value } : { confirmation: value },
+    });
+    if (!response.ok) {
+      setError(response.data?.message || "No fue posible eliminar la cuenta.");
+      return;
+    }
+    onLogout();
+  }
+
+  return (
+    <div className="rounded-2xl border border-red-200 bg-white p-5 shadow-sm sm:p-7">
+      <h2 className="text-2xl font-bold text-red-800">Eliminar cuenta</h2>
+      <p className="mt-2 text-sm leading-6 text-[#666666]">
+        Se eliminan tus negocios, menús, productos y fotos, y tus menús publicados dejan de estar disponibles.
+        Si tienes una suscripción activa se cancela antes de borrar nada. <strong>No se puede deshacer.</strong>
+      </p>
+      <form onSubmit={submit} className="mt-6 space-y-5" noValidate>
+        {hasPassword
+          ? <PasswordField id="delete-account-password" label="Confirma con tu contraseña" autoComplete="current-password" value={value} onChange={(event) => { setValue(event.target.value); setError(""); }} />
+          : <Field id="delete-account-confirmation" label="Escribe ELIMINAR para confirmar" value={value} autoComplete="off" onChange={(event) => { setValue(event.target.value); setError(""); }} help="Tu cuenta usa Google o Apple, así que no tiene contraseña." />}
+        <Feedback error={error} />
+        <button type="submit" disabled={loading || !ready} className="min-h-11 cursor-pointer rounded-xl border border-red-700 bg-red-600 px-5 py-3 font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+          {loading ? "Eliminando..." : "Eliminar mi cuenta"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function ProfileForm({ user, setUser }) {
   const { patch, loading } = useApi("users/me");
   const [form, setForm] = useState({ name: user.name || "", username: user.username || "", phone_number: user.phone_number || "" });
@@ -280,5 +325,6 @@ function SecuritySettings({ user, onLogout }) {
       {!methods.password && <Feedback error={error} success={success} />}
       <div className="flex flex-col gap-3 sm:flex-row"><button type="button" onClick={revoke} disabled={sessionsApi.loading} className="min-h-11 cursor-pointer rounded-xl border border-[#111111] px-5 py-3 font-bold text-[#111111] hover:bg-[#F8E8AE] disabled:cursor-not-allowed disabled:opacity-60">{sessionsApi.loading ? "Cerrando..." : "Cerrar las demás sesiones"}</button><button type="button" onClick={onLogout} className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-red-700 bg-red-600 px-5 py-3 font-bold text-white transition hover:bg-red-700"><LogOut size={18} /> Cerrar sesión</button></div>
     </Card>
+    <DeleteAccountCard user={user} onLogout={onLogout} />
   </div>;
 }

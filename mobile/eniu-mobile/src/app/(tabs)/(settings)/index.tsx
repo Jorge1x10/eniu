@@ -28,6 +28,11 @@ export default function SettingsScreen() {
   const [business, setBusiness] = useState(() => selectedBusiness ? { name: selectedBusiness.name, description: selectedBusiness.description || '', phone: selectedBusiness.phone || '', whatsapp: selectedBusiness.whatsapp || '', address: selectedBusiness.address || '', currency: selectedBusiness.currency || 'MXN' } : null);
   const [saving, setSaving] = useState<'profile' | 'business' | null>(null); const [error, setError] = useState(''); const [success, setSuccess] = useState('');
   const [milestoneNotifications, setMilestoneNotifications] = useState(true);
+  const [deleteValue, setDeleteValue] = useState(''); const [deleting, setDeleting] = useState(false);
+  // Con contraseña se pide la contraseña; quien entró con Google o Apple no
+  // tiene ninguna, y exigírsela lo dejaría sin poder borrar su cuenta.
+  const hasPassword = Boolean(user?.auth_methods?.password);
+  const canDelete = hasPassword ? deleteValue.length > 0 : deleteValue.trim().toUpperCase() === 'ELIMINAR';
   const updateProfile = (key: keyof typeof profile) => (value: string) => setProfile((current) => ({ ...current, [key]: value }));
   const updateBusinessField = (key: keyof NonNullable<typeof business>) => (value: string) => setBusiness((current) => current ? ({ ...current, [key]: value }) : current);
 
@@ -51,6 +56,26 @@ export default function SettingsScreen() {
     finally { setSaving(null); }
   }
   async function toggleMilestoneNotifications(value: boolean) { setMilestoneNotifications(value); await setMilestoneNotificationsEnabled(value); }
+
+  function confirmDelete() {
+    if (!canDelete || deleting) return;
+    Alert.alert(
+      'Eliminar tu cuenta',
+      'Se eliminan tus negocios, menús, productos y fotos, y tus menús publicados dejan de estar disponibles. Si tienes una suscripción activa se cancela. No se puede deshacer.',
+      [{ text: 'Cancelar', style: 'cancel' }, { text: 'Eliminar', style: 'destructive', onPress: deleteAccount }],
+    );
+  }
+
+  async function deleteAccount() {
+    setDeleting(true); setError(''); setSuccess('');
+    try {
+      await api.delete('users/me', hasPassword ? { password: deleteValue } : { confirmation: deleteValue });
+      await logout();
+    } catch (requestError) {
+      setDeleting(false);
+      setError(requestError instanceof Error ? requestError.message : 'No fue posible eliminar la cuenta.');
+    }
+  }
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: topPadding, paddingBottom: 120, gap: 20 }}>
@@ -79,6 +104,14 @@ export default function SettingsScreen() {
       </Section>
 
       <Button variant="danger" onPress={() => Alert.alert('Cerrar sesión', '¿Quieres salir de Eniu en este dispositivo?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Cerrar sesión', style: 'destructive', onPress: logout }])}>Cerrar sesión</Button>
+
+      <Section label="Eliminar cuenta">
+        <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>Se eliminan tus negocios, menús, productos y fotos, y tus menús publicados dejan de estar disponibles. Si tienes una suscripción activa se cancela antes de borrar nada. No se puede deshacer.</Text>
+        {hasPassword
+          ? <FormField label="Confirma con tu contraseña" value={deleteValue} onChangeText={setDeleteValue} secureTextEntry autoComplete="current-password" placeholder="Tu contraseña" />
+          : <FormField label="Escribe ELIMINAR para confirmar" value={deleteValue} onChangeText={setDeleteValue} autoCapitalize="characters" placeholder="ELIMINAR" />}
+        <Button variant="danger" loading={deleting} disabled={!canDelete} onPress={confirmDelete}>Eliminar mi cuenta</Button>
+      </Section>
     </ScrollView>
   );
 }
