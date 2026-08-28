@@ -23,6 +23,8 @@ type Variant = {
   columns: 1 | 2;
   navRounded: boolean;
   compactCover?: boolean;
+  /** La web cae al nombre del negocio cuando el menú no tiene descripción. */
+  subtitleFallback?: boolean;
   imageHeight: number;
   card: (accent: string, background: string) => ViewStyle;
   offsetShadow?: boolean;
@@ -42,23 +44,23 @@ const VARIANTS: Record<TemplateKey, Variant> = {
     card: (accent) => ({ borderWidth: 1, borderColor: accent, padding: 9 }),
   },
   bistro: {
-    eyebrow: 'Selección de la casa', align: 'left', titleSize: 23, titleWeight: '900', columns: 1, navRounded: true, imageHeight: 66,
+    subtitleFallback: true, eyebrow: 'Selección de la casa', align: 'left', titleSize: 23, titleWeight: '900', columns: 1, navRounded: true, imageHeight: 66,
     card: (accent, background) => ({ borderRadius: 9, borderLeftWidth: 4, borderLeftColor: accent, backgroundColor: background, padding: 10 }),
   },
   bold: {
-    eyebrow: 'Sabor sin límites', align: 'left', titleSize: 24, titleWeight: '900', uppercase: true, columns: 2, navRounded: true, imageHeight: 56, offsetShadow: true,
+    subtitleFallback: true, eyebrow: 'Sabor sin límites', align: 'left', titleSize: 24, titleWeight: '900', uppercase: true, columns: 2, navRounded: true, imageHeight: 56, offsetShadow: true,
     card: (accent, background) => ({ borderWidth: 2, borderColor: accent, backgroundColor: background, padding: 8 }),
   },
   natural: {
-    eyebrow: 'Ingredientes y origen', align: 'center', titleSize: 23, titleWeight: '800', columns: 1, navRounded: true, imageHeight: 70,
+    subtitleFallback: true, eyebrow: 'Ingredientes y origen', align: 'center', titleSize: 23, titleWeight: '800', columns: 1, navRounded: true, imageHeight: 70,
     card: (_accent, background) => ({ borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.14)', backgroundColor: background, padding: 11, overflow: 'hidden' }),
   },
   retro: {
-    eyebrow: 'Clásicos favoritos', align: 'center', titleSize: 22, titleWeight: '900', uppercase: true, columns: 2, navRounded: true, imageHeight: 56,
+    subtitleFallback: true, eyebrow: 'Clásicos favoritos', align: 'center', titleSize: 22, titleWeight: '900', uppercase: true, columns: 2, navRounded: true, imageHeight: 56,
     card: (accent, background) => ({ borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: accent, backgroundColor: background, padding: 8 }),
   },
   luxury: {
-    eyebrow: 'Una experiencia especial', align: 'center', titleSize: 23, titleWeight: '700', columns: 1, navRounded: false, imageHeight: 90,
+    subtitleFallback: true, eyebrow: 'Una experiencia especial', align: 'center', titleSize: 23, titleWeight: '700', columns: 1, navRounded: false, imageHeight: 90,
     card: () => ({ borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.30)', paddingVertical: 11 }),
   },
 };
@@ -102,6 +104,7 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
   const active = selected !== 'all' && !sections.some((section) => section.id === selected) ? 'all' : selected;
   const visible = active === 'all' ? sections : sections.filter((section) => section.id === active);
   const eyebrow = variant.eyebrow === 'business' ? business?.name || 'Tu negocio' : variant.eyebrow;
+  const subtitle = catalogue.description || (variant.subtitleFallback ? business?.name : null);
 
   return (
     // `flexGrow` y no `flex`: así llena el marco del teléfono cuando el menú es
@@ -127,11 +130,14 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
         <Text numberOfLines={1} style={{ color: text, opacity: 0.6, fontSize: 9, fontWeight: '800', letterSpacing: 1.6, textTransform: 'uppercase', fontFamily, textAlign: variant.align }}>{eyebrow}</Text>
         {variant.align === 'center' ? <View style={{ height: 1, width: 34, backgroundColor: theme.accent_color, marginVertical: 8 }} /> : null}
         <Text style={{ color: text, fontSize: variant.titleSize, fontWeight: variant.titleWeight, fontFamily, fontStyle: variant.italic ? 'italic' : 'normal', textTransform: variant.uppercase ? 'uppercase' : 'none', marginTop: variant.align === 'center' ? 0 : 4, textAlign: variant.align }}>{catalogue.name}</Text>
-        {catalogue.description ? <Text numberOfLines={2} style={{ color: text, opacity: 0.68, fontSize: 11.5, lineHeight: 17, marginTop: 6, fontFamily, textAlign: variant.align }}>{catalogue.description}</Text> : null}
+        {subtitle ? <Text numberOfLines={2} style={{ color: text, opacity: 0.68, fontSize: 11.5, lineHeight: 17, marginTop: 6, fontFamily, textAlign: variant.align }}>{subtitle}</Text> : null}
       </View>
 
       {sections.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingHorizontal: 16, paddingBottom: 12 }}>
+        // Sin `flexShrink: 0` esta barra desaparece: el estilo base de un
+        // ScrollView horizontal la deja encoger, y dentro del marco de altura
+        // fija es lo único que cede cuando el menú no cabe entero.
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ gap: 7, paddingHorizontal: 16, paddingBottom: 12 }}>
           {[{ id: 'all', name: 'Todo' }, ...sections].map((section) => {
             const on = active === section.id;
             return (
@@ -152,7 +158,10 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
           {visible.map((section) => (
             <View key={section.id} style={{ gap: 10 }}>
               <Text style={{ color: text, fontSize: 15, fontWeight: '800', fontFamily, fontStyle: variant.italic ? 'italic' : 'normal', textAlign: variant.align }}>{section.name}</Text>
-              <View style={{ flexDirection: variant.columns === 2 ? 'row' : 'column', flexWrap: 'wrap', gap: 10 }}>
+              {/* `flexWrap` sólo en dos columnas: envolviendo una columna, Yoga
+                  reparte las tarjetas en columnas del ancho de su contenido y
+                  cada producto se encogía en vez de ocupar todo el ancho. */}
+              <View style={{ flexDirection: variant.columns === 2 ? 'row' : 'column', flexWrap: variant.columns === 2 ? 'wrap' : 'nowrap', gap: 10 }}>
                 {section.products.map((product) => <PreviewProduct key={product.id} product={product} variant={variant} theme={theme} fontFamily={fontFamily} currency={currency} />)}
               </View>
             </View>

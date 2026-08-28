@@ -6,6 +6,7 @@ import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated'
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { CatalogueCard } from '@/components/catalogue-card';
 import { Button } from '@/components/ui/button';
+import { Divider } from '@/components/ui/divider';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
 import { PlusIcon } from '@/components/ui/icons';
@@ -47,7 +48,9 @@ export default function MenusScreen() {
         <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>Menús</Text>
         <Text style={{ color: theme.muted, lineHeight: 20 }}>Administra los menús que compartes con tus clientes.</Text>
       </View>
+      <Divider />
       <BusinessSwitcher />
+      <Divider />
       {!selectedBusiness ? <EmptyState title="Primero crea un negocio" description="Ve a Inicio para crear el negocio que contendrá tus menús." /> : <>
         {creating ? <View style={{ padding: 18, gap: 14, borderRadius: 20, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}><Text style={{ color: theme.text, fontSize: 20, fontWeight: '900' }}>Nuevo menú</Text><FormField label="Nombre" value={name} onChangeText={setName} maxLength={64} placeholder="Menú principal" /><FormField label="Descripción" value={description} onChangeText={setDescription} multiline placeholder="Nuestro menú general" /><Feedback message={error} /><View style={{ flexDirection: 'row', gap: 10 }}><Button style={{ flex: 1 }} onPress={create} loading={saving}>Guardar menú</Button><Button style={{ flex: 1 }} variant="secondary" onPress={() => { setCreating(false); setError(''); }}>Cancelar</Button></View></View> : null}
         {query.isLoading ? <LoadingState label="Cargando menús…" /> : query.isError ? <ErrorState message="No pudimos cargar tus menús." onRetry={() => query.refetch()} /> : menus.length ? <View style={{ gap: 12 }}>

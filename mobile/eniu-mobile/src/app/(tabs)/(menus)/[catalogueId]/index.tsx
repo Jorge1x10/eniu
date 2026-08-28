@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { MenuSkeleton } from '@/components/menu-skeleton';
+import { Divider } from '@/components/ui/divider';
 import { ChevronRightIcon, GridIcon, LinkIcon, PaletteIcon, TagIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
@@ -13,14 +14,13 @@ import { catalogueKeys, getCatalogue } from '@/features/catalogues/catalogue-api
 import { ApiError, api } from '@/lib/api';
 import type { Catalogue, Category, Product } from '@/types/models';
 
-// Cada acción se identifica por su icono; el conteo va en la tercera línea,
-// donde un producto muestra su disponibilidad, para que las dos listas del menú
-// se lean igual.
+// Mismas tarjetas que el panel web: bloque de identidad arriba y la acción bajo
+// una línea divisoria, a todo el ancho de la pantalla.
 const actions = [
-  { route: 'products', title: 'Productos', description: 'Precios, disponibilidad e imágenes', Icon: TagIcon, unit: ['producto', 'productos'] },
-  { route: 'categories', title: 'Categorías', description: 'Organiza el contenido del menú', Icon: GridIcon, unit: ['categoría', 'categorías'] },
-  { route: 'template', title: 'Diseño y plantilla', description: 'Estilo, colores y visibilidad', Icon: PaletteIcon },
-  { route: 'publication', title: 'Publicar y compartir', description: 'Enlace público y código QR', Icon: LinkIcon },
+  { route: 'products', title: 'Productos', description: 'Crea productos con o sin categoría.', action: 'Administrar productos', Icon: TagIcon, unit: ['producto', 'productos'] },
+  { route: 'categories', title: 'Categorías', description: 'Organiza los productos de este menú.', action: 'Administrar categorías', Icon: GridIcon, unit: ['categoría', 'categorías'] },
+  { route: 'template', title: 'Diseño y plantilla', description: 'Elige el diseño y personaliza la identidad del menú.', action: 'Personalizar plantilla', Icon: PaletteIcon },
+  { route: 'publication', title: 'Publicar y compartir', description: 'Publica y comparte este menú con tus clientes.', action: 'Administrar publicación', Icon: LinkIcon },
 ] as const;
 
 export default function CatalogueDetailScreen() {
@@ -78,34 +78,35 @@ export default function CatalogueDetailScreen() {
           </View>
         </View>
 
-        <View style={{ gap: 10 }}>{actions.map((action, index) => {
+        <View style={{ gap: 12 }}>{actions.map((action, index) => {
           const count = counts[action.route];
           const unit = 'unit' in action ? action.unit : null;
-          // Misma estructura que una fila de producto: cuadro a la izquierda,
-          // dos líneas de texto y, en lugar del precio, la flecha de avanzar.
+          const published = action.route === 'publication' ? catalogue.is_published : null;
+          const status = unit
+            ? { label: count == null ? '—' : `${count} ${count === 1 ? unit[0] : unit[1]}`, on: Boolean(count) }
+            : published == null ? null : { label: published ? 'Publicado' : 'Sin publicar', on: published };
           return (
             <Animated.View key={action.route} entering={FadeInDown.duration(300).delay(index * 70)}>
             <Link href={{ pathname: `/(tabs)/(menus)/[catalogueId]/${action.route}`, params: { catalogueId } }} asChild>
-              <Pressable style={({ pressed }) => ({ borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 13, opacity: pressed ? 0.72 : 1 })}>
-                <View style={{ width: 58, height: 58, borderRadius: 13, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><action.Icon color={theme.yellowPressed} size={25} /></View>
-                <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                  <Text numberOfLines={1} style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>{action.title}</Text>
-                  <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 12 }}>{action.description}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 1 }}>
-                    {unit ? (
-                      <>
-                        <View style={{ width: 6, height: 6, borderRadius: 99, backgroundColor: count ? theme.success : theme.muted }} />
-                        <Text style={{ color: count ? theme.success : theme.muted, fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] }}>{count == null ? '—' : `${count} ${count === 1 ? unit[0] : unit[1]}`}</Text>
-                      </>
-                    ) : (
-                      <>
-                        <View style={{ width: 6, height: 6, borderRadius: 99, backgroundColor: action.route === 'publication' && catalogue.is_published ? theme.success : theme.muted }} />
-                        <Text style={{ color: action.route === 'publication' && catalogue.is_published ? theme.success : theme.muted, fontSize: 11, fontWeight: '600' }}>{action.route === 'publication' ? (catalogue.is_published ? 'Publicado' : 'Sin publicar') : 'Portada, colores y tipografía'}</Text>
-                      </>
-                    )}
+              <Pressable style={({ pressed }) => ({ backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous', overflow: 'hidden', opacity: pressed ? 0.72 : 1 })}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }}>
+                  <View style={{ width: 46, height: 46, borderRadius: 14, borderCurve: 'continuous', backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><action.Icon color={theme.onYellow} size={22} /></View>
+                  <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                    <Text style={{ color: theme.text, fontSize: 16, fontWeight: '900' }}>{action.title}</Text>
+                    <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{action.description}</Text>
                   </View>
                 </View>
-                <View style={{ width: 34, height: 34, borderRadius: 999, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><ChevronRightIcon color="#111111" size={13} /></View>
+                <Divider />
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={{ color: theme.yellowPressed, fontSize: 13, fontWeight: '800' }}>{action.action}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {status ? <>
+                      <View style={{ width: 6, height: 6, borderRadius: 99, backgroundColor: status.on ? theme.success : theme.muted }} />
+                      <Text style={{ color: status.on ? theme.success : theme.muted, fontSize: 11.5, fontWeight: '600', fontVariant: ['tabular-nums'] }}>{status.label}</Text>
+                    </> : null}
+                    <View style={{ width: 30, height: 30, borderRadius: 999, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center' }}><ChevronRightIcon color="#111111" size={12} /></View>
+                  </View>
+                </View>
               </Pressable>
             </Link>
             </Animated.View>
