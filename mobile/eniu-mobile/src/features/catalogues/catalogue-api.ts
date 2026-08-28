@@ -13,3 +13,7 @@ export function listCatalogues(businessId: string) {
 export function getCatalogue(businessId: string, catalogueId: string) {
   return api.get<{ catalogue: Catalogue }>(`businesses/${businessId}/catalogues/${catalogueId}`);
 }
+
+export function deleteCatalogue(businessId: string, catalogueId: string) {
+  return api.delete<{ message: string }>(`businesses/${businessId}/catalogues/${catalogueId}`);
+}
