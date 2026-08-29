@@ -1,6 +1,6 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 
 import { AuthShell } from '@/components/auth-shell';
 import { AppleAuthButton } from '@/components/apple-auth-button';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
 import { useEniuTheme } from '@/constants/eniu-theme';
+import { PRIVACY_URL, TERMS_URL } from '@/constants/legal';
 import { useAuth } from '@/features/auth/auth-context';
 
 export default function LoginScreen() {
@@ -39,6 +40,11 @@ export default function LoginScreen() {
       <Button onPress={submit} loading={loading}>Iniciar sesión</Button>
       <GoogleAuthButton mode="login" />
       <AppleAuthButton mode="login" />
+      {/* Sin casilla: quien ya tiene cuenta los aceptó en su día. */}
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 14 }}>
+        <Text accessibilityRole="link" onPress={() => Linking.openURL(TERMS_URL)} style={{ color: theme.muted, fontSize: 12, textDecorationLine: 'underline' }}>Términos y condiciones</Text>
+        <Text accessibilityRole="link" onPress={() => Linking.openURL(PRIVACY_URL)} style={{ color: theme.muted, fontSize: 12, textDecorationLine: 'underline' }}>Aviso de privacidad</Text>
+      </View>
       <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 5 }}>
         <Text style={{ color: theme.muted }}>¿Todavía no tienes cuenta?</Text>
         <Link href="/(auth)/register" style={{ color: theme.text, fontWeight: '800', textDecorationLine: 'underline' }}>Regístrate</Link>

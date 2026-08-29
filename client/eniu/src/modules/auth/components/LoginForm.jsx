@@ -217,6 +217,14 @@ export default function LoginForm() {
           Regístrate
         </Link>
       </p>
+
+      {/* Sin casilla: quien ya tiene cuenta los aceptó en su día y volver a
+          pedírselo al entrar sería ruido. El enlace sí conviene tenerlo a mano. */}
+      <p className="text-center text-xs text-gray-500">
+        <Link to="/terminos" className="underline underline-offset-2 hover:text-[#111111]">Términos y condiciones</Link>
+        {" · "}
+        <Link to="/privacidad" className="underline underline-offset-2 hover:text-[#111111]">Aviso de privacidad</Link>
+      </p>
     </form>
   );
 }

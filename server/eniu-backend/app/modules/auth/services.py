@@ -17,8 +17,43 @@ from app.modules.auth.mailer import build_password_reset_email, send_email
 from app.modules.auth.model import PasswordResetToken
 from app.modules.auth.validators import validate_password
 
+USERNAME_MAX_LENGTH = 50
+
+# Se sube cuando cambian los términos de forma significativa, para saber qué
+# versión aceptó cada quien.
+TERMS_VERSION = "2026-08-28"
+
+
+def accepted_terms_now():
+    return {"terms_accepted_at": datetime.now(timezone.utc), "terms_version": TERMS_VERSION}
+
+
+def derive_username(email):
+    """Inventa un nombre de usuario a partir del correo.
+
+    El alta ya no lo pide: son tres pasos —correo y contraseña, teléfono,
+    confirmar— y añadir un campo más sólo para satisfacer una restricción
+    interna estorbaría al usuario. Sigue siendo editable después desde
+    Configuración.
+    """
+    base = "".join(
+        character for character in email.split("@")[0].lower()
+        if character.isalnum() or character in {".", "_", "-"}
+    ).strip("._-")[:USERNAME_MAX_LENGTH - 5] or "usuario"
+
+    if not User.query.filter_by(username=base).first():
+        return base
+    # El sufijo evita chocar con quien ya tomó ese nombre.
+    for suffix in range(1, 1000):
+        candidate = f"{base}{suffix}"
+        if not User.query.filter_by(username=candidate).first():
+            return candidate
+    return f"{base}{uuid4().hex[:6]}"
+
+
 def register_user(data):
-    username = data["username"].strip()
+    email_for_username = (data.get("email") or "").strip().lower()
+    username = (data.get("username") or "").strip() or derive_username(email_for_username)
     email = data["email"].strip().lower()
     phone_number = data["phone"].strip()
 
@@ -61,7 +96,8 @@ def register_user(data):
         username=username,
         email=email,
         phone_number=phone_number,
-        password=password_hash
+        password=password_hash,
+        **accepted_terms_now(),
     )
 
     try:
@@ -380,7 +416,8 @@ def authenticate_google_user(credential):
             profile_picture=picture,
             password=None,
             username=None,
-            phone_number=None
+            phone_number=None,
+            **accepted_terms_now(),
         )
 
         db.session.add(user)
@@ -512,7 +549,8 @@ def authenticate_apple_user(identity_token, full_name=None):
             apple_id=apple_id,
             password=None,
             username=None,
-            phone_number=None
+            phone_number=None,
+            **accepted_terms_now(),
         )
 
         db.session.add(user)
