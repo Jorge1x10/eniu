@@ -178,6 +178,20 @@ def configure(app):
         _backend = LocalStorage()
 
 
+def public_url(folder, filename):
+    """La URL desde la que un visitante puede pedir el archivo sin pasar por
+    esta API, o `None` si no hay una.
+
+    Sirve para que el menú público anuncie directamente la del bucket: cada
+    escaneo pide una imagen por producto, y aunque el 302 no mueva los bytes,
+    la petición sí llega hasta aquí. Devolver `None` —almacenamiento local, o
+    S3 sin `S3_PUBLIC_BASE_URL`— deja que el llamador use su ruta por la API.
+    """
+    if not filename:
+        return None
+    return _backend.url_for(folder, filename)
+
+
 def save_file(folder, filename, file_obj):
     _backend.save(folder, filename, file_obj)
 
