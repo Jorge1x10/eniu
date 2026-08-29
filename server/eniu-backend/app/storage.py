@@ -11,17 +11,25 @@ S3-compatible bucket instead: AWS S3, Cloudflare R2, Backblaze B2,
 DigitalOcean Spaces, etc. Point S3_PUBLIC_BASE_URL at whatever serves that
 bucket's objects publicly (a custom domain on a public R2 bucket, a
 CloudFront distribution, ...) so `serve_file` can redirect straight to it
-for public assets instead of streaming the bytes through this API. Private
-assets (private=True) get a short-lived signed URL instead, so a bucket
-that isn't publicly readable still works and the JWT gate on the route
-actually controls access to the file, not just to a redirect.
+for public assets instead of streaming the bytes through this API.
+
+Los assets privados (private=True) son la excepción: esos sí viajan por la
+API. Redirigirlos al bucket parece más barato, pero el dashboard los pide con
+`fetch()` para poder mandar el JWT, y el navegador aplica CORS también al
+destino del redirect: la petición al bucket se bloquea con «No
+'Access-Control-Allow-Origin' header is present». Se podría configurar CORS en
+el bucket, pero entonces cada origen nuevo del frontend obligaría a tocar la
+consola de Cloudflare, y el ancho de banda que se ahorra es el de tres
+imágenes que sólo mira el dueño mientras edita su plantilla. El tráfico que
+importa —el de los comensales— sigue sin pasar por aquí.
 """
 import os
 from pathlib import Path
 
 from flask import current_app, redirect, send_from_directory
+from werkzeug.exceptions import NotFound
 
-from app.http_cache import REVALIDATED_ASSET_MAX_AGE, asset_cache_control
+from app.http_cache import asset_cache_control
 
 
 class LocalStorage:
@@ -37,7 +45,12 @@ class LocalStorage:
         except OSError:
             current_app.logger.warning("No fue posible eliminar el archivo %s", filename)
 
-    def url_for(self, folder, filename, *, private=False):
+    def url_for(self, folder, filename):
+        return None
+
+    def serve(self, folder, filename):
+        # El disco local no necesita nada especial: `serve_file` cae a
+        # `send_from_directory`, que es lo que siempre hizo.
         return None
 
 
@@ -113,22 +126,37 @@ class S3Storage:
                 "No fue posible eliminar %s de S3", self._key(folder, filename)
             )
 
-    def url_for(self, folder, filename, *, private=False):
-        key = self._key(folder, filename)
-        if private:
-            # A public bucket URL would make the JWT check on the route
-            # pointless: anyone who ever saw the link could fetch it again
-            # forever. A short-lived signed URL keeps the file gated by the
-            # route's own auth check on every fresh visit, and works even
-            # when the bucket itself isn't publicly readable.
-            return self._client.generate_presigned_url(
-                "get_object",
-                Params={"Bucket": self._bucket, "Key": key},
-                ExpiresIn=REVALIDATED_ASSET_MAX_AGE,
-            )
+    def url_for(self, folder, filename):
         if not self._public_base_url:
             return None
-        return f"{self._public_base_url}/{key}"
+        return f"{self._public_base_url}/{self._key(folder, filename)}"
+
+    def serve(self, folder, filename):
+        """Devuelve el objeto del bucket como respuesta de esta API.
+
+        Sólo se usa para los assets privados. Se transmite por trozos en vez
+        de cargarlo entero en memoria: la instancia tiene 512 MB y no hay
+        razón para que una portada de varios megabytes viva en RAM mientras
+        se envía.
+        """
+        key = self._key(folder, filename)
+        try:
+            stored = self._client.get_object(Bucket=self._bucket, Key=key)
+        except Exception as error:
+            # Que el objeto no esté es un 404 para quien lo pide, no un error
+            # del servidor: el archivo pudo borrarse entre que se guardó el
+            # nombre en la base y alguien lo pidió.
+            current_app.logger.warning("No fue posible leer %s de S3", key)
+            raise NotFound() from error
+        body = stored["Body"]
+        response = current_app.response_class(
+            body.iter_chunks(64 * 1024),
+            mimetype=stored.get("ContentType") or "application/octet-stream",
+        )
+        if stored.get("ContentLength") is not None:
+            response.headers["Content-Length"] = str(stored["ContentLength"])
+        response.call_on_close(body.close)
+        return response
 
 
 _backend = LocalStorage()
@@ -171,13 +199,22 @@ def serve_file(folder, filename, *, private=False, immutable=False):
     on a re-upload while the URL stays the same, so a long cache lifetime
     would keep serving the old image long after it was replaced.
     """
-    immutable = immutable and not private  # a signed URL can expire before an immutable cache entry would
-    url = _backend.url_for(folder, filename, private=private)
+    immutable = immutable and not private  # lo privado nunca se cachea para siempre
     cache_control = asset_cache_control(private=private, immutable=immutable)
-    if url:
-        response = redirect(url, code=302)
-        response.headers["Cache-Control"] = cache_control
-        return response
-    response = send_from_directory(folder, filename)
+
+    if private:
+        # Por qué no un redirect al bucket: ver el comentario de arriba.
+        response = _backend.serve(folder, filename)
+    else:
+        url = _backend.url_for(folder, filename)
+        # Sin URL pública configurada, el archivo se sirve desde el bucket en
+        # vez de buscarlo en el disco: con STORAGE_BACKEND=s3 y sin
+        # S3_PUBLIC_BASE_URL, en el disco no está, y caer ahí sería un 404 para
+        # cada comensal. Cuesta ancho de banda, pero un menú que se ve mal
+        # cuesta más.
+        response = redirect(url, code=302) if url else _backend.serve(folder, filename)
+
+    if response is None:
+        response = send_from_directory(folder, filename)
     response.headers["Cache-Control"] = cache_control
     return response

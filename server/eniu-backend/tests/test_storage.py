@@ -1,9 +1,12 @@
 import io
+import os
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from flask import Response
 from werkzeug.datastructures import FileStorage
+from werkzeug.exceptions import NotFound
 
 from app import create_app, storage
 
@@ -58,9 +61,11 @@ class StorageTestCase(unittest.TestCase):
 
     def test_redirects_to_a_public_url_when_the_backend_exposes_one(self):
         class FakeRemoteBackend:
-            def url_for(self, folder, filename, *, private=False):
-                kind = "signed" if private else "public"
-                return f"https://cdn.example.com/{kind}/{Path(folder).name}/{filename}"
+            def url_for(self, folder, filename):
+                return f"https://cdn.example.com/{Path(folder).name}/{filename}"
+
+            def serve(self, folder, filename):
+                return Response(b"bytes privados", mimetype="image/png")
 
         original_backend = storage._backend
         storage._backend = FakeRemoteBackend()
@@ -69,24 +74,51 @@ class StorageTestCase(unittest.TestCase):
                 response = storage.serve_file("uploads/products", "a.png")
                 self.assertEqual(response.status_code, 302)
                 self.assertEqual(
-                    response.headers["Location"], "https://cdn.example.com/public/products/a.png"
+                    response.headers["Location"], "https://cdn.example.com/products/a.png"
                 )
                 self.assertEqual(response.headers["Cache-Control"], "public, max-age=60")
 
-                # A private redirect must never be marked immutable: a signed
-                # URL can expire well before a long browser cache would.
+                # Lo privado no se redirige nunca: el dashboard lo pide con
+                # `fetch()` para mandar el JWT, y el navegador aplica CORS
+                # también al destino del redirect, así que el bucket lo
+                # bloquearía.
                 private_response = storage.serve_file(
                     "uploads/covers", "b.png", private=True, immutable=True
                 )
-                self.assertEqual(
-                    private_response.headers["Location"],
-                    "https://cdn.example.com/signed/covers/b.png",
-                )
+                self.assertEqual(private_response.status_code, 200)
+                self.assertNotIn("Location", private_response.headers)
+                self.assertEqual(private_response.get_data(), b"bytes privados")
+                # Aunque se pida inmutable: la respuesta es del dueño y de ahora.
                 self.assertEqual(private_response.headers["Cache-Control"], "private, max-age=60")
         finally:
             storage._backend = original_backend
 
-    def test_s3_backend_signs_private_urls_and_uses_public_base_url_for_public_ones(self):
+    def test_public_assets_come_from_the_bucket_when_there_is_no_public_url(self):
+        """Con S3 activo y sin S3_PUBLIC_BASE_URL, el disco local está vacío.
+
+        Caer a `send_from_directory` ahí sería un 404 para cada comensal que
+        abre el menú, que es justo lo que no puede pasar.
+        """
+        class BucketWithoutPublicUrl:
+            def url_for(self, folder, filename):
+                return None
+
+            def serve(self, folder, filename):
+                return Response(b"desde el bucket", mimetype="image/webp")
+
+        original_backend = storage._backend
+        storage._backend = BucketWithoutPublicUrl()
+        try:
+            with self.app.test_request_context():
+                response = storage.serve_file("uploads/products", "a.webp")
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.get_data(), b"desde el bucket")
+                self.assertEqual(response.headers["Cache-Control"], "public, max-age=60")
+        finally:
+            storage._backend = original_backend
+
+    def test_s3_backend_builds_public_urls_from_the_public_base_url(self):
         s3_backend = storage.S3Storage(
             bucket="eniu-uploads",
             prefix="",
@@ -96,13 +128,68 @@ class StorageTestCase(unittest.TestCase):
             secret_key="fakesecretkey",
             public_base_url="https://cdn.eniu.app",
         )
-        public_url = s3_backend.url_for("uploads/products", "a.png")
-        self.assertEqual(public_url, "https://cdn.eniu.app/products/a.png")
 
-        signed_url = s3_backend.url_for("uploads/covers", "b.png", private=True)
-        self.assertIn("eniu-uploads", signed_url)
-        self.assertIn("covers/b.png", signed_url)
-        self.assertIn("X-Amz-Signature", signed_url)
+        self.assertEqual(
+            s3_backend.url_for("uploads/products", "a.png"),
+            "https://cdn.eniu.app/products/a.png",
+        )
+
+    def test_s3_backend_streams_a_private_object_instead_of_redirecting(self):
+        s3_backend = storage.S3Storage(
+            bucket="eniu-uploads", prefix="", region="auto", endpoint_url=None,
+            access_key="AKIAFAKEACCESSKEY", secret_key="fakesecretkey",
+            public_base_url="https://cdn.eniu.app",
+        )
+        requested = {}
+
+        class FakeBody:
+            def __init__(self):
+                self.closed = False
+
+            def iter_chunks(self, size):
+                yield b"portada"
+
+            def close(self):
+                self.closed = True
+
+        body = FakeBody()
+
+        class FakeClient:
+            def get_object(self, Bucket, Key):  # noqa: N803 - la firma es la de boto3
+                requested.update(bucket=Bucket, key=Key)
+                return {"Body": body, "ContentType": "image/webp", "ContentLength": 7}
+
+        # El cliente se construye perezosamente y se cachea por PID; sustituirlo
+        # aquí evita tocar la red desde una prueba.
+        s3_backend._client_cache = FakeClient()
+        s3_backend._client_pid = os.getpid()
+
+        with self.app.test_request_context():
+            response = s3_backend.serve("uploads/covers", "b.webp")
+
+            self.assertEqual(requested, {"bucket": "eniu-uploads", "key": "covers/b.webp"})
+            self.assertEqual(response.mimetype, "image/webp")
+            self.assertEqual(response.headers["Content-Length"], "7")
+            self.assertEqual(response.get_data(), b"portada")
+
+    def test_a_missing_private_object_is_a_404_not_a_server_error(self):
+        s3_backend = storage.S3Storage(
+            bucket="eniu-uploads", prefix="", region="auto", endpoint_url=None,
+            access_key="AKIAFAKEACCESSKEY", secret_key="fakesecretkey",
+            public_base_url="https://cdn.eniu.app",
+        )
+
+        class MissingClient:
+            def get_object(self, Bucket, Key):  # noqa: N803
+                raise RuntimeError("NoSuchKey")
+
+        s3_backend._client_cache = MissingClient()
+        s3_backend._client_pid = os.getpid()
+
+        # El archivo pudo borrarse entre que su nombre se guardó en la base y
+        # alguien lo pidió; para quien pide, eso es un 404.
+        with self.app.test_request_context(), self.assertRaises(NotFound):
+            s3_backend.serve("uploads/covers", "b.webp")
 
 
 if __name__ == "__main__":
