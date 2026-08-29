@@ -2,9 +2,11 @@ import { createElement, useCallback, useEffect, useMemo, useRef, useState } from
 import { ArrowLeft, Eye, ImagePlus, RefreshCw, RotateCcw, Save, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router";
 
+import { ACCEPTED_MIMETYPES, prepareImage } from "../../../services/imageFile";
 import PlanBadge from "../../auth/components/PlanBadge";
 import { usePlan } from "../../auth/hooks/usePlan";
 import { useBusiness } from "../../Business/services/useBusiness";
+import ImageQualitySelector from "../../Catalogue/components/ImageQualitySelector";
 import { useCategoryService } from "../../Catalogue/services/categoryService";
 import { useCatalogueService } from "../../Catalogue/services/catalogueService";
 import { useProductService } from "../../Catalogue/services/productService";
@@ -40,6 +42,7 @@ export default function TemplatesPage() {
   const [draft, setDraft] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [quality, setQuality] = useState("alta");
   const [saveError, setSaveError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -142,16 +145,33 @@ export default function TemplatesPage() {
     setSaveError(""); setSuccess("");
   }
 
-  function chooseSplash(event) {
+  /**
+   * Valida y reencodifica la imagen elegida antes de quedarse con ella.
+   *
+   * Las tres imágenes de esta pantalla —portada, fondo y bienvenida— viajan a
+   * cada comensal que abre el menú, así que ninguna debe subirse tal como
+   * salió de la cámara. Devuelve `null` cuando no hay nada que hacer: el
+   * usuario canceló, o el archivo no sirve y el error ya quedó en pantalla.
+   */
+  async function pickImage(event, subject) {
     const file = event.target.files?.[0];
     event.target.value = "";
+    if (!file) return null;
+    if (!ACCEPTED_MIMETYPES.includes(file.type)) {
+      setSaveError(`${subject} debe ser JPG, PNG o WebP.`);
+      return null;
+    }
+    try {
+      return await prepareImage(file, quality);
+    } catch (error) {
+      setSaveError(error.message);
+      return null;
+    }
+  }
+
+  async function chooseSplash(event) {
+    const file = await pickImage(event, "La bienvenida");
     if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setSaveError("La bienvenida debe ser JPG, PNG o WebP."); return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setSaveError("La bienvenida puede pesar máximo 5 MB."); return;
-    }
     if (splashPreview) URL.revokeObjectURL(splashPreview);
     setSplashFile(file); setSplashPreview(URL.createObjectURL(file)); setRemoveSplash(false);
     setSaveError(""); setSuccess("");
@@ -162,16 +182,9 @@ export default function TemplatesPage() {
     setSplashFile(null); setSplashPreview(null); setRemoveSplash(true); setSaveError(""); setSuccess("");
   }
 
-  function chooseCover(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+  async function chooseCover(event) {
+    const file = await pickImage(event, "La portada");
     if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setSaveError("La portada debe ser JPG, PNG o WebP."); return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setSaveError("La portada puede pesar máximo 5 MB."); return;
-    }
     if (coverPreview) URL.revokeObjectURL(coverPreview);
     setCoverFile(file); setCoverPreview(URL.createObjectURL(file)); setRemoveCover(false);
     updateTheme("show_cover", true);
@@ -182,16 +195,9 @@ export default function TemplatesPage() {
     setCoverFile(null); setCoverPreview(null); setRemoveCover(true); setSaveError("");
   }
 
-  function chooseBackground(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+  async function chooseBackground(event) {
+    const file = await pickImage(event, "El fondo");
     if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setSaveError("El fondo debe ser JPG, PNG o WebP."); return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setSaveError("El fondo puede pesar máximo 5 MB."); return;
-    }
     if (backgroundPreview) URL.revokeObjectURL(backgroundPreview);
     setBackgroundFile(file); setBackgroundPreview(URL.createObjectURL(file)); setRemoveBackground(false);
     setSaveError(""); setSuccess("");
@@ -280,6 +286,7 @@ export default function TemplatesPage() {
         <TemplateSelector value={draft.template_key} isAllowed={allowsTemplate} onChange={(template_key) => { setDraft((current) => ({ ...current, template_key })); setSuccess(""); }} />
         <section><h2 className="text-sm font-bold">Colores</h2><div className="mt-3 grid gap-4 sm:grid-cols-2">{COLOR_CONTROLS.map(([field, label]) => <ColorControl key={field} id={`theme-${field}`} label={label} value={draft.theme[field]} originalValue={saved.theme[field]} error={validationErrors[field]} onChange={(value) => updateTheme(field, value)} />)}</div>{validationErrors.contrast && <p role="alert" className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{validationErrors.contrast} Ajusta los colores antes de guardar.</p>}</section>
         <section><div className="flex flex-wrap items-center justify-between gap-2"><label htmlFor="theme-font" className="text-sm font-bold">Tipografía</label>{fontsLocked && <PlanBadge />}</div><select id="theme-font" value={draft.theme.font_key} disabled={fontsLocked} onChange={(event) => updateTheme("font_key", event.target.value)} className={`mt-2 min-h-11 w-full rounded-xl border border-[#D9D9D9] px-4 outline-none focus:border-[#E8C93D] ${fontsLocked ? "cursor-not-allowed bg-[#F7F3E4] opacity-60" : "cursor-pointer bg-white"}`}>{Object.entries(FONT_REGISTRY).map(([key, font]) => <option key={key} value={key} disabled={!allowsFont(key)}>{font.label}</option>)}</select></section>
+        <section><h2 className="text-sm font-bold">Fotos</h2><p className="mt-1 text-xs text-[#777777]">Se aplica a la portada, el fondo y la bienvenida. Menos calidad hace que el menú abra más rápido en el celular de tus clientes.</p><ImageQualitySelector value={quality} onChange={setQuality} /></section>
         <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">Portada y productos</h2>{coverLocked && <PlanBadge />}</div><div className="mt-3 space-y-3"><Toggle label="Mostrar portada" checked={draft.theme.show_cover} disabled={coverLocked} onChange={(value) => updateTheme("show_cover", value)} /><Toggle label="Mostrar imágenes de productos" checked={draft.theme.show_product_images} disabled={productImagesLocked} onChange={(value) => updateTheme("show_product_images", value)} /></div><ImagePicker title="Portada" url={coverUrl} emptyText="Sin portada" disabled={coverLocked} onChange={chooseCover} onRemove={removeCurrentCover} /></section>
         <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">Fondo del menú</h2>{backgroundLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">La imagen queda detrás del contenido y no reemplaza la portada.</p><ImagePicker title="Fondo" url={backgroundUrl} emptyText="Sin imagen de fondo" disabled={backgroundLocked} onChange={chooseBackground} onRemove={removeCurrentBackground} /><label htmlFor="background-opacity" className="mt-4 block text-sm font-semibold">Opacidad del fondo: {Math.round(draft.theme.background_opacity * 100)}%</label><input id="background-opacity" type="range" min="0" max="1" step="0.05" disabled={backgroundLocked} value={draft.theme.background_opacity} onChange={(event) => updateTheme("background_opacity", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${backgroundLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
         <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">Pantalla de bienvenida</h2>{splashLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">Aparece unos segundos al abrir el menú y se desvanece sola. Un toque la cierra antes.</p><div className="mt-3"><Toggle label="Mostrar bienvenida" checked={draft.splash.enabled} disabled={splashLocked} onChange={(value) => updateSplash("enabled", value)} /></div><ImagePicker title="Bienvenida" url={splashUrl} emptyText="Sin imagen: se muestra el nombre del negocio" disabled={splashLocked} onChange={chooseSplash} onRemove={removeCurrentSplash} /><label htmlFor="splash-duration" className="mt-4 block text-sm font-semibold">Duración: {draft.splash.duration} s</label><input id="splash-duration" type="range" min={SPLASH_RANGE.min} max={SPLASH_RANGE.max} step={SPLASH_RANGE.step} disabled={splashLocked} value={draft.splash.duration} onChange={(event) => updateSplash("duration", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${splashLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
