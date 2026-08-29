@@ -13,6 +13,17 @@
       "port": 8081
     },
     {
+      "name": "eniu-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "client/eniu",
+        "run",
+        "dev"
+      ],
+      "port": 5173
+    },
+    {
       "name": "eniu-landing",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
@@ -21,7 +32,7 @@
         "run",
         "dev"
       ],
-      "port": 5173
+      "port": 5174
     }
   ]
 }
