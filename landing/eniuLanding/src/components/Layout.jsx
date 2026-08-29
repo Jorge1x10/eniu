@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from '../router.jsx'
 import { useRouter } from '../routerContext.js'
 import { useScrolled } from '../useReveal.js'
-import { appUrl, contactEmail, socialLinks } from '../data/site.js'
+import { appUrl, contactEmail, privacyUrl, socialLinks, termsUrl } from '../data/site.js'
 import { SocialIcon } from './Icons.jsx'
 
 export function Brand() {
@@ -92,7 +92,8 @@ export function SiteFooter() {
       <div className="footer-legal">
         <small>© {new Date().getFullYear()} Eniu. Hecho en México.</small>
         <div className="footer-legal-links">
-          <Link href="/terminos">Términos y condiciones</Link>
+          <a href={termsUrl}>Términos y condiciones</a>
+          <a href={privacyUrl}>Aviso de privacidad</a>
         </div>
       </div>
     </footer>

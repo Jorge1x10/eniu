@@ -6,12 +6,10 @@ import { useReveal } from './useReveal.js'
 import { SiteFooter, SiteHeader } from './components/Layout.jsx'
 import Home from './pages/Home.jsx'
 import Onboarding from './pages/Onboarding.jsx'
-import Terms from './pages/Terms.jsx'
 
 const routes = {
   '/': { component: Home, title: 'Eniu — Tu menú, más simple y más tuyo' },
   '/primeros-pasos': { component: Onboarding, title: 'Primeros pasos con Eniu — Cómo funciona' },
-  '/terminos': { component: Terms, title: 'Términos y condiciones — Eniu' },
 }
 
 function Site() {
