@@ -2,10 +2,12 @@ import json
 import re
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 from unittest.mock import patch
 
 from flask_jwt_extended import create_access_token
+from sqlalchemy import event
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import create_app
@@ -200,6 +202,156 @@ class PublicationApiTestCase(unittest.TestCase):
             catalogue = db.session.get(Catalogue, __import__("uuid").UUID(self.catalogue_id))
             self.assertFalse(catalogue.is_published)
             self.assertIsNone(catalogue.public_slug)
+
+    # --- imagenes de producto del menu publico -----------------------------
+
+    def product_images_folder(self):
+        """Carpeta temporal de fotos, con una foto distinta por producto."""
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.app.config["PRODUCT_UPLOAD_FOLDER"] = folder.name
+        return Path(folder.name)
+
+    def picture_for(self, folder, filename):
+        """Escribe un archivo cuyo contenido identifica de que producto es."""
+        (folder / filename).write_bytes(f"imagen:{filename}".encode())
+        return json.dumps([{"id": filename, "filename": filename, "is_default": True}])
+
+    def build_menu_with_images(self):
+        """Un menu con las trampas que el indice de la URL tiene que sortear:
+        una categoria oculta que no debe contar, categorias desordenadas, un
+        producto agotado que si ocupa posicion y una seccion sin categoria."""
+        folder = self.product_images_folder()
+        with self.app.app_context():
+            catalogue = db.session.get(Catalogue, uuid.UUID(self.catalogue_id))
+            hidden = Category(name="Borradores", catalogue_id=catalogue.id, is_visible=False, display_order=0)
+            drinks = Category(name="Bebidas", catalogue_id=catalogue.id, display_order=5)
+            db.session.add_all([hidden, drinks])
+            db.session.flush()
+            pizzas = Category.query.filter_by(catalogue_id=catalogue.id, name="Pizzas").first()
+            pizzas.display_order = 1
+            # Un producto en la categoria oculta: no aparece en el menu y no
+            # debe correr la numeracion de las secciones visibles.
+            db.session.add(Product(
+                name="Prueba", catalogue_id=catalogue.id, category_id=hidden.id,
+                pictures=self.picture_for(folder, "oculta.png"),
+            ))
+            existing = Product.query.filter_by(catalogue_id=catalogue.id, name="Pepperoni").first()
+            existing.display_order = 1
+            existing.pictures = self.picture_for(folder, "pepperoni.png")
+            db.session.add_all([
+                Product(name="Margarita", catalogue_id=catalogue.id, category_id=pizzas.id,
+                        display_order=0, pictures=self.picture_for(folder, "margarita.png")),
+                Product(name="Cerveza", catalogue_id=catalogue.id, category_id=drinks.id,
+                        display_order=0, is_available=False,
+                        pictures=self.picture_for(folder, "cerveza.png")),
+                Product(name="Limonada", catalogue_id=catalogue.id, category_id=drinks.id,
+                        display_order=1, pictures=self.picture_for(folder, "limonada.png")),
+            ])
+            # El "Agua" que ya existe va sin categoria: ultima seccion.
+            water = Product.query.filter_by(catalogue_id=catalogue.id, name="Agua").first()
+            water.pictures = self.picture_for(folder, "agua.png")
+            db.session.commit()
+        self.publish()
+        status = self.client.get(f"{self.base()}/publication", headers=self.headers())
+        return status.get_json()["publication"]["public_slug"]
+
+    def test_public_product_images_correspond_to_their_position_in_the_menu(self):
+        slug = self.build_menu_with_images()
+        menu = self.client.get(f"/api/public/menus/{slug}").get_json()["menu"]
+
+        self.assertEqual(
+            [category["name"] for category in menu["categories"]],
+            ["Pizzas", "Bebidas"],
+            "la categoria oculta no debe aparecer ni desplazar a las visibles",
+        )
+
+        sections = [category["products"] for category in menu["categories"]]
+        sections.append(menu["uncategorized_products"])
+
+        served = {}
+        for products in sections:
+            for product in products:
+                response = self.client.get(product["image_url"])
+                self.assertEqual(response.status_code, 200, product["name"])
+                served[product["name"]] = response.get_data()
+
+        # Cada producto sirve su propia foto, no la de su vecino.
+        self.assertEqual(served, {
+            "Margarita": b"imagen:margarita.png",
+            "Pepperoni": b"imagen:pepperoni.png",
+            "Cerveza": b"imagen:cerveza.png",
+            "Limonada": b"imagen:limonada.png",
+            "Agua": b"imagen:agua.png",
+        })
+
+    def test_public_product_image_rejects_positions_outside_the_menu(self):
+        slug = self.build_menu_with_images()
+        base = f"/api/public/menus/{slug}/product-images"
+        # Secciones: 0 y 1 con categoria, 2 la de sin categoria. La 3 no existe.
+        self.assertEqual(self.client.get(f"{base}/3/0").status_code, 404)
+        self.assertEqual(self.client.get(f"{base}/9/0").status_code, 404)
+        # La seccion sin categoria tiene un solo producto.
+        self.assertEqual(self.client.get(f"{base}/2/0").status_code, 200)
+        self.assertEqual(self.client.get(f"{base}/2/1").status_code, 404)
+        self.assertEqual(self.client.get("/api/public/menus/no-existe/product-images/0/0").status_code, 404)
+
+        self.client.patch(f"{self.base()}/publication", headers=self.headers(), json={"is_published": False})
+        self.assertEqual(self.client.get(f"{base}/0/0").status_code, 404)
+
+    def test_public_product_image_cost_does_not_grow_with_the_catalogue(self):
+        """Servir una foto no debe depender del tamano del menu.
+
+        Es la regresion que motivo el cambio. Lo que crecia no era el numero
+        de consultas —la version anterior hacia dos, siempre las mismas— sino
+        cuantas filas traia cada una: cargaba todas las categorias y todos los
+        productos del catalogo, y construia un objeto por cada uno, para
+        devolver el nombre de un archivo. Un menu se pide una vez pero sus
+        imagenes una por producto, asi que ese trabajo se repetia tantas veces
+        como fotos tuviera el menu.
+
+        Por eso se cuentan objetos cargados y no sentencias emitidas: es la
+        diferencia que el cambio realmente elimina.
+        """
+        slug = self.build_menu_with_images()
+        url = f"/api/public/menus/{slug}/product-images/0/0"
+
+        def rows_loaded_for_one_image():
+            loaded = []
+
+            def record(target, context):
+                loaded.append(type(target).__name__)
+
+            event.listen(Category, "load", record)
+            event.listen(Product, "load", record)
+            try:
+                self.assertEqual(self.client.get(url).status_code, 200)
+            finally:
+                event.remove(Category, "load", record)
+                event.remove(Product, "load", record)
+            return loaded
+
+        small = rows_loaded_for_one_image()
+
+        with self.app.app_context():
+            catalogue = db.session.get(Catalogue, uuid.UUID(self.catalogue_id))
+            pizzas = Category.query.filter_by(catalogue_id=catalogue.id, name="Pizzas").first()
+            db.session.add_all([
+                Product(name=f"Relleno {index}", catalogue_id=catalogue.id,
+                        category_id=pizzas.id, display_order=100 + index)
+                for index in range(60)
+            ])
+            db.session.commit()
+
+        large = rows_loaded_for_one_image()
+
+        self.assertEqual(
+            len(small), len(large),
+            f"cargar una foto empeoro al crecer el catalogo: {len(small)} filas "
+            f"con 6 productos, {len(large)} con 66",
+        )
+        # La categoria de la seccion y el producto de la posicion. Nada mas.
+        self.assertEqual(sorted(small), ["Category", "Product"], small)
 
 
 if __name__ == "__main__":
