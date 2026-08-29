@@ -22,7 +22,8 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 @limiter.limit("10 per hour")
 def register():
     data = request.get_json(silent=True)
-    required_fields = ["username", "email", "phone", "password"]
+    # `username` ya no se pide: se deriva del correo cuando no llega.
+    required_fields = ["email", "phone", "password"]
     missing_fields = [
         field for field in required_fields
         if not data.get(field)

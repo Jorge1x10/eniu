@@ -10,7 +10,8 @@ type AuthContextValue = {
   user: User | null;
   isLoading: boolean;
   login: (identifier: string, password: string) => Promise<void>;
-  register: (payload: { username: string; email: string; phone: string; password: string }) => Promise<void>;
+  // `username` es opcional: el alta ya no lo pide y el backend lo deriva del correo.
+  register: (payload: { username?: string; email: string; phone: string; password: string }) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
   loginWithApple: (identityToken: string, fullName?: string | null) => Promise<void>;
   logout: () => Promise<void>;
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await startSession(data);
   }, [startSession]);
 
-  const register = useCallback(async (payload: { username: string; email: string; phone: string; password: string }) => {
+  const register = useCallback(async (payload: { username?: string; email: string; phone: string; password: string }) => {
     const data = await api.post<SessionResponse>('auth/register', payload);
     await startSession(data);
   }, [startSession]);

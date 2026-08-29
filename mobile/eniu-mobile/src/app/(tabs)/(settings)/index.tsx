@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
 import { useEniuTheme } from '@/constants/eniu-theme';
+import { PRIVACY_URL } from '@/constants/legal';
 import { useScreenTopPadding } from '@/constants/layout';
 import { useAuth } from '@/features/auth/auth-context';
 import { useBusiness } from '@/features/business/business-context';
@@ -18,9 +19,6 @@ function Section({ label, children }: React.PropsWithChildren<{ label: string }>
   const theme = useEniuTheme();
   return <View style={{ gap: 11 }}><Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{label}</Text><View style={{ padding: 18, gap: 14, borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}>{children}</View></View>;
 }
-
-// El aviso vive en el panel web, que es la URL pública que pide App Store Connect.
-const PRIVACY_URL = 'https://eniu.vercel.app/privacidad';
 
 export default function SettingsScreen() {
   const theme = useEniuTheme();
