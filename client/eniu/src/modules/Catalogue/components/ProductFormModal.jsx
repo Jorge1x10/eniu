@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { ImagePlus, PackagePlus, Star, Trash2, X } from "lucide-react";
 import { Link } from "react-router";
 
+import { prepareImages } from "../../../services/imageFile";
 import { getProductErrorMessage } from "../services/productService";
 import AccessibleModal from "./AccessibleModal";
+import ImageQualitySelector from "./ImageQualitySelector";
 
 const PRICE_PATTERN = /^\d+(?:\.\d{1,2})?$/;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function resolveImageUrl(url) {
   if (!url || url.startsWith("http") || url.startsWith("blob:")) return url;
@@ -40,6 +40,8 @@ export default function ProductFormModal({
   const originalPictures = product?.pictures || [];
   const [existingPictures, setExistingPictures] = useState(originalPictures);
   const [newPictures, setNewPictures] = useState([]);
+  const [quality, setQuality] = useState("alta");
+  const [isPreparing, setIsPreparing] = useState(false);
   const [defaultKey, setDefaultKey] = useState(
     originalPictures.find((picture) => picture.is_default)?.id
       || originalPictures[0]?.id
@@ -73,26 +75,32 @@ export default function ProductFormModal({
     return Object.keys(next).length === 0;
   }
 
-  function selectImages(event) {
+  async function selectImages(event) {
     const selected = Array.from(event.target.files || []);
     event.target.value = "";
+    if (!selected.length) return;
     if (existingPictures.length + newPictures.length + selected.length > 5) {
       setErrors((current) => ({ ...current, images: "Puedes agregar máximo 5 imágenes." }));
       return;
     }
-    const invalid = selected.find((file) => !ALLOWED_IMAGE_TYPES.includes(file.type) || file.size > MAX_IMAGE_BYTES);
-    if (invalid) {
-      setErrors((current) => ({ ...current, images: "Cada imagen debe ser JPG, PNG o WebP y pesar máximo 5 MB." }));
-      return;
+    setIsPreparing(true);
+    try {
+      // La vista previa se hace sobre la imagen ya procesada, no sobre el
+      // archivo original: lo que el dueño ve aquí es lo que se va a subir.
+      const prepared = await prepareImages(selected, quality);
+      const additions = prepared.map((file) => {
+        const preview = URL.createObjectURL(file);
+        createdUrlsRef.current.push(preview);
+        return { key: crypto.randomUUID(), file, preview };
+      });
+      setNewPictures((current) => [...current, ...additions]);
+      if (!defaultKey && additions.length) setDefaultKey(additions[0].key);
+      setErrors((current) => ({ ...current, images: "" }));
+    } catch (error) {
+      setErrors((current) => ({ ...current, images: error.message }));
+    } finally {
+      setIsPreparing(false);
     }
-    const additions = selected.map((file) => {
-      const preview = URL.createObjectURL(file);
-      createdUrlsRef.current.push(preview);
-      return { key: crypto.randomUUID(), file, preview };
-    });
-    setNewPictures((current) => [...current, ...additions]);
-    if (!defaultKey && additions.length) setDefaultKey(additions[0].key);
-    setErrors((current) => ({ ...current, images: "" }));
   }
 
   function removeExisting(pictureId) {
@@ -213,12 +221,15 @@ export default function ProductFormModal({
             </div>
           )}
           {existingPictures.length + newPictures.length < 5 && (
-            <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#CDBD87] bg-white px-4 py-4 text-sm font-semibold text-[#5E501A] hover:bg-[#FFF8DE]">
-              <ImagePlus size={18} /> Agregar imágenes
-              <input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={selectImages} disabled={isSubmitting} className="sr-only" />
-            </label>
+            <>
+              <ImageQualitySelector value={quality} onChange={setQuality} disabled={isSubmitting || isPreparing} />
+              <label className={`mt-3 flex items-center justify-center gap-2 rounded-xl border border-dashed border-[#CDBD87] bg-white px-4 py-4 text-sm font-semibold text-[#5E501A] ${isPreparing ? "cursor-wait opacity-70" : "cursor-pointer hover:bg-[#FFF8DE]"}`}>
+                <ImagePlus size={18} /> {isPreparing ? "Optimizando..." : "Agregar imágenes"}
+                <input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={selectImages} disabled={isSubmitting || isPreparing} className="sr-only" />
+              </label>
+            </>
           )}
-          <p className="mt-2 text-xs text-[#777777]">JPG, PNG o WebP. Máximo 5 MB por imagen. Selecciona la estrella para elegir la principal.</p>
+          <p className="mt-2 text-xs text-[#777777]">JPG, PNG o WebP. Las fotos se optimizan al subirlas. Selecciona la estrella para elegir la principal.</p>
           {errors.images && <p role="alert" className="mt-2 text-sm text-red-700">{errors.images}</p>}
         </div>
         {categories.length === 0 && (

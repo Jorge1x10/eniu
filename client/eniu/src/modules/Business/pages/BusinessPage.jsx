@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 
+import { prepareImage } from "../../../services/imageFile";
 import { useApi } from "../../auth/services/useApi";
 import { useBusiness } from "../services/useBusiness";
 
@@ -103,26 +104,22 @@ export default function BusinessPage() {
     setError("");
   }
 
-  function handlePhotoChange(event) {
+  async function handlePhotoChange(event) {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError("La foto no puede superar los 5 MB");
-      event.target.value = "";
-      return;
+    // Igual que en la app, la foto del negocio se sube siempre en la calidad
+    // más alta: es una sola imagen y no se repite en cada escaneo del menú.
+    try {
+      const prepared = await prepareImage(file);
+      setPhotoFile(prepared);
+      setPhotoPreview(URL.createObjectURL(prepared));
+      setRemovePhoto(false);
+      setError("");
+    } catch (photoError) {
+      setError(photoError.message);
     }
-
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setError("La foto debe ser JPG, PNG o WebP");
-      event.target.value = "";
-      return;
-    }
-
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
-    setRemovePhoto(false);
-    setError("");
   }
 
   async function handleSubmit(event) {

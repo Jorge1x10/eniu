@@ -15,10 +15,13 @@ from app.modules.category.model import Category
 from app.modules.products.model import Product
 from app.modules.template.model import CatalogueTemplate
 from app.modules.users.model import User
+from tests.image_helpers import image_bytes, opened
 from tests.plan_helpers import grant_plan
 
-JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"cover-one"
-WEBP_BYTES = b"RIFF\x08\x00\x00\x00WEBP" + b"background-one"
+JPEG_BYTES = image_bytes("JPEG")
+# Un WebP ya pequeño se guarda tal cual: es la ruta de paso directo de
+# `app.images`, y por eso estas pruebas pueden comparar byte a byte.
+WEBP_BYTES = image_bytes("WEBP")
 
 
 class TemplateApiTestCase(unittest.TestCase):
@@ -217,8 +220,11 @@ class TemplateApiTestCase(unittest.TestCase):
             404,
         )
         cover_response = self.client.get(cover_url, headers=self.headers())
-        self.assertEqual(cover_response.data, JPEG_BYTES)
+        # El JPEG se guarda convertido: lo que sirve el menú es siempre WebP,
+        # que es lo que hace predecible el peso por escaneo.
+        self.assertEqual(opened(cover_response.data).format, "WEBP")
         cover_response.close()
+        self.assertTrue(cover_url.endswith("/cover"))
         stored_files = list(Path(self.covers.name).iterdir())
         self.assertEqual(len(stored_files), 1)
         stored_cover = stored_files[0]

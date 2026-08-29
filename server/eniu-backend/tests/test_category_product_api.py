@@ -15,6 +15,11 @@ from app.modules.catalogue.model import Catalogue
 from app.modules.category.model import Category
 from app.modules.products.model import Product
 from app.modules.users.model import User
+from tests.image_helpers import image_bytes
+
+# Ya viene dentro del presupuesto de `app.images`, asi que se guarda sin
+# recomprimir y las pruebas pueden compararla byte a byte.
+SECOND_IMAGE = image_bytes("WEBP", size=(48, 32), color=(20, 90, 200))
 
 
 class CategoryProductApiTestCase(unittest.TestCase):
@@ -382,8 +387,8 @@ class CategoryProductApiTestCase(unittest.TestCase):
                 "name": "Producto con fotos",
                 "default_image_index": "1",
                 "images": [
-                    (BytesIO(b"\xff\xd8\xfffirst-image"), "first.jpg", "image/jpeg"),
-                    (BytesIO(b"RIFF\x08\x00\x00\x00WEBPsecond-image"), "second.webp", "image/webp"),
+                    (BytesIO(image_bytes("JPEG")), "first.jpg", "image/jpeg"),
+                    (BytesIO(SECOND_IMAGE), "second.webp", "image/webp"),
                 ],
             },
             content_type="multipart/form-data",
@@ -396,7 +401,8 @@ class CategoryProductApiTestCase(unittest.TestCase):
 
         image_response = self.client.get(product["pictures"][1]["url"])
         self.assertEqual(image_response.status_code, 200)
-        self.assertEqual(image_response.data, b"RIFF\x08\x00\x00\x00WEBPsecond-image")
+        # Ya venía dentro del presupuesto, así que se guardó sin recomprimir.
+        self.assertEqual(image_response.data, SECOND_IMAGE)
         image_response.close()
 
         response = self.client.patch(

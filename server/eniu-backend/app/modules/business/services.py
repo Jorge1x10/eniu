@@ -2,7 +2,7 @@ from app.modules.billing.guards import ensure_can_create_business
 from app.modules.business.model import Business
 from flask import current_app
 from uuid import UUID, uuid4
-from app import storage
+from app import images, storage
 from app.database.db import db
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
@@ -204,8 +204,12 @@ def update_business(owner_id, business_id, data, photo=None):
             if _photo_size(photo) > MAX_PHOTO_BYTES:
                 return {"message": "La foto puede pesar máximo 5 MB"}, 400
 
+            try:
+                optimized, extension = images.optimize(photo)
+            except images.InvalidImage as error:
+                return {"message": str(error)}, 400
             new_photo_filename = f"{uuid4().hex}.{extension}"
-            storage.save_file(current_app.config["BUSINESS_UPLOAD_FOLDER"], new_photo_filename, photo)
+            storage.save_file(current_app.config["BUSINESS_UPLOAD_FOLDER"], new_photo_filename, optimized)
             business.photo_filename = new_photo_filename
         elif str(data.get("remove_photo", "false")).lower() in {
             "true", "1", "yes", "on"
