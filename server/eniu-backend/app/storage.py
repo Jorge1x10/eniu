@@ -16,6 +16,7 @@ assets (private=True) get a short-lived signed URL instead, so a bucket
 that isn't publicly readable still works and the JWT gate on the route
 actually controls access to the file, not just to a redirect.
 """
+import os
 from pathlib import Path
 
 from flask import current_app, redirect, send_from_directory
@@ -42,21 +43,45 @@ class LocalStorage:
 
 class S3Storage:
     def __init__(self, *, bucket, prefix, region, endpoint_url, access_key, secret_key, public_base_url):
-        import boto3  # only imported when this backend is actually selected
-
         if not bucket:
             raise RuntimeError("S3_BUCKET is required when STORAGE_BACKEND=s3")
 
         self._bucket = bucket
         self._prefix = (prefix or "").strip("/")
         self._public_base_url = public_base_url.rstrip("/") if public_base_url else None
-        self._client = boto3.client(
-            "s3",
-            region_name=region,
-            endpoint_url=endpoint_url or None,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-        )
+        self._client_options = {
+            "region_name": region,
+            "endpoint_url": endpoint_url or None,
+            "aws_access_key_id": access_key,
+            "aws_secret_access_key": secret_key,
+        }
+        self._client_cache = None
+        self._client_pid = None
+
+    @property
+    def _client(self):
+        """El cliente de boto3, creado perezosamente y por proceso.
+
+        Dos razones para no construirlo en `__init__`:
+
+        1. Importar boto3 carga los modelos JSON de botocore, que son decenas
+           de MB de RSS. Diferirlo hasta la primera subida deja ese costo
+           fuera del arranque, y sobre todo fuera de los workers que sólo
+           sirven lecturas.
+        2. Con `preload_app` en gunicorn, `__init__` corre antes del fork. Un
+           cliente de botocore mantiene un pool de conexiones HTTP, y esos
+           sockets no se pueden compartir entre procesos: heredarlos produce
+           los mismos errores cruzados que un pool de Postgres compartido.
+           Al recordar el PID que lo creó, cada worker construye el suyo la
+           primera vez que lo necesita.
+        """
+        import boto3  # only imported when this backend is actually used
+
+        pid = os.getpid()
+        if self._client_cache is None or self._client_pid != pid:
+            self._client_cache = boto3.client("s3", **self._client_options)
+            self._client_pid = pid
+        return self._client_cache
 
     def _key(self, folder, filename):
         parts = [self._prefix, Path(folder).name, filename]
