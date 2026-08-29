@@ -10,7 +10,7 @@ from flask_jwt_extended import create_access_token
 from sqlalchemy import event
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import create_app
+from app import create_app, storage
 from app.database.db import db
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
@@ -298,6 +298,73 @@ class PublicationApiTestCase(unittest.TestCase):
 
         self.client.patch(f"{self.base()}/publication", headers=self.headers(), json={"is_published": False})
         self.assertEqual(self.client.get(f"{base}/0/0").status_code, 404)
+
+    def test_the_menu_points_straight_at_the_bucket_when_there_is_one(self):
+        """Con bucket publico, el comensal no le pide las fotos a esta API.
+
+        El 302 de antes no movia bytes, pero la peticion si llegaba hasta
+        aqui: unas 20 por escaneo en un menu con fotos. Anunciando la URL del
+        bucket quedan dos, el JSON del menu y la analitica.
+        """
+        slug = self.build_menu_with_images()
+        with self.app.app_context():
+            catalogue = db.session.get(Catalogue, uuid.UUID(self.catalogue_id))
+            catalogue.template_config.cover_filename = "portada.webp"
+            catalogue.template_config.splash_filename = "bienvenida.webp"
+            db.session.commit()
+
+        class Bucket:
+            def url_for(self, folder, filename):
+                return f"https://cdn.eniu.app/{filename}"
+
+            def serve(self, folder, filename):
+                return None
+
+        original_backend = storage._backend
+        storage._backend = Bucket()
+        try:
+            menu = self.client.get(f"/api/public/menus/{slug}").get_json()["menu"]
+        finally:
+            storage._backend = original_backend
+
+        images = [
+            product["image_url"]
+            for category in menu["categories"]
+            for product in category["products"]
+        ]
+        images += [product["image_url"] for product in menu["uncategorized_products"]]
+
+        # Cada URL nombra el archivo, no la posicion del producto en el menu:
+        # reordenar el menu deja de cambiar a que apunta cada foto.
+        self.assertEqual(sorted(images), sorted([
+            "https://cdn.eniu.app/margarita.png",
+            "https://cdn.eniu.app/pepperoni.png",
+            "https://cdn.eniu.app/cerveza.png",
+            "https://cdn.eniu.app/limonada.png",
+            "https://cdn.eniu.app/agua.png",
+        ]))
+        self.assertEqual(menu["template"]["theme"]["cover_image_url"], "https://cdn.eniu.app/portada.webp")
+        self.assertEqual(
+            menu["template"]["theme"]["background_image_url"],
+            "https://cdn.eniu.app/background.webp",
+        )
+        self.assertEqual(menu["splash"]["image_url"], "https://cdn.eniu.app/bienvenida.webp")
+
+    def test_without_a_bucket_the_menu_keeps_serving_the_images_itself(self):
+        slug = self.build_menu_with_images()
+
+        menu = self.client.get(f"/api/public/menus/{slug}").get_json()["menu"]
+
+        # Almacenamiento local: nada que anunciar fuera de esta API.
+        self.assertTrue(
+            menu["categories"][0]["products"][0]["image_url"].startswith(
+                f"/api/public/menus/{slug}/product-images/"
+            )
+        )
+        self.assertEqual(
+            menu["template"]["theme"]["background_image_url"],
+            f"/api/public/menus/{slug}/background",
+        )
 
     def test_public_product_image_cost_does_not_grow_with_the_catalogue(self):
         """Servir una foto no debe depender del tamano del menu.
