@@ -9,7 +9,9 @@ from app.database.db import db
 from app.database.basemodel import utc_now
 from app.modules.catalogue.model import Catalogue
 from app.modules.catalogue.services import catalogue_access
-from app.modules.publication.serializer import serialize_public_menu
+from app.modules.category.model import Category
+from app.modules.products.model import Product
+from app.modules.publication.serializer import main_picture, serialize_public_menu
 
 
 def _slugify(value):
@@ -125,23 +127,65 @@ def get_public_splash(public_slug):
     return catalogue.template_config.splash_filename
 
 
+def _visible_categories(catalogue_id):
+    """Las secciones con nombre del menú público, numeradas desde 0.
+
+    El orden tiene que ser exactamente el que usa `serialize_public_menu`
+    para construir las URLs: el índice de la URL *es* la posición en esta
+    lista, así que un criterio distinto aquí serviría la foto de otro
+    producto.
+    """
+    return (
+        Category.query
+        .filter_by(catalogue_id=catalogue_id, is_visible=True)
+        .order_by(Category.display_order, Category.created_at)
+    )
+
+
+def _section_products(catalogue_id, category_id):
+    """Los productos de una sección, en el orden del menú público.
+
+    `category_id=None` es la sección sin categoría, que el menú coloca al
+    final, después de las categorías visibles.
+    """
+    belongs_to_section = (
+        Product.category_id.is_(None) if category_id is None
+        else Product.category_id == category_id
+    )
+    return (
+        Product.query
+        .filter(Product.catalogue_id == catalogue_id, belongs_to_section)
+        .order_by(Product.display_order, Product.created_at)
+    )
+
+
 def get_public_product_image(public_slug, section_index, product_index):
+    """El archivo de la foto que ocupa esa posición en el menú público.
+
+    Se resuelve con consultas acotadas en vez de recorrer el catálogo en
+    memoria. Un menú se escanea una vez pero pide una imagen por producto,
+    así que la versión anterior —que cargaba todas las categorías y todos
+    los productos para devolver un solo archivo— repetía ese trabajo tantas
+    veces como fotos tuviera el menú, y el costo crecía con el tamaño del
+    catálogo justo cuando más tráfico había.
+    """
+    if section_index < 0 or product_index < 0:
+        return None
     catalogue = Catalogue.query.filter_by(public_slug=public_slug, is_published=True).first()
     if not catalogue:
         return None
-    categories = sorted(
-        (category for category in catalogue.categories if category.is_visible),
-        key=lambda category: (category.display_order, category.created_at),
+    categories = _visible_categories(catalogue.id)
+    category = categories.offset(section_index).first()
+    # Sin categoría en esa posición, el único índice válido que queda es el
+    # que sigue a la última: la sección de los productos sin categoría.
+    if category is None and section_index != categories.count():
+        return None
+    product = (
+        _section_products(catalogue.id, category.id if category else None)
+        .offset(product_index)
+        .first()
     )
-    products = sorted(catalogue.products, key=lambda product: (product.display_order, product.created_at))
-    if section_index < len(categories):
-        section_products = [product for product in products if product.category_id == categories[section_index].id]
-    elif section_index == len(categories):
-        section_products = [product for product in products if product.category_id is None]
-    else:
+    if product is None:
         return None
-    if product_index < 0 or product_index >= len(section_products):
-        return None
-    pictures = section_products[product_index].picture_metadata()
-    picture = next((item for item in pictures if item.get("is_default")), pictures[0] if pictures else None)
+    picture = main_picture(product)
     return picture.get("filename") if picture else None

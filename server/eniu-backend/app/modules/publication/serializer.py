@@ -4,7 +4,13 @@ from app.modules.template.services import default_configuration
 from app.modules.analytics.security import tracking_key
 
 
-def _main_picture(product):
+def main_picture(product):
+    """La foto que representa al producto en el menú público.
+
+    La comparte `get_public_product_image`: es la misma decisión tomada dos
+    veces —qué archivo hay detrás de la imagen de un producto— y si las dos
+    copias se separan, el menú anuncia una foto y el endpoint sirve otra.
+    """
     pictures = product.picture_metadata()
     return next((picture for picture in pictures if picture.get("is_default")), pictures[0] if pictures else None)
 
@@ -15,7 +21,7 @@ def _product_data(catalogue, product, image_url):
         "name": product.name,
         "description": product.description,
         "price": format(product.price, ".2f") if product.price is not None else None,
-        "image_url": image_url if _main_picture(product) else None,
+        "image_url": image_url if main_picture(product) else None,
         "is_available": product.is_available,
     }
 
