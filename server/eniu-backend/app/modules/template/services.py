@@ -5,7 +5,7 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.utils import secure_filename
 
-from app import storage
+from app import images, storage
 from app.database.db import db
 from app.modules.billing.guards import ensure_template_allowed
 from app.modules.catalogue.services import catalogue_access
@@ -147,7 +147,13 @@ def _detected_image_type(image):
     return None
 
 
-def _validate_image(image, label):
+def _prepare_image(image, label):
+    """Valida la imagen y devuelve la versión que se va a guardar.
+
+    Las tres imágenes de la plantilla —portada, fondo y bienvenida— se le
+    sirven a cada comensal que abre el menú, así que son justo las que no
+    conviene guardar tal como llegaron.
+    """
     safe_name = secure_filename(image.filename)
     extension = safe_name.rsplit(".", 1)[-1].lower() if "." in safe_name else ""
     if extension not in ALLOWED_IMAGE_EXTENSIONS or image.mimetype not in ALLOWED_IMAGE_MIMETYPES:
@@ -157,7 +163,12 @@ def _validate_image(image, label):
         raise ValueError(f"{label} no contiene una imagen válida")
     if _image_size(image) > MAX_IMAGE_BYTES:
         raise ValueError(f"{label} puede pesar máximo 5 MB")
-    return extension
+    try:
+        return images.optimize(image)
+    except images.InvalidImage as error:
+        # El mensaje del módulo no sabe de cuál de las tres imágenes se trata,
+        # y en esta pantalla se pueden mandar las tres a la vez.
+        raise ValueError(f"{label}: {error}") from error
 
 
 def _delete_cover(filename):
@@ -243,25 +254,25 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         config.splash_duration = splash_config["duration"]
 
         if cover and cover.filename:
-            extension = _validate_image(cover, "La portada")
+            optimized, extension = _prepare_image(cover, "La portada")
             new_filename = f"{uuid4().hex}.{extension}"
-            storage.save_file(current_app.config["CATALOGUE_COVER_FOLDER"], new_filename, cover)
+            storage.save_file(current_app.config["CATALOGUE_COVER_FOLDER"], new_filename, optimized)
             config.cover_filename = new_filename
         elif data.get("remove_cover") is True:
             config.cover_filename = None
 
         if background and background.filename:
-            extension = _validate_image(background, "El fondo")
+            optimized, extension = _prepare_image(background, "El fondo")
             new_background_filename = f"{uuid4().hex}.{extension}"
-            storage.save_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], new_background_filename, background)
+            storage.save_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], new_background_filename, optimized)
             config.background_filename = new_background_filename
         elif data.get("remove_background") is True:
             config.background_filename = None
 
         if splash and splash.filename:
-            extension = _validate_image(splash, "La pantalla de bienvenida")
+            optimized, extension = _prepare_image(splash, "La pantalla de bienvenida")
             new_splash_filename = f"{uuid4().hex}.{extension}"
-            storage.save_file(current_app.config["CATALOGUE_SPLASH_FOLDER"], new_splash_filename, splash)
+            storage.save_file(current_app.config["CATALOGUE_SPLASH_FOLDER"], new_splash_filename, optimized)
             config.splash_filename = new_splash_filename
         elif data.get("remove_splash") is True:
             config.splash_filename = None

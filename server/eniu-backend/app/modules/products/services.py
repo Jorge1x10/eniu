@@ -6,7 +6,7 @@ from flask import current_app
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from app import storage
+from app import images, storage
 from app.database.db import db
 from app.modules.billing.guards import ensure_can_create_product
 from app.modules.catalogue.services import catalogue_access
@@ -173,14 +173,17 @@ def _validate_images(images, existing_count=0):
     return images
 
 
-def _save_images(images):
+def _save_images(uploads):
     upload_folder = current_app.config["PRODUCT_UPLOAD_FOLDER"]
     saved = []
-    for image in images:
-        extension = secure_filename(image.filename).rsplit(".", 1)[-1].lower()
+    for upload in uploads:
+        # La extensión sale de lo que se va a escribir, no de lo que llegó: la
+        # optimización reencodifica y el nombre tiene que describir el archivo
+        # real, porque es lo que se sirve después.
+        optimized, extension = images.optimize(upload)
         image_id = uuid4().hex
         filename = f"{image_id}.{extension}"
-        storage.save_file(upload_folder, filename, image)
+        storage.save_file(upload_folder, filename, optimized)
         saved.append({"id": image_id, "filename": filename, "is_default": False})
     return saved
 
