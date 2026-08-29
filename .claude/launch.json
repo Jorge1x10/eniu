@@ -25,6 +25,20 @@
         "5174"
       ],
       "port": 5174
+    },
+    {
+      "name": "eniu-landing",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "landing/eniuLanding",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5179"
+      ],
+      "port": 5179
     }
   ]
 }
