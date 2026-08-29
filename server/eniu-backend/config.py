@@ -10,6 +10,31 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Sin esto SQLAlchemy usa su default de 5 conexiones + 10 de overflow
+    # *por proceso*: con varios workers de gunicorn son decenas de conexiones
+    # contra una Postgres pequeña, que tiene un tope bajo. El pool se
+    # dimensiona a los threads de cada worker (ver gunicorn.conf.py), no al
+    # servicio entero.
+    #
+    # `pool_pre_ping` es lo que evita el error intermitente clásico de un
+    # Postgres administrado: la base cierra conexiones ociosas y el pool no
+    # se entera hasta que una petición real falla con "server closed the
+    # connection unexpectedly". Con el ping, la conexión muerta se descarta y
+    # se reemplaza antes de usarla. `pool_recycle` la rota antes de que la
+    # base decida cerrarla.
+    #
+    # Los argumentos de pool sólo aplican a Postgres: el pool que SQLAlchemy
+    # usa para SQLite (el de las pruebas) no los acepta.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": int(os.getenv("DB_POOL_RECYCLE", "280")),
+    }
+    if (SQLALCHEMY_DATABASE_URI or "").startswith(("postgres://", "postgresql://", "postgresql+")):
+        SQLALCHEMY_ENGINE_OPTIONS.update({
+            "pool_size": int(os.getenv("DB_POOL_SIZE", "2")),
+            "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "3")),
+        })
+
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     FRONTEND_URL = os.getenv("FRONTEND_URL", os.getenv("FRONT", "http://localhost:5173")).rstrip("/")
     CORS_ORIGINS = [
@@ -90,7 +115,12 @@ class Config:
     # on a public R2 bucket or a CloudFront distribution in front of S3.
     S3_PUBLIC_BASE_URL = os.getenv("S3_PUBLIC_BASE_URL")
 
-    MAX_CONTENT_LENGTH = 26 * 1024 * 1024
+    # Flask bufferea el cuerpo de la petición en memoria, así que este número
+    # es también el pico de RAM que una sola subida puede reservar. En una
+    # instancia de 512 MB, unas pocas subidas simultáneas al tope se comen el
+    # margen entero. Se deja el valor histórico como default y se expone por
+    # entorno para poder bajarlo sin desplegar código.
+    MAX_CONTENT_LENGTH = int(os.getenv("MAX_UPLOAD_MB", "26")) * 1024 * 1024
     BUSINESS_UPLOAD_FOLDER = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "uploads",
