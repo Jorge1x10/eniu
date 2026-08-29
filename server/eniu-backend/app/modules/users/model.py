@@ -17,6 +17,10 @@ class User(BaseModel):
     phone_number = db.Column(db.String(20), nullable=True, unique=True)
     name = db.Column(db.String(50), unique=False, nullable=True)
     auth_version = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    # Un checkbox que no deja rastro no prueba nada el día que haya que
+    # demostrar que alguien aceptó, y qué versión aceptó.
+    terms_accepted_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    terms_version = db.Column(db.String(32), nullable=True)
     password_reset_tokens = db.relationship(
         "PasswordResetToken",
         back_populates="user",
@@ -46,6 +50,10 @@ class User(BaseModel):
                 "apple": bool(self.apple_id),
             },
             "plan": subscription.to_plan_dict() if subscription else plan_payload(FREE),
+            "terms": {
+                "accepted_at": self.terms_accepted_at.isoformat() if self.terms_accepted_at else None,
+                "version": self.terms_version,
+            },
             "created_at": (
                 self.created_at.isoformat()
                 if self.created_at else None

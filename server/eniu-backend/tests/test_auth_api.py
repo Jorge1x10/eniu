@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from app import create_app
 from app.database.db import db
+from app.modules.auth.services import TERMS_VERSION
 from app.modules.users.model import User
 
 
@@ -66,6 +67,15 @@ class AuthApiTestCase(unittest.TestCase):
         response = self.client.post("/api/auth/register", json={"email": "sin@telefono.com"})
         self.assertEqual(response.status_code, 400)
         self.assertEqual(sorted(response.json["fields"]), ["password", "phone"])
+
+    def test_registering_records_when_the_terms_were_accepted(self):
+        # Un checkbox que no deja rastro no prueba nada el día que haya que
+        # demostrar quién aceptó y qué versión.
+        response = self.register()
+        self.assertEqual(response.status_code, 201)
+        terms = response.json["user"]["terms"]
+        self.assertEqual(terms["version"], TERMS_VERSION)
+        self.assertIsNotNone(terms["accepted_at"])
 
     def test_register_duplicate_email_returns_string_message(self):
         self.register()

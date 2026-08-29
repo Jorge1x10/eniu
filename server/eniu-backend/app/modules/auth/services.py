@@ -19,6 +19,14 @@ from app.modules.auth.validators import validate_password
 
 USERNAME_MAX_LENGTH = 50
 
+# Se sube cuando cambian los términos de forma significativa, para saber qué
+# versión aceptó cada quien.
+TERMS_VERSION = "2026-08-28"
+
+
+def accepted_terms_now():
+    return {"terms_accepted_at": datetime.now(timezone.utc), "terms_version": TERMS_VERSION}
+
 
 def derive_username(email):
     """Inventa un nombre de usuario a partir del correo.
@@ -88,7 +96,8 @@ def register_user(data):
         username=username,
         email=email,
         phone_number=phone_number,
-        password=password_hash
+        password=password_hash,
+        **accepted_terms_now(),
     )
 
     try:
@@ -407,7 +416,8 @@ def authenticate_google_user(credential):
             profile_picture=picture,
             password=None,
             username=None,
-            phone_number=None
+            phone_number=None,
+            **accepted_terms_now(),
         )
 
         db.session.add(user)
@@ -539,7 +549,8 @@ def authenticate_apple_user(identity_token, full_name=None):
             apple_id=apple_id,
             password=None,
             username=None,
-            phone_number=None
+            phone_number=None,
+            **accepted_terms_now(),
         )
 
         db.session.add(user)
