@@ -30,9 +30,12 @@
         "--prefix",
         "landing/eniuLanding",
         "run",
-        "dev"
+        "dev",
+        "--",
+        "--port",
+        "5179"
       ],
-      "port": 5174
+      "port": 5179
     }
   ]
 }

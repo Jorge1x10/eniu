@@ -84,8 +84,7 @@ export function SiteFooter() {
           <Link href="/primeros-pasos">Primeros pasos</Link>
         </div>
         <div className="footer-col">
-          <h4>Legal y contacto</h4>
-          <Link href="/terminos">Términos y condiciones</Link>
+          <h4>Contacto</h4>
           <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
           <a href={appUrl}>Crear mi menú</a>
         </div>
