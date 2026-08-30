@@ -1,12 +1,13 @@
 import { useCallback } from "react";
 
 import { useApi } from "../../auth/services/useApi";
+import i18n from "../../../i18n";
 
 export function publicationErrorMessage(response, fallback) {
-  if (response?.status === 403) return "No tienes permiso para administrar este menú.";
-  if (response?.status === 404) return "El negocio o menú solicitado no existe.";
-  if (response?.status === 409) return "No pudimos generar una URL única. Intenta nuevamente.";
-  if (response?.status === 400) return response.data?.message || "La solicitud no es válida.";
+  if (response?.status === 403) return i18n.t("No tienes permiso para administrar este menú.");
+  if (response?.status === 404) return i18n.t("El negocio o menú solicitado no existe.");
+  if (response?.status === 409) return i18n.t("No pudimos generar una URL única. Intenta nuevamente.");
+  if (response?.status === 400) return response.data?.message || i18n.t("La solicitud no es válida.");
   return response?.data?.message || fallback;
 }
 

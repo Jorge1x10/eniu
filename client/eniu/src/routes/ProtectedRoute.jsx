@@ -1,14 +1,17 @@
 import { Navigate, Outlet } from "react-router";
 
 import { useAuth } from "../modules/auth/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 
 export default function ProtectedRoute() {
+  const { t } = useTranslation();
+
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        Verificando sesión...
+       {t("Verificando sesión...")}
       </div>
     );
   }

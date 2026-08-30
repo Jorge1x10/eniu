@@ -1,4 +1,5 @@
-/**
+
+import i18n from "../i18n";/**
  * Reencodifica en el navegador las fotos que se suben desde el dashboard.
  *
  * La app móvil ya hacía esto en `mobile/eniu-mobile/src/lib/image-file.ts`; el
@@ -62,7 +63,7 @@ function encode(bitmap, { maxSide, compress }, mimetype) {
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("No fue posible procesar la imagen."))),
+      (blob) => (blob ? resolve(blob) : reject(new Error(i18n.t("No fue posible procesar la imagen.")))),
       mimetype,
       compress
     );
@@ -101,7 +102,7 @@ export async function prepareImage(file, quality = "alta") {
     }
     if (blob.size > MAX_IMAGE_BYTES) {
       throw new Error(
-        "La imagen sigue pesando más de 5 MB. Elige una calidad menor o recórtala antes de subirla."
+        i18n.t("La imagen sigue pesando más de 5 MB. Elige una calidad menor o recórtala antes de subirla.")
       );
     }
     return named(blob, mimetype);
@@ -116,6 +117,6 @@ export async function prepareImage(file, quality = "alta") {
  */
 export async function prepareImages(files, quality = "alta") {
   const rejected = files.find((file) => !ACCEPTED_MIMETYPES.includes(file.type));
-  if (rejected) throw new Error("Cada imagen debe ser JPG, PNG o WebP.");
+  if (rejected) throw new Error(i18n.t("Cada imagen debe ser JPG, PNG o WebP."));
   return Promise.all(files.map((file) => prepareImage(file, quality)));
 }

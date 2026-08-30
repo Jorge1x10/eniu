@@ -1,19 +1,20 @@
 import { useCallback } from "react";
 
 import { useApi } from "../../auth/services/useApi";
+import i18n from "../../../i18n";
 
 export function getCatalogueErrorMessage(response, fallback) {
   if (response?.status === 403) {
-    return "No tienes permiso para administrar este negocio.";
+    return i18n.t("No tienes permiso para administrar este negocio.");
   }
   if (response?.status === 404) {
-    return "El negocio o menú solicitado no existe.";
+    return i18n.t("El negocio o menú solicitado no existe.");
   }
   if (response?.status === 409) {
-    return "Ya existe un menú con ese nombre en este negocio.";
+    return i18n.t("Ya existe un menú con ese nombre en este negocio.");
   }
   if (response?.status === 400) {
-    return response.data?.message || "Revisa la información ingresada.";
+    return response.data?.message || i18n.t("Revisa la información ingresada.");
   }
   return response?.data?.message || fallback;
 }

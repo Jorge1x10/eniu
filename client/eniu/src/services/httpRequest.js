@@ -1,4 +1,5 @@
 import api from "./api";
+import i18n from "../i18n";
 
 export async function httpRequest({
   method,
@@ -28,7 +29,7 @@ export async function httpRequest({
       error.response?.data?.message ||
       error.response?.data?.error ||
       error.message ||
-      "Ocurrió un error inesperado";
+      i18n.t("Ocurrió un error inesperado");
 
     return {
       success: false,

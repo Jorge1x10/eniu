@@ -5,8 +5,11 @@ import DashboardNav from '../components/DashboardLayout'
 import MotionDiv from '../hooks/MotionDiv';
 import { BusinessProvider } from '../../Business/services/BusinessProvider';
 import mobileLogo from '../../../assets/Images/eniu-DarkBannerNoBack.svg';
+import { useTranslation } from "react-i18next";
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -16,7 +19,7 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => setIsSidebarOpen(true)}
-            aria-label="Abrir menú"
+            aria-label={t("Abrir menú")}
             className="flex h-10 w-10 items-center justify-center rounded-lg text-[#FFFDF5] hover:bg-[#2A2A2A]"
           >
             <Menu size={22} />

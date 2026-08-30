@@ -1,7 +1,10 @@
 import RegisterForm from "../components/RegisterForm";
 import darkLogo from "../../../assets/Images/eniu-DarkBannerNoBack.svg"
+import { useTranslation } from "react-i18next";
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
+
   return (
     <main className="flex h-screen bg-[#FFFDF5]">
       <section className="hidden w-1/2 bg-[#111111] text-[#FFFDF5] lg:flex lg:flex-col lg:justify-between lg:w-full">
@@ -11,12 +14,11 @@ export default function RegisterPage() {
 
         <div className="flex-col hidden lg:flex">
           <h2 className="max-w-lg text-4xl font-bold leading-tight pl-5">
-            Tu menú digital, siempre actualizado.
+           {t("Tu menú digital, siempre actualizado.")}
           </h2>
 
           <p className="mt-4 max-w-md text-[#D9D9D9] pl-5">
-            Crea productos, organiza categorías y comparte tu
-            menú mediante una URL o código QR.
+           {t("Crea productos, organiza categorías y comparte tu menú mediante una URL o código QR.")}
           </p>
         </div>
 

@@ -10,6 +10,7 @@ import {
 
 import { usePlan } from "../../auth/hooks/usePlan";
 import { useBusiness } from "../services/useBusiness";
+import { useTranslation } from "react-i18next";
 
 function resolvePhotoUrl(photoUrl) {
   if (!photoUrl || photoUrl.startsWith("http")) return photoUrl;
@@ -42,6 +43,8 @@ function BusinessAvatar({ business, className, iconSize = 18 }) {
 }
 
 export default function BusinessSelector({ onCreateBusiness }) {
+  const { t } = useTranslation();
+
   const [isOpen, setIsOpen] = useState(false);
   const { limits, isWithin } = usePlan();
   const dropdownRef = useRef(null);
@@ -103,8 +106,8 @@ export default function BusinessSelector({ onCreateBusiness }) {
         <Plus size={18} />
 
         <div>
-          <p className="text-xs text-[#D9D9D9]">Negocio</p>
-          <p className="text-sm font-semibold">Crea tu negocio</p>
+          <p className="text-xs text-[#D9D9D9]">{t("Negocio")}</p>
+          <p className="text-sm font-semibold">{t("Crea tu negocio")}</p>
         </div>
       </button>
     );
@@ -133,7 +136,7 @@ export default function BusinessSelector({ onCreateBusiness }) {
               isBusinessPage ? "text-[#555555]" : "text-[#D9D9D9]"
             }`}
           >
-            Negocio actual
+           {t("Negocio actual")}
           </p>
 
           <p className="truncate text-sm font-semibold">
@@ -152,7 +155,7 @@ export default function BusinessSelector({ onCreateBusiness }) {
       {isOpen && (
         <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-full overflow-hidden rounded-xl border border-[#3A3A3A] bg-[#2A2A2A] p-1 shadow-xl">
           <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#D9D9D9]">
-            Mis negocios
+           {t("Mis negocios")}
           </p>
 
           {businesses.map((business) => {
@@ -196,12 +199,12 @@ export default function BusinessSelector({ onCreateBusiness }) {
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-[#FFE05A] transition hover:bg-[#3A3A3A] cursor-pointer"
             >
               <Plus size={16} />
-              Crear otro negocio
+             {t("Crear otro negocio")}
             </button>
           ) : (
             <p className="flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#AAAAAA]">
               <Lock size={16} className="mt-0.5 shrink-0" />
-              Tu plan actual permite {limits.max_businesses === 1 ? "un negocio" : `${limits.max_businesses} negocios`}.
+             {t("Tu plan actual permite")} {limits.max_businesses === 1 ? t("un negocio") : `${limits.max_businesses} negocios`}.
             </p>
           )}
         </div>
