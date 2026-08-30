@@ -15,10 +15,20 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://eniu-backend.onrender.com/api",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "366455277593-n4oms8920un3540rbbq0g9lg6p45rr84.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "366455277593-pu0vhubu01ga7ema31jqa047gd9pc1t6.apps.googleusercontent.com"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://eniu-backend.onrender.com/api",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "366455277593-n4oms8920un3540rbbq0g9lg6p45rr84.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "366455277593-pu0vhubu01ga7ema31jqa047gd9pc1t6.apps.googleusercontent.com"
+      }
     }
   }
 }

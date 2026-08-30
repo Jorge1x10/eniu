@@ -51,6 +51,17 @@ npm run start:dev
 
 La app incluye inicio de sesión y registro por correo o Google, selección de negocio, dashboard, menús, productos, categorías, publicación con QR, analíticas y configuración de cuenta. Los tokens se almacenan con `expo-secure-store` en iOS y Android.
 
+## Builds de preview y producción
+
+`eas.json` fija `EXPO_PUBLIC_API_URL` y los dos client id de Google en los
+perfiles `preview` y `production`, para que una build no salga apuntando al
+backend local. Los tres valores son públicos —viajan dentro del bundle y el de
+iOS ya está en `app.json`—, así que viven en el repositorio a propósito.
+
+Para revocar la sesión de Apple al borrar una cuenta, el backend necesita
+además la clave privada de Sign in with Apple; está documentado en
+`server/eniu-backend/APPLE_CONFIGURATION.md`.
+
 ## Validar
 
 ```powershell
