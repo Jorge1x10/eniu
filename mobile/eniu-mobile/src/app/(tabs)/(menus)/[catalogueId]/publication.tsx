@@ -45,7 +45,11 @@ export default function PublicationScreen() {
 
         {!publication.is_published ? <Button onPress={toggle}>Publicar menú</Button> : null}
 
-        {publication.public_url ? <>
+        {/* El slug se reserva al primer publicado y se conserva aunque luego se
+            despublique, para que un QR ya impreso siga siendo válido. Pero
+            mientras no esté publicado ese enlace responde 404, así que aquí sólo
+            se ofrece cuando de verdad lleva a algún lado. */}
+        {publication.is_published && publication.public_url ? <>
           <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 22, alignItems: 'center', gap: 16 }}>
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, borderCurve: 'continuous', padding: 16 }}><QRCode value={`${publication.public_url}?source=qr`} size={196} color="#111111" backgroundColor="#FFFFFF" /></View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 38, paddingHorizontal: 14, borderRadius: 99, backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border }}>
@@ -60,7 +64,13 @@ export default function PublicationScreen() {
             </Pressable>
             <Button variant="secondary" onPress={share}>Compartir enlace</Button>
           </View>
-        </> : <Text style={{ color: theme.muted, textAlign: 'center' }}>La URL se generará al publicar el menú.</Text>}
+        </> : publication.public_url ? (
+          <View style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 16, gap: 6 }}>
+            <Text style={{ color: theme.text, fontSize: 13.5, fontWeight: '700' }}>Su dirección ya está apartada</Text>
+            <Text selectable style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{publication.public_url.replace(/^https?:\/\//, '')}</Text>
+            <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>No cambiará al publicar y despublicar, así que un código QR impreso sigue sirviendo. El QR aparece aquí en cuanto publiques.</Text>
+          </View>
+        ) : <Text style={{ color: theme.muted, textAlign: 'center' }}>La URL se generará al publicar el menú.</Text>}
 
         {publication.is_published ? <Pressable onPress={toggle} style={({ pressed }) => ({ minHeight: 52, borderRadius: 15, borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}><Text style={{ color: theme.danger, fontWeight: '700', fontSize: 14 }}>Despublicar menú</Text></Pressable> : null}
       </>}
