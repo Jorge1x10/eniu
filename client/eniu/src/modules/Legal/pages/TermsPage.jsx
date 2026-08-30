@@ -2,10 +2,10 @@ import { Link } from "react-router";
 
 // TODO: sustituir por los datos reales antes de publicar, igual que en el
 // aviso de privacidad. Son los únicos huecos del documento.
-const RESPONSABLE = "[RAZÓN SOCIAL O NOMBRE DEL RESPONSABLE]";
-const CONTACTO = "[correo-de-contacto@ejemplo.com]";
+const RESPONSABLE = "Jorge Arturo Alvarado Díaz de León";
+const CONTACTO = "hola@eniu.app";
 
-const ACTUALIZADA = "28 de agosto de 2026";
+const ACTUALIZADA = "29 de agosto de 2026";
 
 function Seccion({ titulo, children }) {
   return (
