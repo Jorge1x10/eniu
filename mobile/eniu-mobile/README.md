@@ -62,6 +62,28 @@ Para revocar la sesión de Apple al borrar una cuenta, el backend necesita
 además la clave privada de Sign in with Apple; está documentado en
 `server/eniu-backend/APPLE_CONFIGURATION.md`.
 
+## Enviar a la App Store
+
+`eas.json` fija sólo el `appleTeamId` en el perfil `submit`. Es el mismo Team ID
+con el que el backend valida los tokens de Apple, no es secreto y no cambia.
+
+Lo demás se queda deliberadamente fuera del archivo, que está versionado:
+
+- **El Apple ID de la cuenta** se pasa por `EXPO_APPLE_ID`, para no dejar un
+  correo personal en el repositorio.
+- **La llave de App Store Connect API** conviene subirla a EAS con
+  `eas credentials` en vez de guardar el `.p8` en disco. El `.gitignore` de la
+  raíz ignora `*.p8` por si acaso.
+- **El `ascAppId`** no existe hasta que la ficha de la app está creada en App
+  Store Connect. El primer `eas submit --platform ios` la crea si hace falta y
+  lo imprime; conviene añadirlo aquí después para que los siguientes envíos no
+  vuelvan a preguntarlo.
+
+No confundir las dos claves privadas del proyecto: la de **Sign in with Apple**
+va en Render y sirve para revocar sesiones al borrar una cuenta
+(`server/eniu-backend/APPLE_CONFIGURATION.md`); la de **App Store Connect API**
+sirve para publicar y nunca toca el servidor.
+
 ## Validar
 
 ```powershell
