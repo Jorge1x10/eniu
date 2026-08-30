@@ -3,11 +3,11 @@ import { Link } from "react-router";
 // TODO: sustituir por los datos reales antes de publicar la política.
 // Son los tres únicos huecos del documento; el resto describe lo que el
 // sistema hace de verdad.
-const RESPONSABLE = "[RAZÓN SOCIAL O NOMBRE DEL RESPONSABLE]";
-const CONTACTO = "[correo-de-contacto@ejemplo.com]";
-const DOMICILIO = "[domicilio fiscal o de contacto]";
+const RESPONSABLE = "Jorge Arturo Alvarado Díaz de León";
+const CONTACTO = "hola@eniu.app";
+const DOMICILIO = "Paseo del Origen 600, Club de Golf Santa Anita, Tlajomulco de Zúñiga, Jal., C.P. 45645";
 
-const ACTUALIZADA = "28 de agosto de 2026";
+const ACTUALIZADA = "29 de agosto de 2026";
 
 function Seccion({ titulo, children }) {
   return (
