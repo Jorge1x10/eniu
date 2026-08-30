@@ -4,6 +4,7 @@ import { ColorValue, Text } from 'react-native';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useAuth } from '@/features/auth/auth-context';
+import { useTranslation } from 'react-i18next';
 
 const tabIcons: Record<string, string> = {
   home: '⌂',
@@ -17,6 +18,8 @@ function TabIcon({ name, color }: { name: keyof typeof tabIcons; color: ColorVal
 }
 
 export default function WebTabsLayout() {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const { user, isLoading } = useAuth();
   if (isLoading) return <FullScreenLoader />;
@@ -46,10 +49,10 @@ export default function WebTabsLayout() {
         },
       }}
     >
-      <Tabs.Screen name="(home)" options={{ title: 'Inicio', tabBarIcon: ({ color }) => <TabIcon name="home" color={color} /> }} />
-      <Tabs.Screen name="(menus)" options={{ title: 'Menús', tabBarIcon: ({ color }) => <TabIcon name="menus" color={color} /> }} />
-      <Tabs.Screen name="(analytics)" options={{ title: 'Analíticas', tabBarIcon: ({ color }) => <TabIcon name="analytics" color={color} /> }} />
-      <Tabs.Screen name="(settings)" options={{ title: 'Ajustes', tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} /> }} />
+      <Tabs.Screen name="(home)" options={{ title: t("Inicio"), tabBarIcon: ({ color }) => <TabIcon name="home" color={color} /> }} />
+      <Tabs.Screen name="(menus)" options={{ title: t("Menús"), tabBarIcon: ({ color }) => <TabIcon name="menus" color={color} /> }} />
+      <Tabs.Screen name="(analytics)" options={{ title: t("Analíticas"), tabBarIcon: ({ color }) => <TabIcon name="analytics" color={color} /> }} />
+      <Tabs.Screen name="(settings)" options={{ title: t("Ajustes"), tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} /> }} />
     </Tabs>
   );
 }

@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 
 import { FONT_KEYS, TEMPLATE_KEYS, type FontKey, type MenuSplash, type MenuTheme, type TemplateConfig, type TemplateKey, type ThemeColor } from '@/types/models';
+import i18n from '@/i18n';
 
 export const DEFAULT_SPLASH: MenuSplash = { enabled: false, duration: 2.5, image_url: null };
 
@@ -94,11 +95,11 @@ export function readableOn(background: string) {
  */
 export function validateTheme(theme: MenuTheme) {
   const errors: Partial<Record<ThemeColor | 'contrast', string>> = {};
-  COLOR_FIELDS.forEach(({ key }) => { if (!normalizeHex(theme[key])) errors[key] = 'Usa un color hexadecimal válido.'; });
+  COLOR_FIELDS.forEach(({ key }) => { if (!normalizeHex(theme[key])) errors[key] = i18n.t(i18n.t(i18n.t("Usa un color hexadecimal válido."))); });
   if (!errors.text_color && !errors.background_color && contrastRatio(theme.text_color, theme.background_color) < 4.5) {
-    errors.contrast = 'El texto no contrasta lo suficiente con el fondo.';
+    errors.contrast = i18n.t(i18n.t(i18n.t("El texto no contrasta lo suficiente con el fondo.")));
   } else if (!errors.text_color && !errors.primary_color && contrastRatio(theme.text_color, theme.primary_color) < 4.5) {
-    errors.contrast = 'El texto no contrasta lo suficiente con el color principal.';
+    errors.contrast = i18n.t(i18n.t(i18n.t("El texto no contrasta lo suficiente con el color principal.")));
   }
   return errors;
 }

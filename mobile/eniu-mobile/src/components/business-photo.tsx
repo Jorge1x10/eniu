@@ -7,6 +7,7 @@ import { useBusiness } from '@/features/business/business-context';
 import { api, resolveMediaUrl } from '@/lib/api';
 import { appendImage, type ImageQuality, type PickedPicture } from '@/lib/image-file';
 import type { Business } from '@/types/models';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Foto del negocio: la misma que se sube desde la web. Guarda al instante en
@@ -14,6 +15,8 @@ import type { Business } from '@/types/models';
  * el cambio en cuanto elige la imagen.
  */
 export function BusinessPhotoField({ quality = 'alta', onError }: { quality?: ImageQuality; onError?: (message: string) => void }) {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const { selectedBusiness, updateBusiness } = useBusiness();
   // La URL de la foto no cambia al reemplazarla, así que sin esto expo-image
@@ -22,7 +25,7 @@ export function BusinessPhotoField({ quality = 'alta', onError }: { quality?: Im
 
   function fail(message: string) {
     if (onError) onError(message);
-    else Alert.alert('No se pudo guardar la foto', message);
+    else Alert.alert(t("No se pudo guardar la foto"), message);
   }
 
   async function send(fill: (form: FormData) => void) {
@@ -34,7 +37,7 @@ export function BusinessPhotoField({ quality = 'alta', onError }: { quality?: Im
       updateBusiness(data.business);
       setVersion(Date.now());
     } catch (error) {
-      fail(error instanceof Error ? error.message : 'Intenta nuevamente.');
+      fail(error instanceof Error ? error.message : t("Intenta nuevamente."));
     }
   }
 
@@ -43,8 +46,8 @@ export function BusinessPhotoField({ quality = 'alta', onError }: { quality?: Im
   }
 
   function remove() {
-    Alert.alert('Quitar foto', '¿Quieres quitar la foto de tu negocio?', [
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert(t("Quitar foto"), t("¿Quieres quitar la foto de tu negocio?"), [
+      { text: t("Cancelar"), style: 'cancel' },
       { text: 'Quitar', style: 'destructive', onPress: () => send((form) => form.append('remove_photo', 'true')) },
     ]);
   }
@@ -54,10 +57,10 @@ export function BusinessPhotoField({ quality = 'alta', onError }: { quality?: Im
 
   return (
     <View style={{ gap: 9 }}>
-      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>Foto del negocio</Text>
+      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>{t("Foto del negocio")}</Text>
       <ImageField
         title="foto"
-        emptyText="Sin foto del negocio"
+        emptyText={t("Sin foto del negocio")}
         source={url ? { uri: version ? `${url}?v=${version}` : url } : null}
         quality={quality}
         height={150}

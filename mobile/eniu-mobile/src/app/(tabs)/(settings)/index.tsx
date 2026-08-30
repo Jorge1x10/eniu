@@ -13,9 +13,11 @@ import { PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '@/constants/legal';
 import { useScreenTopPadding } from '@/constants/layout';
 import { useAuth } from '@/features/auth/auth-context';
 import { useBusiness } from '@/features/business/business-context';
+import { useLanguage } from '@/i18n/language-context';
 import { getMilestoneNotificationsEnabled, setMilestoneNotificationsEnabled } from '@/features/milestones/milestone-store';
 import { api } from '@/lib/api';
 import type { Business, User } from '@/types/models';
+import { useTranslation } from 'react-i18next';
 
 function LinkRow({ label, url }: { label: string; url: string }) {
   const theme = useEniuTheme();
@@ -31,11 +33,19 @@ function Section({ label, children }: React.PropsWithChildren<{ label: string }>
   return <View style={{ gap: 11 }}><Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{label}</Text><View style={{ padding: 18, gap: 14, borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}>{children}</View></View>;
 }
 
+const LANGUAGE_OPTIONS = [
+  { code: 'es', label: 'Español' },
+  { code: 'en', label: 'English' },
+] as const;
+
 export default function SettingsScreen() {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const topPadding = useScreenTopPadding();
   const { user, setUser, logout } = useAuth();
   const { selectedBusiness, updateBusiness } = useBusiness();
+  const { language, changeLanguage, isSaving: isSavingLanguage } = useLanguage();
   const [profile, setProfile] = useState({ name: user?.name || '', username: user?.username || '', phone_number: user?.phone_number || '' });
   const [business, setBusiness] = useState(() => selectedBusiness ? { name: selectedBusiness.name, description: selectedBusiness.description || '', phone: selectedBusiness.phone || '', whatsapp: selectedBusiness.whatsapp || '', address: selectedBusiness.address || '', currency: selectedBusiness.currency || 'MXN' } : null);
   const [saving, setSaving] = useState<'profile' | 'business' | null>(null); const [error, setError] = useState(''); const [success, setSuccess] = useState('');
@@ -56,15 +66,15 @@ export default function SettingsScreen() {
 
   async function saveProfile() {
     setSaving('profile'); setError(''); setSuccess('');
-    try { const data = await api.patch<{ user: User }>('users/me', { name: profile.name.trim(), username: profile.username.trim(), phone_number: profile.phone_number.trim() }); setUser(data.user); setSuccess('Tu perfil se actualizó correctamente.'); }
-    catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'No fue posible guardar el perfil.'); }
+    try { const data = await api.patch<{ user: User }>('users/me', { name: profile.name.trim(), username: profile.username.trim(), phone_number: profile.phone_number.trim() }); setUser(data.user); setSuccess(t("Tu perfil se actualizó correctamente.")); }
+    catch (requestError) { setError(requestError instanceof Error ? requestError.message : t("No fue posible guardar el perfil.")); }
     finally { setSaving(null); }
   }
   async function saveBusiness() {
     if (!selectedBusiness || !business) return;
     setSaving('business'); setError(''); setSuccess('');
-    try { const data = await api.patch<{ business: Business }>(`businesses/${selectedBusiness.id}`, { ...business, name: business.name.trim(), currency: business.currency.trim().toUpperCase() }); updateBusiness(data.business); setSuccess('Los datos del negocio se actualizaron correctamente.'); }
-    catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'No fue posible guardar el negocio.'); }
+    try { const data = await api.patch<{ business: Business }>(`businesses/${selectedBusiness.id}`, { ...business, name: business.name.trim(), currency: business.currency.trim().toUpperCase() }); updateBusiness(data.business); setSuccess(t("Los datos del negocio se actualizaron correctamente.")); }
+    catch (requestError) { setError(requestError instanceof Error ? requestError.message : t("No fue posible guardar el negocio.")); }
     finally { setSaving(null); }
   }
   async function toggleMilestoneNotifications(value: boolean) { setMilestoneNotifications(value); await setMilestoneNotificationsEnabled(value); }
@@ -72,9 +82,9 @@ export default function SettingsScreen() {
   function confirmDelete() {
     if (!canDelete || deleting) return;
     Alert.alert(
-      'Eliminar tu cuenta',
-      'Se eliminan tus negocios, menús, productos y fotos, y tus menús publicados dejan de estar disponibles. Si tienes una suscripción activa se cancela. No se puede deshacer.',
-      [{ text: 'Cancelar', style: 'cancel' }, { text: 'Eliminar', style: 'destructive', onPress: deleteAccount }],
+      t("Eliminar tu cuenta"),
+      t("Se eliminan tus negocios, menús, productos y fotos, y tus menús publicados dejan de estar disponibles. Si tienes una suscripción activa se cancela. No se puede deshacer."),
+      [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Eliminar"), style: 'destructive', onPress: deleteAccount }],
     );
   }
 
@@ -85,13 +95,13 @@ export default function SettingsScreen() {
       await logout();
     } catch (requestError) {
       setDeleting(false);
-      setError(requestError instanceof Error ? requestError.message : 'No fue posible eliminar la cuenta.');
+      setError(requestError instanceof Error ? requestError.message : t("No fue posible eliminar la cuenta."));
     }
   }
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: topPadding, paddingBottom: 120, gap: 20 }}>
-      <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>Ajustes</Text>
+      <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>{t("Ajustes")}</Text>
       <Feedback message={error} /><Feedback message={success} tone="success" />
 
       <View style={{ borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 15 }}>
@@ -102,32 +112,55 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      <Section label="Mi perfil"><FormField label="Nombre visible" value={profile.name} onChangeText={updateProfile('name')} /><FormField label="Nombre de usuario" value={profile.username} onChangeText={updateProfile('username')} autoCapitalize="none" /><FormField label="Teléfono" value={profile.phone_number} onChangeText={updateProfile('phone_number')} keyboardType="phone-pad" /><FormField label="Correo electrónico" value={user?.email || ''} editable={false} /><Button loading={saving === 'profile'} onPress={saveProfile}>Guardar perfil</Button></Section>
+      <Section label={t("Mi perfil")}><FormField label={t("Nombre visible")} value={profile.name} onChangeText={updateProfile('name')} /><FormField label={t("Nombre de usuario")} value={profile.username} onChangeText={updateProfile('username')} autoCapitalize="none" /><FormField label={t("Teléfono")} value={profile.phone_number} onChangeText={updateProfile('phone_number')} keyboardType="phone-pad" /><FormField label={t("Correo electrónico")} value={user?.email || ''} editable={false} /><Button loading={saving === 'profile'} onPress={saveProfile}>{t("Guardar perfil")}</Button></Section>
 
-      <Section label="Mi negocio"><BusinessSwitcher />{business ? <><BusinessPhotoField onError={setError} /><FormField label="Nombre" value={business.name} onChangeText={updateBusinessField('name')} /><FormField label="Descripción" value={business.description} onChangeText={updateBusinessField('description')} multiline /><FormField label="Teléfono" value={business.phone} onChangeText={updateBusinessField('phone')} keyboardType="phone-pad" /><FormField label="WhatsApp" value={business.whatsapp} onChangeText={updateBusinessField('whatsapp')} keyboardType="phone-pad" /><FormField label="Dirección" value={business.address} onChangeText={updateBusinessField('address')} /><FormField label="Moneda" value={business.currency} onChangeText={updateBusinessField('currency')} autoCapitalize="characters" maxLength={3} /><Button loading={saving === 'business'} onPress={saveBusiness}>Guardar negocio</Button></> : <Text style={{ color: theme.muted }}>Crea un negocio desde Inicio para configurarlo.</Text>}</Section>
+      <Section label={t("Mi negocio")}><BusinessSwitcher />{business ? <><BusinessPhotoField onError={setError} /><FormField label={t("Nombre")} value={business.name} onChangeText={updateBusinessField('name')} /><FormField label={t("Descripción")} value={business.description} onChangeText={updateBusinessField('description')} multiline /><FormField label={t("Teléfono")} value={business.phone} onChangeText={updateBusinessField('phone')} keyboardType="phone-pad" /><FormField label={t("WhatsApp")} value={business.whatsapp} onChangeText={updateBusinessField('whatsapp')} keyboardType="phone-pad" /><FormField label={t("Dirección")} value={business.address} onChangeText={updateBusinessField('address')} /><FormField label={t("Moneda")} value={business.currency} onChangeText={updateBusinessField('currency')} autoCapitalize="characters" maxLength={3} /><Button loading={saving === 'business'} onPress={saveBusiness}>{t("Guardar negocio")}</Button></> : <Text style={{ color: theme.muted }}>{t("Crea un negocio desde Inicio para configurarlo.")}</Text>}</Section>
 
-      <Section label="Aplicación">
-        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>Apariencia</Text><Text style={{ color: theme.muted, fontSize: 12.5 }}>Automática</Text></View>
+      <Section label={t("Aplicación")}>
+        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>{t("Apariencia")}</Text><Text style={{ color: theme.muted, fontSize: 12.5 }}>{t("Automática")}</Text></View>
         <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <View style={{ flex: 1, gap: 2 }}><Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>Avisos de logros</Text><Text style={{ color: theme.muted, fontSize: 11.5 }}>Cuando alcances una meta de vistas</Text></View>
+          <View style={{ flex: 1, gap: 2 }}><Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>{t("Avisos de logros")}</Text><Text style={{ color: theme.muted, fontSize: 11.5 }}>{t("Cuando alcances una meta de vistas")}</Text></View>
           <Switch value={milestoneNotifications} onValueChange={toggleMilestoneNotifications} trackColor={{ true: theme.yellowPressed }} />
         </View>
-        <LinkRow label="Ayuda y soporte" url={SUPPORT_URL} />
-        <LinkRow label="Términos y condiciones" url={TERMS_URL} />
-        <LinkRow label="Aviso de privacidad" url={PRIVACY_URL} />
+        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>{t("Idioma")}</Text>
+            <Text style={{ color: theme.muted, fontSize: 11.5 }}>{t("En toda la app y en los correos")}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 4, backgroundColor: theme.surfaceAlt, borderRadius: 11, borderCurve: 'continuous', padding: 3 }}>
+            {LANGUAGE_OPTIONS.map((option) => {
+              const on = option.code === language;
+              return (
+                <Pressable
+                  key={option.code}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on, disabled: isSavingLanguage }}
+                  disabled={isSavingLanguage}
+                  onPress={() => void changeLanguage(option.code)}
+                  style={({ pressed }) => ({ minHeight: 34, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderRadius: 9, borderCurve: 'continuous', backgroundColor: on ? theme.yellow : 'transparent', opacity: pressed || isSavingLanguage ? 0.7 : 1 })}
+                >
+                  <Text style={{ color: on ? theme.onYellow : theme.muted, fontSize: 12.5, fontWeight: '800' }}>{option.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+        <LinkRow label={t("Ayuda y soporte")} url={SUPPORT_URL} />
+        <LinkRow label={t("Términos y condiciones")} url={TERMS_URL} />
+        <LinkRow label={t("Aviso de privacidad")} url={PRIVACY_URL} />
         {/* La versión es lo primero que se pide al reportar un fallo, y quien
             lo reporta no tiene otro sitio donde consultarla. */}
-        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><Text style={{ color: theme.muted, fontWeight: '700', fontSize: 12.5 }}>Versión</Text><Text style={{ color: theme.muted, fontSize: 12.5 }}>{Constants.expoConfig?.version ?? '—'}</Text></View>
+        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><Text style={{ color: theme.muted, fontWeight: '700', fontSize: 12.5 }}>{t("Versión")}</Text><Text style={{ color: theme.muted, fontSize: 12.5 }}>{Constants.expoConfig?.version ?? '—'}</Text></View>
       </Section>
 
-      <Button variant="danger" onPress={() => Alert.alert('Cerrar sesión', '¿Quieres salir de Eniu en este dispositivo?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Cerrar sesión', style: 'destructive', onPress: logout }])}>Cerrar sesión</Button>
+      <Button variant="danger" onPress={() => Alert.alert(t("Cerrar sesión"), t("¿Quieres salir de Eniu en este dispositivo?"), [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Cerrar sesión"), style: 'destructive', onPress: logout }])}>{t("Cerrar sesión")}</Button>
 
-      <Section label="Eliminar cuenta">
-        <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>Se eliminan tus negocios, menús, productos y fotos, y tus menús publicados dejan de estar disponibles. Si tienes una suscripción activa se cancela antes de borrar nada. No se puede deshacer.</Text>
+      <Section label={t("Eliminar cuenta")}>
+        <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{t("Se eliminan tus negocios, menús, productos y fotos, y tus menús publicados dejan de estar disponibles. Si tienes una suscripción activa se cancela antes de borrar nada. No se puede deshacer.")}</Text>
         {hasPassword
-          ? <FormField label="Confirma con tu contraseña" value={deleteValue} onChangeText={setDeleteValue} secureTextEntry autoComplete="current-password" placeholder="Tu contraseña" />
-          : <FormField label="Escribe ELIMINAR para confirmar" value={deleteValue} onChangeText={setDeleteValue} autoCapitalize="characters" placeholder="ELIMINAR" />}
-        <Button variant="danger" loading={deleting} disabled={!canDelete} onPress={confirmDelete}>Eliminar mi cuenta</Button>
+          ? <FormField label={t("Confirma con tu contraseña")} value={deleteValue} onChangeText={setDeleteValue} secureTextEntry autoComplete="current-password" placeholder={t("Tu contraseña")} />
+          : <FormField label={t("Escribe ELIMINAR para confirmar")} value={deleteValue} onChangeText={setDeleteValue} autoCapitalize="characters" placeholder="ELIMINAR" />}
+        <Button variant="danger" loading={deleting} disabled={!canDelete} onPress={confirmDelete}>{t("Eliminar mi cuenta")}</Button>
       </Section>
     </ScrollView>
   );

@@ -12,6 +12,7 @@ import { CheckIcon } from '@/components/ui/icons';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { PRIVACY_URL, TERMS_URL } from '@/constants/legal';
 import { useAuth } from '@/features/auth/auth-context';
+import { useTranslation } from 'react-i18next';
 
 const TOTAL_STEPS = 3;
 
@@ -36,6 +37,8 @@ function Progress({ step }: { step: number }) {
 }
 
 function TermsCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   return (
     <View style={{ gap: 8 }}>
@@ -49,17 +52,19 @@ function TermsCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () =
         <View style={{ width: 22, height: 22, borderRadius: 7, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: checked ? theme.yellow : 'transparent', borderWidth: checked ? 0 : 1.5, borderColor: theme.border }}>
           {checked ? <CheckIcon color={theme.onYellow} size={13} /> : null}
         </View>
-        <Text style={{ flex: 1, color: theme.text, fontSize: 13.5, lineHeight: 19 }}>Acepto los términos y condiciones y el aviso de privacidad.</Text>
+        <Text style={{ flex: 1, color: theme.text, fontSize: 13.5, lineHeight: 19 }}>{t("Acepto los términos y condiciones y el aviso de privacidad.")}</Text>
       </Pressable>
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 14 }}>
-        <Text accessibilityRole="link" onPress={() => Linking.openURL(TERMS_URL)} style={{ color: theme.muted, fontSize: 12, textDecorationLine: 'underline' }}>Leer los términos</Text>
-        <Text accessibilityRole="link" onPress={() => Linking.openURL(PRIVACY_URL)} style={{ color: theme.muted, fontSize: 12, textDecorationLine: 'underline' }}>Leer el aviso</Text>
+        <Text accessibilityRole="link" onPress={() => Linking.openURL(TERMS_URL)} style={{ color: theme.muted, fontSize: 12, textDecorationLine: 'underline' }}>{t("Leer los términos")}</Text>
+        <Text accessibilityRole="link" onPress={() => Linking.openURL(PRIVACY_URL)} style={{ color: theme.muted, fontSize: 12, textDecorationLine: 'underline' }}>{t("Leer el aviso")}</Text>
       </View>
     </View>
   );
 }
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const { register } = useAuth();
   const [step, setStep] = useState(1);
@@ -72,14 +77,14 @@ export default function RegisterScreen() {
   // Cada paso valida lo suyo antes de dejar avanzar: nadie debería llegar al
   // resumen con un correo inválido escrito dos pantallas atrás.
   function nextFromAccount() {
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) { setError('Ingresa un correo electrónico válido.'); return; }
-    if (form.password.length < 8) { setError('La contraseña debe tener al menos 8 caracteres.'); return; }
-    if (form.password !== form.confirmation) { setError('Las contraseñas no coinciden.'); return; }
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) { setError(t("Ingresa un correo electrónico válido.")); return; }
+    if (form.password.length < 8) { setError(t("La contraseña debe tener al menos 8 caracteres.")); return; }
+    if (form.password !== form.confirmation) { setError(t("Las contraseñas no coinciden.")); return; }
     setError(''); setStep(2);
   }
 
   function nextFromPhone() {
-    if (!/^\d{10}$/.test(form.phone)) { setError('El teléfono debe tener 10 dígitos.'); return; }
+    if (!/^\d{10}$/.test(form.phone)) { setError(t("El teléfono debe tener 10 dígitos.")); return; }
     setError(''); setStep(3);
   }
 
@@ -91,7 +96,7 @@ export default function RegisterScreen() {
       await register({ email: form.email.trim().toLowerCase(), phone: form.phone, password: form.password });
       router.replace('/(onboarding)/business');
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'No fue posible crear la cuenta.');
+      setError(requestError instanceof Error ? requestError.message : t("No fue posible crear la cuenta."));
     } finally { setLoading(false); }
   }
 
@@ -104,37 +109,37 @@ export default function RegisterScreen() {
 
       {step === 1 ? (
         <>
-          <FormField label="Correo electrónico" value={form.email} onChangeText={update('email')} autoCapitalize="none" autoComplete="email" keyboardType="email-address" placeholder="correo@ejemplo.com" />
-          <FormField label="Contraseña" value={form.password} onChangeText={update('password')} secureTextEntry autoComplete="new-password" placeholder="Mínimo 8 caracteres" />
-          <FormField label="Confirmar contraseña" value={form.confirmation} onChangeText={update('confirmation')} secureTextEntry autoComplete="new-password" placeholder="Repite tu contraseña" />
+          <FormField label={t("Correo electrónico")} value={form.email} onChangeText={update('email')} autoCapitalize="none" autoComplete="email" keyboardType="email-address" placeholder={t("correo@ejemplo.com")} />
+          <FormField label={t("Contraseña")} value={form.password} onChangeText={update('password')} secureTextEntry autoComplete="new-password" placeholder={t("Mínimo 8 caracteres")} />
+          <FormField label={t("Confirmar contraseña")} value={form.confirmation} onChangeText={update('confirmation')} secureTextEntry autoComplete="new-password" placeholder={t("Repite tu contraseña")} />
 
           {/* La casilla va en este paso porque desde aquí también se crea la
               cuenta con Google o Apple: al final se la saltarían. */}
           <TermsCheckbox checked={accepted} onToggle={() => setAccepted((current) => !current)} />
 
-          <Button disabled={!accepted} onPress={nextFromAccount}>Continuar</Button>
+          <Button disabled={!accepted} onPress={nextFromAccount}>{t("Continuar")}</Button>
           {accepted ? (
             <>
               <GoogleAuthButton mode="register" />
               <AppleAuthButton mode="register" />
             </>
           ) : (
-            <Text style={{ color: theme.muted, fontSize: 12.5, textAlign: 'center', lineHeight: 18 }}>Acepta los términos para continuar con Google o Apple.</Text>
+            <Text style={{ color: theme.muted, fontSize: 12.5, textAlign: 'center', lineHeight: 18 }}>{t("Acepta los términos para continuar con Google o Apple.")}</Text>
           )}
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 5 }}>
-            <Text style={{ color: theme.muted }}>¿Ya tienes una cuenta?</Text>
-            <Link href="/(auth)/login" style={{ color: theme.text, fontWeight: '800', textDecorationLine: 'underline' }}>Inicia sesión</Link>
+            <Text style={{ color: theme.muted }}>{t("¿Ya tienes una cuenta?")}</Text>
+            <Link href="/(auth)/login" style={{ color: theme.text, fontWeight: '800', textDecorationLine: 'underline' }}>{t("Inicia sesión")}</Link>
           </View>
         </>
       ) : null}
 
       {step === 2 ? (
         <>
-          <FormField label="Teléfono" value={form.phone} onChangeText={update('phone')} autoComplete="tel" keyboardType="number-pad" maxLength={10} placeholder="3312345678" />
+          <FormField label={t("Teléfono")} value={form.phone} onChangeText={update('phone')} autoComplete="tel" keyboardType="number-pad" maxLength={10} placeholder="3312345678" />
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Button style={{ flex: 1 }} variant="secondary" onPress={back}>Atrás</Button>
-            <Button style={{ flex: 1 }} onPress={nextFromPhone}>Continuar</Button>
+            <Button style={{ flex: 1 }} variant="secondary" onPress={back}>{t("Atrás")}</Button>
+            <Button style={{ flex: 1 }} onPress={nextFromPhone}>{t("Continuar")}</Button>
           </View>
         </>
       ) : null}
@@ -142,7 +147,7 @@ export default function RegisterScreen() {
       {step === 3 ? (
         <>
           <View style={{ borderRadius: 16, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface }}>
-            {([['Correo', form.email.trim().toLowerCase()], ['Teléfono', form.phone.trim()]] as const).map(([label, value], index) => (
+            {([[t("Correo"), form.email.trim().toLowerCase()], [t("Teléfono"), form.phone.trim()]] as const).map(([label, value], index) => (
               <View key={label} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 15, borderTopWidth: index ? 1 : 0, borderTopColor: theme.border }}>
                 <Text style={{ color: theme.muted, fontSize: 13 }}>{label}</Text>
                 <Text numberOfLines={1} style={{ flexShrink: 1, color: theme.text, fontSize: 13.5, fontWeight: '700' }}>{value}</Text>
@@ -150,8 +155,8 @@ export default function RegisterScreen() {
             ))}
           </View>
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Button style={{ flex: 1 }} variant="secondary" onPress={back}>Atrás</Button>
-            <Button style={{ flex: 1 }} loading={loading} onPress={submit}>Crear cuenta</Button>
+            <Button style={{ flex: 1 }} variant="secondary" onPress={back}>{t("Atrás")}</Button>
+            <Button style={{ flex: 1 }} loading={loading} onPress={submit}>{t("Crear cuenta")}</Button>
           </View>
         </>
       ) : null}

@@ -1,6 +1,8 @@
 import { fetch as expoFetch } from 'expo/fetch';
+import * as Network from 'expo-network';
 
 import { sessionStore } from '@/lib/session-store';
+import i18n from '@/i18n';
 
 // Desde SDK 54 `expo/fetch` es también el `fetch` global en Android e iOS, así
 // que no queda un fetch de React Native al que caer para las subidas: la forma
@@ -16,6 +18,32 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+
+  /** La petición no llegó a salir: sin red o sin servidor al otro lado. */
+  get isOffline() {
+    return this.status === 0;
+  }
+}
+
+/**
+ * Explica por qué no se pudo llegar al servidor, en términos que ayuden.
+ *
+ * "Sin internet" y "el servidor no responde" piden cosas distintas de quien
+ * lee: en el primer caso conviene revisar la conexión, en el segundo lo único
+ * que queda es reintentar. `fetch` no distingue —lanza el mismo error—, así
+ * que se le pregunta al sistema.
+ */
+async function connectionErrorMessage() {
+  try {
+    const state = await Network.getNetworkStateAsync();
+    // En Android `isInternetReachable` se comprueba de verdad; en iOS
+    // coincide con `isConnected`. Si viene indefinido no se supone nada.
+    const offline = state.isInternetReachable === false || state.isConnected === false;
+    if (offline) return i18n.t(i18n.t(i18n.t("Sin conexión a internet. Revisa tu red e inténtalo de nuevo.")));
+  } catch {
+    // Si no se puede consultar el estado de la red, queda el mensaje genérico.
+  }
+  return i18n.t(i18n.t(i18n.t("No hay conexión con el servidor.")));
 }
 
 async function parseResponse(response: Response) {
@@ -66,7 +94,12 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, all
   try {
     response = await request(`${API_URL}/${normalizedPath}`, { ...options, headers });
   } catch (error) {
-    throw new ApiError(error instanceof Error ? error.message : 'No hay conexión con el servidor.', 0);
+    // El mensaje de `fetch` ("Network request failed") no le dice nada a quien
+    // usa la app, así que se sustituye por uno que sí explica qué pasó. El
+    // original se conserva en `data` para poder diagnosticarlo.
+    throw new ApiError(await connectionErrorMessage(), 0, {
+      cause: error instanceof Error ? error.message : String(error),
+    });
   }
 
   if (response.status === 401 && allowRefresh && !PUBLIC_ROUTES.has(normalizedPath)) {
@@ -77,7 +110,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, all
 
   const data = await parseResponse(response);
   if (!response.ok) {
-    throw new ApiError(extractErrorMessage(data) || 'No fue posible completar la solicitud.', response.status, data);
+    throw new ApiError(extractErrorMessage(data) || i18n.t(i18n.t(i18n.t("No fue posible completar la solicitud."))), response.status, data);
   }
   return data as T;
 }

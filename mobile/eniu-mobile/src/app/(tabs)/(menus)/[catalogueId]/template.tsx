@@ -23,6 +23,8 @@ import { api } from '@/lib/api';
 import { appendImage, type ImageQuality, type PickedPicture } from '@/lib/image-file';
 import { usePrivateImage } from '@/lib/private-image';
 import type { Category, MenuSplash, MenuTheme, Product, TemplateConfig, TemplateKey } from '@/types/models';
+import { useTranslation } from 'react-i18next';
+import { currentLocale } from '@/i18n/formats';
 
 function Section({ title, description, children }: React.PropsWithChildren<{ title: string; description?: string }>) {
   const theme = useEniuTheme();
@@ -52,6 +54,8 @@ function TemplateThumb({ templateKey, theme }: { templateKey: TemplateKey; theme
 }
 
 export default function TemplateScreen() {
+  const { t } = useTranslation();
+
   const appTheme = useEniuTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -166,33 +170,33 @@ export default function TemplateScreen() {
       setSaved(configuration); setDraft(configuration);
       setCoverPicked(null); setRemoveCover(false); setBackgroundPicked(null); setRemoveBackground(false);
       setAssetVersion(Date.now());
-      setSuccess('La personalización se guardó correctamente.');
+      setSuccess(t("La personalización se guardó correctamente."));
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'No fue posible guardar la plantilla.');
+      setError(requestError instanceof Error ? requestError.message : t("No fue posible guardar la plantilla."));
     } finally {
       setSaving(false);
     }
   }
 
-  if (query.isLoading) return <LoadingState label="Cargando diseño…" />;
-  if (query.isError || !draft || !saved) return <ErrorState message="No pudimos cargar la plantilla." onRetry={() => query.refetch()} />;
+  if (query.isLoading) return <LoadingState label={t("Cargando diseño…")} />;
+  if (query.isError || !draft || !saved) return <ErrorState message={t("No pudimos cargar la plantilla.")} error={query.error} onRetry={() => query.refetch()} />;
 
   const problems = validateTheme(draft.theme);
   const dirty = JSON.stringify(saved) !== JSON.stringify(draft) || Boolean(coverPicked || removeCover || backgroundPicked || removeBackground || splashPicked || removeSplash);
-  const catalogue = catalogueQuery.data?.catalogue ?? { name: 'Tu menú', description: null };
+  const catalogue = catalogueQuery.data?.catalogue ?? { name: t("Tu menú"), description: null };
   const categories = categoriesQuery.data?.categories ?? [];
   const products = productsQuery.data?.products ?? [];
-  const currency = new Intl.NumberFormat('es-MX', { style: 'currency', currency: selectedBusiness?.currency || 'MXN' });
+  const currency = new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: selectedBusiness?.currency || 'MXN' });
   const preview = { templateKey: draft.template_key, theme: draft.theme, business: selectedBusiness, catalogue, categories, products, cover, background, currency, showEniuBadge: limits.show_eniu_badge };
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: appTheme.background }} contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          {dirty ? <Text style={{ color: appTheme.yellowPressed, fontSize: 12.5, fontWeight: '800' }}>Cambios sin guardar</Text> : <Text style={{ color: appTheme.muted, fontSize: 12.5 }}>Todo guardado</Text>}
+          {dirty ? <Text style={{ color: appTheme.yellowPressed, fontSize: 12.5, fontWeight: '800' }}>{t("Cambios sin guardar")}</Text> : <Text style={{ color: appTheme.muted, fontSize: 12.5 }}>{t("Todo guardado")}</Text>}
         </View>
-        <Button variant="secondary" disabled={!dirty || saving} onPress={discard} style={{ paddingHorizontal: 14 }}>Descartar</Button>
-        <Button loading={saving} disabled={!dirty} onPress={save} style={{ paddingHorizontal: 18 }}>Guardar</Button>
+        <Button variant="secondary" disabled={!dirty || saving} onPress={discard} style={{ paddingHorizontal: 14 }}>{t("Descartar")}</Button>
+        <Button loading={saving} disabled={!dirty} onPress={save} style={{ paddingHorizontal: 18 }}>{t("Guardar")}</Button>
       </View>
       <Feedback message={error} /><Feedback message={success} tone="success" />
       {problems.contrast ? <Feedback message={`${problems.contrast} Ajústalo antes de guardar.`} /> : null}
@@ -200,16 +204,16 @@ export default function TemplateScreen() {
       <View style={{ gap: 11, alignItems: 'center' }}>
         <View style={{ alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <EyeIcon color={appTheme.text} size={17} />
-          <Text style={{ color: appTheme.text, fontSize: 16.5, fontWeight: '900', flex: 1 }}>Vista previa</Text>
-          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setExpanded(true)}><Text style={{ color: appTheme.yellowPressed, fontSize: 13, fontWeight: '800' }}>Ampliar</Text></Pressable>
+          <Text style={{ color: appTheme.text, fontSize: 16.5, fontWeight: '900', flex: 1 }}>{t("Vista previa")}</Text>
+          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setExpanded(true)}><Text style={{ color: appTheme.yellowPressed, fontSize: 13, fontWeight: '800' }}>{t("Ampliar")}</Text></Pressable>
         </View>
         <View style={{ width: 296, borderRadius: 34, borderCurve: 'continuous', borderWidth: 8, borderColor: '#111111', backgroundColor: '#111111', overflow: 'hidden' }}>
           <View style={{ height: 452, overflow: 'hidden' }}><MenuPreview {...preview} /></View>
         </View>
-        <Text style={{ color: appTheme.muted, fontSize: 11.5, textAlign: 'center' }}>Así se ve el menú en el teléfono de tus clientes.</Text>
+        <Text style={{ color: appTheme.muted, fontSize: 11.5, textAlign: 'center' }}>{t("Así se ve el menú en el teléfono de tus clientes.")}</Text>
       </View>
 
-      <Section title="Plantilla" description="Define la composición del menú: tarjetas, listas o carta editorial.">
+      <Section title={t("Plantilla")} description={t("Define la composición del menú: tarjetas, listas o carta editorial.")}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
           {TEMPLATE_OPTIONS.map((option) => {
             const on = draft.template_key === option.key;
@@ -233,10 +237,10 @@ export default function TemplateScreen() {
             );
           })}
         </ScrollView>
-        {templatesLocked ? <PlanNotice message="Tu plan actual sólo incluye la plantilla básica." /> : null}
+        {templatesLocked ? <PlanNotice message={t("Tu plan actual sólo incluye la plantilla básica.")} /> : null}
       </Section>
 
-      <Section title="Colores" description="Toca un color para elegirlo de la paleta o escribe el código de tu marca.">
+      <Section title={t("Colores")} description={t("Toca un color para elegirlo de la paleta o escribe el código de tu marca.")}>
         {COLOR_FIELDS.map((field) => (
           <ColorField
             key={field.key}
@@ -250,7 +254,7 @@ export default function TemplateScreen() {
         ))}
       </Section>
 
-      <Section title="Tipografía" description="La vista previa usa la fuente del sistema más parecida a la del menú publicado.">
+      <Section title={t("Tipografía")} description={t("La vista previa usa la fuente del sistema más parecida a la del menú publicado.")}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {FONT_OPTIONS.map((option) => {
             const on = draft.theme.font_key === option.key;
@@ -270,19 +274,19 @@ export default function TemplateScreen() {
             );
           })}
         </View>
-        {fontsLocked ? <PlanNotice message="Tu plan actual sólo incluye la tipografía básica." /> : null}
+        {fontsLocked ? <PlanNotice message={t("Tu plan actual sólo incluye la tipografía básica.")} /> : null}
       </Section>
 
-      <Section title="Imágenes del menú" description="La foto del negocio te identifica; la portada encabeza el menú que ven tus clientes.">
+      <Section title={t("Imágenes del menú")} description={t("La foto del negocio te identifica; la portada encabeza el menú que ven tus clientes.")}>
         <ImageQualitySelector value={quality} onChange={setQuality} />
         <BusinessPhotoField quality={quality} onError={setError} />
         <View style={{ gap: 9 }}>
-          <Text style={{ color: appTheme.text, fontSize: 13, fontWeight: '700' }}>Portada del menú</Text>
+          <Text style={{ color: appTheme.text, fontSize: 13, fontWeight: '700' }}>{t("Portada del menú")}</Text>
           {coverLocked
-            ? <PlanNotice message="Tu plan actual no incluye portada en el menú." />
-            : <ImageField title="portada" emptyText="Sin portada" source={cover} quality={quality} onPicked={pickCover} onRemove={dropCover} onError={setError} note="Se muestra arriba del menú. Se guarda al tocar «Guardar»." />}
+            ? <PlanNotice message={t("Tu plan actual no incluye portada en el menú.")} />
+            : <ImageField title="portada" emptyText={t("Sin portada")} source={cover} quality={quality} onPicked={pickCover} onRemove={dropCover} onError={setError} note="Se muestra arriba del menú. Se guarda al tocar «Guardar»." />}
         </View>
-        {([['show_cover', 'Mostrar portada'], ['show_product_images', 'Mostrar imágenes de productos']] as const).map(([field, label]) => {
+        {([['show_cover', t("Mostrar portada")], ['show_product_images', t("Mostrar imágenes de productos")]] as const).map(([field, label]) => {
           const locked = field === 'show_cover' ? coverLocked : productImagesLocked;
           return (
             <View key={field} style={{ minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, opacity: locked ? 0.5 : 1 }}>
@@ -293,28 +297,28 @@ export default function TemplateScreen() {
         })}
       </Section>
 
-      <Section title="Fondo del menú" description="La imagen queda detrás del contenido y no reemplaza la portada.">
-        {backgroundLocked ? <PlanNotice message="Tu plan actual no incluye imagen de fondo en el menú." /> : null}
-        <ImageField title="fondo" emptyText="Sin imagen de fondo" source={background} quality={quality} onPicked={pickBackground} onRemove={dropBackground} onError={setError} disabled={backgroundLocked} note="Baja la opacidad para que el texto siga leyéndose." />
-        <Slider label="Opacidad del fondo" value={draft.theme.background_opacity} disabled={backgroundLocked} onChange={(value) => updateTheme('background_opacity', value)} />
+      <Section title={t("Fondo del menú")} description={t("La imagen queda detrás del contenido y no reemplaza la portada.")}>
+        {backgroundLocked ? <PlanNotice message={t("Tu plan actual no incluye imagen de fondo en el menú.")} /> : null}
+        <ImageField title="fondo" emptyText={t("Sin imagen de fondo")} source={background} quality={quality} onPicked={pickBackground} onRemove={dropBackground} onError={setError} disabled={backgroundLocked} note="Baja la opacidad para que el texto siga leyéndose." />
+        <Slider label={t("Opacidad del fondo")} value={draft.theme.background_opacity} disabled={backgroundLocked} onChange={(value) => updateTheme('background_opacity', value)} />
       </Section>
 
-      <Section title="Pantalla de bienvenida" description="Aparece unos segundos al abrir el menú y se desvanece sola. Un toque la cierra antes.">
-        {splashLocked ? <PlanNotice message="Tu plan actual no incluye la pantalla de bienvenida del menú." /> : null}
+      <Section title={t("Pantalla de bienvenida")} description={t("Aparece unos segundos al abrir el menú y se desvanece sola. Un toque la cierra antes.")}>
+        {splashLocked ? <PlanNotice message={t("Tu plan actual no incluye la pantalla de bienvenida del menú.")} /> : null}
         <View style={{ minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, opacity: splashLocked ? 0.5 : 1 }}>
-          <Text style={{ color: appTheme.text, fontWeight: '700', fontSize: 14 }}>Mostrar bienvenida</Text>
+          <Text style={{ color: appTheme.text, fontWeight: '700', fontSize: 14 }}>{t("Mostrar bienvenida")}</Text>
           <Switch value={draft.splash.enabled} disabled={splashLocked} onValueChange={(value) => updateSplash('enabled', value)} trackColor={{ true: appTheme.yellowPressed }} />
         </View>
-        <ImageField title="bienvenida" emptyText="Sin imagen: se muestra el nombre del negocio" source={splash} quality={quality} onPicked={pickSplash} onRemove={dropSplash} onError={setError} disabled={splashLocked} note="Tu logo se ve mejor centrado y con fondo transparente." />
-        <Slider label="Duración" value={draft.splash.duration} min={SPLASH_RANGE.min} max={SPLASH_RANGE.max} step={SPLASH_RANGE.step} unit="s" disabled={splashLocked} onChange={(value) => updateSplash('duration', value)} />
+        <ImageField title="bienvenida" emptyText={t("Sin imagen: se muestra el nombre del negocio")} source={splash} quality={quality} onPicked={pickSplash} onRemove={dropSplash} onError={setError} disabled={splashLocked} note="Tu logo se ve mejor centrado y con fondo transparente." />
+        <Slider label={t("Duración")} value={draft.splash.duration} min={SPLASH_RANGE.min} max={SPLASH_RANGE.max} step={SPLASH_RANGE.step} unit="s" disabled={splashLocked} onChange={(value) => updateSplash('duration', value)} />
       </Section>
 
-      <Button loading={saving} disabled={!dirty} onPress={save}>Guardar personalización</Button>
+      <Button loading={saving} disabled={!dirty} onPress={save}>{t("Guardar personalización")}</Button>
 
       <Modal visible={expanded} animationType="slide" onRequestClose={() => setExpanded(false)}>
         <View style={{ flex: 1, backgroundColor: appTheme.background }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 18, paddingTop: insets.top + 12, paddingBottom: 12 }}>
-            <Text style={{ color: appTheme.text, fontSize: 19, fontWeight: '900' }}>Vista previa</Text>
+            <Text style={{ color: appTheme.text, fontSize: 19, fontWeight: '900' }}>{t("Vista previa")}</Text>
             <Pressable accessibilityRole="button" accessibilityLabel="Cerrar vista previa" onPress={() => setExpanded(false)} style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: appTheme.surface, borderWidth: 1, borderColor: appTheme.border, opacity: pressed ? 0.7 : 1 })}>
               <CloseIcon color={appTheme.text} size={16} />
             </Pressable>

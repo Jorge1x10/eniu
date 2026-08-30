@@ -14,6 +14,7 @@ import { useOnboarding } from '@/features/onboarding/onboarding-context';
 import { getStarterMenu } from '@/features/onboarding/starter-menus';
 import { ApiError, api } from '@/lib/api';
 import type { Business, Catalogue, Category, Product } from '@/types/models';
+import { useTranslation } from 'react-i18next';
 
 type Publication = { is_published: boolean; public_url?: string | null };
 
@@ -45,6 +46,8 @@ async function createOrReuse<T extends { name: string }>(
 }
 
 export default function OnboardingReadyScreen() {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -102,7 +105,7 @@ export default function OnboardingReadyScreen() {
       queryClient.setQueryData<{ catalogues: Catalogue[] }>(catalogueKeys.all(createdBusiness.id), { catalogues: [published.catalogue] });
       setProvisioned(createdBusiness, published.catalogue);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'No fue posible terminar la configuración.');
+      setError(requestError instanceof Error ? requestError.message : t("No fue posible terminar la configuración."));
     }
   }, [addBusiness, draft.businessName, draft.businessType, draft.menuChoice, queryClient, setProvisioned]);
 
@@ -129,7 +132,7 @@ export default function OnboardingReadyScreen() {
   return (
     <ScrollView contentInsetAdjustmentBehavior="never" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, gap: 24, flexGrow: 1, backgroundColor: '#111111' }}>
       <View style={{ gap: 10 }}>
-        <Text style={{ color: theme.yellow, fontWeight: '700', fontSize: 14 }}>Paso 3 de 3</Text>
+        <Text style={{ color: theme.yellow, fontWeight: '700', fontSize: 14 }}>{t("Paso 3 de 3")}</Text>
         <View style={{ flexDirection: 'row', gap: 5 }}>
           <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.yellow }} />
           <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.yellow }} />
@@ -138,14 +141,14 @@ export default function OnboardingReadyScreen() {
       </View>
 
       <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 8 }}>
-        <Text style={{ color: '#FFFDF5', fontSize: 30, fontWeight: '800', letterSpacing: -0.6, lineHeight: 36 }}>{publicUrl ? 'Tu menú ya está en línea' : 'Dejando todo listo'}</Text>
-        <Text style={{ color: '#C7C7C7', fontSize: 14, lineHeight: 21 }}>{publicUrl ? 'Imprime este código, pégalo en la mesa y tus clientes lo abren desde su teléfono.' : 'Estamos creando tu negocio y tu primer menú. Tarda unos segundos.'}</Text>
+        <Text style={{ color: '#FFFDF5', fontSize: 30, fontWeight: '800', letterSpacing: -0.6, lineHeight: 36 }}>{publicUrl ? t("Tu menú ya está en línea") : t("Dejando todo listo")}</Text>
+        <Text style={{ color: '#C7C7C7', fontSize: 14, lineHeight: 21 }}>{publicUrl ? t("Imprime este código, pégalo en la mesa y tus clientes lo abren desde su teléfono.") : t("Estamos creando tu negocio y tu primer menú. Tarda unos segundos.")}</Text>
       </Animated.View>
 
       {error ? (
         <Animated.View entering={FadeIn.duration(240)} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: '#242424', borderWidth: 1, borderColor: '#555555', padding: 18, gap: 14 }}>
           <Text style={{ color: '#FFFDF5', fontSize: 14, lineHeight: 21 }}>{error}</Text>
-          <Button onPress={retry}>Reintentar</Button>
+          <Button onPress={retry}>{t("Reintentar")}</Button>
         </Animated.View>
       ) : !publicUrl ? (
         <Animated.View entering={FadeIn.duration(240)} style={{ gap: 16, paddingVertical: 28, alignItems: 'center' }}>
@@ -158,21 +161,21 @@ export default function OnboardingReadyScreen() {
       ) : (
         <>
           <Animated.View entering={FadeInDown.duration(380)} style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: '#FFFDF5', padding: 22, alignItems: 'center', gap: 16 }}>
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, borderCurve: 'continuous', padding: 16 }}><QRCode value={`${publicUrl}?source=qr`} size={196} color="#111111" backgroundColor="#FFFFFF" /></View>
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, borderCurve: 'continuous', padding: 16 }}><QRCode value={`${publicUrl}?src=qr`} size={196} color="#111111" backgroundColor="#FFFFFF" /></View>
             <Text selectable numberOfLines={1} style={{ color: '#5C5646', fontSize: 12.5, fontWeight: '600' }}>{publicUrl.replace(/^https?:\/\//, '')}</Text>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.duration(380).delay(120)} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: '#242424', padding: 15, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Text style={{ color: theme.onYellow, fontWeight: '800', fontSize: 15 }}>1</Text></View>
-            <Text style={{ flex: 1, color: '#E4DFCB', fontSize: 12.5, lineHeight: 19 }}>Primer logro desbloqueado: <Text style={{ color: theme.yellow, fontWeight: '700' }}>menú publicado</Text></Text>
+            <Text style={{ flex: 1, color: '#E4DFCB', fontSize: 12.5, lineHeight: 19 }}>{t("Primer logro desbloqueado:")} <Text style={{ color: theme.yellow, fontWeight: '700' }}>{t("menú publicado")}</Text></Text>
           </Animated.View>
         </>
       )}
 
       <View style={{ flex: 1, minHeight: 12 }} />
       <View style={{ gap: 10 }}>
-        <Pressable disabled={!publicUrl} onPress={() => publicUrl ? Linking.openURL(publicUrl) : undefined} style={({ pressed }) => ({ height: 52, borderRadius: 15, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: !publicUrl ? 0.5 : pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}><Text style={{ color: theme.onYellow, fontWeight: '700', fontSize: 15 }}>Ver mi menú como cliente</Text></Pressable>
-        <Button variant="secondary" onPress={() => router.replace('/(tabs)/(home)')}>Ir a mi panel</Button>
+        <Pressable disabled={!publicUrl} onPress={() => publicUrl ? Linking.openURL(publicUrl) : undefined} style={({ pressed }) => ({ height: 52, borderRadius: 15, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: !publicUrl ? 0.5 : pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}><Text style={{ color: theme.onYellow, fontWeight: '700', fontSize: 15 }}>{t("Ver mi menú como cliente")}</Text></Pressable>
+        <Button variant="secondary" onPress={() => router.replace('/(tabs)/(home)')}>{t("Ir a mi panel")}</Button>
       </View>
     </ScrollView>
   );

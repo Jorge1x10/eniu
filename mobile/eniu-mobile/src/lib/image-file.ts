@@ -2,6 +2,7 @@ import { File as StoredFile } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Platform } from 'react-native';
+import i18n from '@/i18n';
 
 /** Tope del backend para cualquier imagen (producto, portada, fondo o logo). */
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -77,7 +78,7 @@ export async function prepareImage(
     result = await encode(asset.uri, asset.width, asset.height, quality, encoding);
   }
   if (result.size > MAX_IMAGE_BYTES) {
-    throw new Error('La imagen sigue pesando más de 5 MB. Elige una calidad menor o recórtala antes de subirla.');
+    throw new Error(i18n.t(i18n.t(i18n.t("La imagen sigue pesando más de 5 MB. Elige una calidad menor o recórtala antes de subirla."))));
   }
   return {
     uri: result.uri,
@@ -94,7 +95,7 @@ export async function prepareImage(
 export async function pickImages({ limit = 1, quality = 'alta' as ImageQuality } = {}): Promise<PickedPicture[] | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
-    Alert.alert('Permiso necesario', 'Permite el acceso a tus fotos para subir imágenes.');
+    Alert.alert(i18n.t(i18n.t(i18n.t("Permiso necesario"))), i18n.t(i18n.t(i18n.t("Permite el acceso a tus fotos para subir imágenes."))));
     return null;
   }
   const result = await ImagePicker.launchImageLibraryAsync({

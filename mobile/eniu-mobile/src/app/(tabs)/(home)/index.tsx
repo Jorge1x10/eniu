@@ -18,6 +18,8 @@ import { catalogueKeys, listCatalogues } from '@/features/catalogues/catalogue-a
 import { getLastCelebratedMilestone, getMilestoneNotificationsEnabled, nextUncelebratedMilestone, setLastCelebratedMilestone } from '@/features/milestones/milestone-store';
 import { api } from '@/lib/api';
 import type { Analytics } from '@/types/models';
+import { useTranslation } from 'react-i18next';
+import { currentLocale } from '@/i18n/formats';
 
 function dateRange() {
   const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 29);
@@ -41,6 +43,8 @@ function QuickAction({ title, subtitle, icon, onPress }: { title: string; subtit
 }
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const topPadding = useScreenTopPadding();
   const { width } = useWindowDimensions();
@@ -91,17 +95,17 @@ export default function HomeScreen() {
         gap: 22,
       }}
     >
-      <View style={{ gap: 5 }}><Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>Hola, {user?.name || user?.username}</Text><Text style={{ color: theme.muted, lineHeight: 20 }}>Así se están comportando tus menús hoy.</Text></View>
-      {loadingBusinesses ? <LoadingState label="Cargando tus negocios…" /> : !selectedBusiness ? <View style={{ alignItems: 'center', gap: 16, paddingVertical: 30 }}><Text style={{ color: theme.text, fontSize: 22, fontWeight: '900', textAlign: 'center' }}>Crea tu primer negocio</Text><Text style={{ color: theme.muted, textAlign: 'center', lineHeight: 21 }}>Necesitas un negocio para comenzar a crear menús.</Text><CreateBusinessCard /></View> : <>
+      <View style={{ gap: 5 }}><Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>{t("Hola,")} {user?.name || user?.username}</Text><Text style={{ color: theme.muted, lineHeight: 20 }}>{t("Así se están comportando tus menús hoy.")}</Text></View>
+      {loadingBusinesses ? <LoadingState label={t("Cargando tus negocios…")} /> : !selectedBusiness ? <View style={{ alignItems: 'center', gap: 16, paddingVertical: 30 }}><Text style={{ color: theme.text, fontSize: 22, fontWeight: '900', textAlign: 'center' }}>{t("Crea tu primer negocio")}</Text><Text style={{ color: theme.muted, textAlign: 'center', lineHeight: 21 }}>{t("Necesitas un negocio para comenzar a crear menús.")}</Text><CreateBusinessCard /></View> : <>
         <BusinessSwitcher />
-        {catalogues.isLoading ? <LoadingState label="Preparando resumen…" /> : catalogues.isError ? <ErrorState message="No pudimos cargar el resumen de tu negocio." onRetry={() => catalogues.refetch()} /> : <>
-          {showDemoBadge ? <View style={{ borderRadius: 16, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}><View style={{ minHeight: 24, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 999, backgroundColor: theme.yellow, paddingHorizontal: 9 }}><Text style={{ color: '#111111', fontSize: 10, fontWeight: '800', letterSpacing: 0.6 }}>EJEMPLO</Text></View><Text style={{ flex: 1, color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>Todavía no tienes visitas reales. Esto es cómo se verá tu panel cuando tus clientes empiecen a escanear.</Text></View> : null}
+        {catalogues.isLoading ? <LoadingState label={t("Preparando resumen…")} /> : catalogues.isError ? <ErrorState message={t("No pudimos cargar el resumen de tu negocio.")} error={catalogues.error} onRetry={() => catalogues.refetch()} /> : <>
+          {showDemoBadge ? <View style={{ borderRadius: 16, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}><View style={{ minHeight: 24, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 999, backgroundColor: theme.yellow, paddingHorizontal: 9 }}><Text style={{ color: '#111111', fontSize: 10, fontWeight: '800', letterSpacing: 0.6 }}>EJEMPLO</Text></View><Text style={{ flex: 1, color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Todavía no tienes visitas reales. Esto es cómo se verá tu panel cuando tus clientes empiecen a escanear.")}</Text></View> : null}
 
           {selectedCatalogue ? (
             <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: '#111111', padding: 20, gap: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <View style={{ gap: 4 }}>
-                  <Text style={{ color: theme.yellow, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>Tu menú en vivo</Text>
+                  <Text style={{ color: theme.yellow, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Tu menú en vivo")}</Text>
                   <Text style={{ color: '#FFFDF5', fontSize: 21, fontWeight: '800' }}>{selectedCatalogue.name}</Text>
                 </View>
                 <View style={{ minHeight: 28, justifyContent: 'center', borderRadius: 999, backgroundColor: selectedCatalogue.is_published ? theme.yellow : 'rgba(255,255,255,0.12)', paddingHorizontal: 11 }}><Text style={{ color: selectedCatalogue.is_published ? '#111111' : '#C7C7C7', fontSize: 11, fontWeight: '800' }}>{selectedCatalogue.is_published ? 'Publicado' : 'Borrador'}</Text></View>
@@ -109,32 +113,32 @@ export default function HomeScreen() {
               <View style={{ flexDirection: 'row', gap: 14, alignItems: 'stretch' }}>
                 <MenuSkeleton width={98} padding={10} />
                 <View style={{ flex: 1, minWidth: 0, gap: 10, justifyContent: 'space-between' }}>
-                  <Text style={{ color: '#C7C7C7', fontSize: 12.5, lineHeight: 19 }} numberOfLines={2}>{selectedCatalogue.description || 'Agrega una descripción para tus clientes.'}</Text>
-                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/publication', params: { catalogueId: selectedCatalogue.id } })} style={({ pressed }) => ({ height: 44, borderRadius: 13, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}><Text style={{ color: '#111111', fontWeight: '700', fontSize: 14 }}>Ver como cliente</Text></Pressable>
+                  <Text style={{ color: '#C7C7C7', fontSize: 12.5, lineHeight: 19 }} numberOfLines={2}>{selectedCatalogue.description || t("Agrega una descripción para tus clientes.")}</Text>
+                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/publication', params: { catalogueId: selectedCatalogue.id } })} style={({ pressed }) => ({ height: 44, borderRadius: 13, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}><Text style={{ color: '#111111', fontWeight: '700', fontSize: 14 }}>{t("Ver como cliente")}</Text></Pressable>
                 </View>
               </View>
             </View>
           ) : null}
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
-            <MetricCard label="Vistas últimos 30 días" value={monthlyViews.toLocaleString('es-MX')} detail={showDemoBadge ? 'Dato de ejemplo' : (selectedCatalogue ? selectedCatalogue.name : 'Sin menú seleccionado')} emphasis={showDemoBadge} index={0} />
-            <MetricCard label="Escaneos QR" value={qrViews.toLocaleString('es-MX')} detail={showDemoBadge ? 'Dato de ejemplo' : 'Origen atribuido al código QR'} emphasis={showDemoBadge} index={1} />
-            <MetricCard label="Menús activos" value={publishedCount} detail={`${draftCount} en borrador`} index={2} />
-            <MetricCard label="Menús totales" value={catalogues.data?.catalogues.length ?? 0} detail="En este negocio" index={3} />
+            <MetricCard label={t("Vistas últimos 30 días")} value={monthlyViews.toLocaleString(currentLocale())} detail={showDemoBadge ? t("Dato de ejemplo") : (selectedCatalogue ? selectedCatalogue.name : t("Sin menú seleccionado"))} emphasis={showDemoBadge} index={0} />
+            <MetricCard label={t("Escaneos QR")} value={qrViews.toLocaleString(currentLocale())} detail={showDemoBadge ? t("Dato de ejemplo") : t("Origen atribuido al código QR")} emphasis={showDemoBadge} index={1} />
+            <MetricCard label={t("Menús activos")} value={publishedCount} detail={`${draftCount} en borrador`} index={2} />
+            <MetricCard label={t("Menús totales")} value={catalogues.data?.catalogues.length ?? 0} detail="En este negocio" index={3} />
           </View>
 
           <View style={{ gap: 12 }}>
-            <Text style={{ color: theme.yellowPressed, fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>Acciones rápidas</Text>
+            <Text style={{ color: theme.yellowPressed, fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>{t("Acciones rápidas")}</Text>
             <View style={{ gap: 9 }}>
               <QuickAction
-                title="Agregar producto"
-                subtitle={selectedCatalogue ? `Súbelo a ${selectedCatalogue.name}` : 'Crea un menú primero'}
+                title={t("Agregar producto")}
+                subtitle={selectedCatalogue ? `Súbelo a ${selectedCatalogue.name}` : t("Crea un menú primero")}
                 icon={<PlusIcon color={theme.onYellow} size={18} />}
                 onPress={() => selectedCatalogue ? router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/products', params: { catalogueId: selectedCatalogue.id } }) : router.push('/(tabs)/(menus)')}
               />
               <QuickAction
-                title="Descargar QR"
-                subtitle="Para imprimir y pegar en mesa"
+                title={t("Descargar QR")}
+                subtitle={t("Para imprimir y pegar en mesa")}
                 icon={<QrIcon color={theme.onYellow} size={17} />}
                 onPress={() => selectedCatalogue ? router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/publication', params: { catalogueId: selectedCatalogue.id } }) : router.push('/(tabs)/(menus)')}
               />
