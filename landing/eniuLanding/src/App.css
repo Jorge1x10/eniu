@@ -9,8 +9,8 @@ a { color:inherit; }
 button, a { -webkit-tap-highlight-color:transparent; }
 .site-shell { overflow-x:clip; }
 .topbar { @apply relative z-20 mx-auto flex h-[86px] items-center justify-between; width:min(1180px,calc(100% - 48px)); }
-.brand { @apply relative block h-11 w-[124px] shrink-0 overflow-hidden no-underline; }
-.brand picture { display:block; }.brand img { position:absolute; width:156px; max-width:none; height:auto; left:0; top:-17px; }
+.brand { @apply block h-11 w-[124px] shrink-0 no-underline; }
+.brand picture,.brand img { @apply block w-full; height:auto; }
 .nav { @apply flex items-center gap-8 text-sm font-semibold; }
 .nav a { @apply no-underline; }
 .nav a:not(.nav-cta):hover { opacity:.55; }
