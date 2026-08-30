@@ -17,6 +17,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token
 from app.modules.auth.mailer import build_password_reset_email, send_email
 from app.modules.auth.model import PasswordResetToken
 from app.modules.auth.validators import validate_password
+from app.shared.i18n import _
 
 USERNAME_MAX_LENGTH = 50
 
@@ -70,19 +71,19 @@ def register_user(data):
         if existing_user.email == email:
             return None, {
                 "code": "email_already_exists",
-                "message": "El correo ya está registrado"
+                "message": _("El correo ya está registrado")
             }
 
         if existing_user.username == username:
             return None, {
                 "code": "username_already_exists",
-                "message": "El nombre de usuario ya está registrado"
+                "message": _("El nombre de usuario ya está registrado")
             }
 
         if existing_user.phone_number == phone_number:
             return None, {
                 "code": "phone_already_exists",
-                "message": "El teléfono ya está registrado"
+                "message": _("El teléfono ya está registrado")
             }
 
     password_error = validate_password(data.get("password"))
@@ -113,7 +114,7 @@ def register_user(data):
 
         return None, {
             "code": "integrity_error",
-            "message": "El correo, usuario o teléfono ya está registrado"
+            "message": _("El correo, usuario o teléfono ya está registrado")
         }
 
     except Exception as error:
@@ -122,7 +123,7 @@ def register_user(data):
 
         return None, {
             "code": "database_error",
-            "message": "No fue posible registrar al usuario"
+            "message": _("No fue posible registrar al usuario")
         }
     
 def authenticate_user(identifier, password):
@@ -169,17 +170,17 @@ def _session_tokens(user):
 def change_password(user_id, current_password, new_password):
     user = get_user_by_id(user_id)
     if not user:
-        return None, "Usuario no encontrado", 404
+        return None, _("Usuario no encontrado"), 404
     if not user.password:
-        return None, "Usa la recuperación por correo para establecer una contraseña", 400
+        return None, _("Usa la recuperación por correo para establecer una contraseña"), 400
     if not isinstance(current_password, str) or not bcrypt.check_password_hash(user.password, current_password):
-        return None, "La contraseña actual es incorrecta", 400
+        return None, _("La contraseña actual es incorrecta"), 400
 
     error = validate_password(new_password)
     if error:
         return None, error, 400
     if bcrypt.check_password_hash(user.password, new_password):
-        return None, "La nueva contraseña debe ser diferente de la actual", 400
+        return None, _("La nueva contraseña debe ser diferente de la actual"), 400
 
     try:
         user.password = bcrypt.generate_password_hash(new_password).decode("utf-8")
@@ -189,13 +190,13 @@ def change_password(user_id, current_password, new_password):
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return None, "No fue posible actualizar la contraseña", 500
+        return None, _("No fue posible actualizar la contraseña"), 500
 
 
 def revoke_other_sessions(user_id):
     user = get_user_by_id(user_id)
     if not user:
-        return None, "Usuario no encontrado", 404
+        return None, _("Usuario no encontrado"), 404
     try:
         user.auth_version += 1
         db.session.commit()
@@ -203,7 +204,7 @@ def revoke_other_sessions(user_id):
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return None, "No fue posible cerrar las sesiones", 500
+        return None, _("No fue posible cerrar las sesiones"), 500
 
 
 def _jti_hash(jti):
@@ -256,7 +257,9 @@ def request_password_reset(email):
 
     reset_url = f"{current_app.config['FRONTEND_URL']}/reset-password?token={token}"
     try:
-        send_email(build_password_reset_email(user.email, reset_url, minutes))
+        send_email(
+            build_password_reset_email(user.email, reset_url, minutes, user.language)
+        )
     except Exception:
         record.used_at = datetime.now(timezone.utc)
         db.session.commit()
@@ -265,7 +268,7 @@ def request_password_reset(email):
 
 def _decode_reset_token(token):
     if not current_app.config.get("PASSWORD_RESET_SECRET_KEY"):
-        return None, "El enlace de recuperación no es válido"
+        return None, _("El enlace de recuperación no es válido")
     try:
         payload = pyjwt.decode(
             token,
@@ -275,11 +278,11 @@ def _decode_reset_token(token):
             options={"require": ["sub", "jti", "iat", "exp", "aud", "purpose"]},
         )
     except pyjwt.ExpiredSignatureError:
-        return None, "El enlace de recuperación venció"
+        return None, _("El enlace de recuperación venció")
     except pyjwt.PyJWTError:
-        return None, "El enlace de recuperación no es válido"
+        return None, _("El enlace de recuperación no es válido")
     if payload.get("purpose") != "password_reset":
-        return None, "El enlace de recuperación no es válido"
+        return None, _("El enlace de recuperación no es válido")
     return payload, None
 
 
@@ -298,10 +301,10 @@ def reset_password(token, new_password):
         user = get_user_by_id(payload["sub"])
         if not record or record.used_at or not user or record.user_id != user.id:
             db.session.rollback()
-            return "El enlace de recuperación ya fue utilizado o no es válido", 400
+            return _("El enlace de recuperación ya fue utilizado o no es válido"), 400
         if user.password and bcrypt.check_password_hash(user.password, new_password):
             db.session.rollback()
-            return "La nueva contraseña debe ser diferente de la actual", 400
+            return _("La nueva contraseña debe ser diferente de la actual"), 400
 
         now = datetime.now(timezone.utc)
         user.password = bcrypt.generate_password_hash(new_password).decode("utf-8")
@@ -315,13 +318,13 @@ def reset_password(token, new_password):
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return "No fue posible actualizar la contraseña", 500
+        return _("No fue posible actualizar la contraseña"), 500
 
 def update_user_profile(user_id, data):
     user = get_user_by_id(user_id)
 
     if not user:
-        return None, "Usuario no encontrado"
+        return None, _("Usuario no encontrado")
 
     if "phone" in data:
         phone = data["phone"].strip()
@@ -332,7 +335,7 @@ def update_user_profile(user_id, data):
         ).first()
 
         if existing_user:
-            return None, "El teléfono ya está registrado"
+            return None, _("El teléfono ya está registrado")
 
         user.phone_number = phone
 
@@ -345,7 +348,7 @@ def update_user_profile(user_id, data):
         ).first()
 
         if existing_user:
-            return None, "El nombre de usuario ya está registrado"
+            return None, _("El nombre de usuario ya está registrado")
 
         user.username = username
 
@@ -355,7 +358,7 @@ def update_user_profile(user_id, data):
 
     except Exception:
         db.session.rollback()
-        return None, "No fue posible actualizar el perfil"
+        return None, _("No fue posible actualizar el perfil")
     
 def authenticate_google_user(credential):
     try:
@@ -369,13 +372,13 @@ def authenticate_google_user(credential):
     except (ValueError, Exception):
         return None, {
             "code": "invalid_google_credential",
-            "message": "La credencial de Google no es válida"
+            "message": _("La credencial de Google no es válida")
         }
 
     if not google_data.get("email_verified"):
         return None, {
             "code": "unverified_email",
-            "message": "Google no ha verificado este correo"
+            "message": _("Google no ha verificado este correo")
         }
 
     google_id = google_data["sub"]
@@ -398,7 +401,7 @@ def authenticate_google_user(credential):
         if user.google_id and user.google_id != google_id:
             return None, {
                 "code": "google_account_conflict",
-                "message": "El correo ya está vinculado con otra cuenta de Google"
+                "message": _("El correo ya está vinculado con otra cuenta de Google")
             }
 
         user.google_id = google_id
@@ -432,7 +435,7 @@ def authenticate_google_user(credential):
 
         return None, {
             "code": "google_account_conflict",
-            "message": "No fue posible vincular esta cuenta de Google"
+            "message": _("No fue posible vincular esta cuenta de Google")
         }
 
     except Exception:
@@ -440,7 +443,7 @@ def authenticate_google_user(credential):
 
         return None, {
             "code": "database_error",
-            "message": "No fue posible autenticar al usuario"
+            "message": _("No fue posible autenticar al usuario")
         }
 
 
@@ -632,7 +635,7 @@ def authenticate_apple_user(identity_token, full_name=None, authorization_code=N
     except Exception:
         return None, {
             "code": "invalid_apple_credential",
-            "message": "La credencial de Apple no es válida"
+            "message": _("La credencial de Apple no es válida")
         }
 
     apple_id = apple_data.get("sub")
@@ -640,7 +643,7 @@ def authenticate_apple_user(identity_token, full_name=None, authorization_code=N
     if not apple_id:
         return None, {
             "code": "invalid_apple_credential",
-            "message": "La credencial de Apple no es válida"
+            "message": _("La credencial de Apple no es válida")
         }
 
     user = User.query.filter_by(apple_id=apple_id).first()
@@ -667,13 +670,13 @@ def authenticate_apple_user(identity_token, full_name=None, authorization_code=N
     if not email:
         return None, {
             "code": "apple_email_unavailable",
-            "message": "Apple no compartió un correo con Eniu. Inicia sesión con el método que usaste al registrarte"
+            "message": _("Apple no compartió un correo con Eniu. Inicia sesión con el método que usaste al registrarte")
         }
 
     if not verified:
         return None, {
             "code": "unverified_email",
-            "message": "Apple no ha verificado este correo"
+            "message": _("Apple no ha verificado este correo")
         }
 
     user = User.query.filter_by(email=email).first()
@@ -682,7 +685,7 @@ def authenticate_apple_user(identity_token, full_name=None, authorization_code=N
         if user.apple_id and user.apple_id != apple_id:
             return None, {
                 "code": "apple_account_conflict",
-                "message": "El correo ya está vinculado con otra cuenta de Apple"
+                "message": _("El correo ya está vinculado con otra cuenta de Apple")
             }
 
         user.apple_id = apple_id
@@ -714,7 +717,7 @@ def authenticate_apple_user(identity_token, full_name=None, authorization_code=N
 
         return None, {
             "code": "apple_account_conflict",
-            "message": "No fue posible vincular esta cuenta de Apple"
+            "message": _("No fue posible vincular esta cuenta de Apple")
         }
 
     except Exception:
@@ -722,5 +725,5 @@ def authenticate_apple_user(identity_token, full_name=None, authorization_code=N
 
         return None, {
             "code": "database_error",
-            "message": "No fue posible autenticar al usuario"
+            "message": _("No fue posible autenticar al usuario")
         }

@@ -5,6 +5,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app import storage
 from .services import get_background, get_cover, get_splash, get_template, update_template
+from app.shared.i18n import _
 
 
 template_bp = Blueprint("templates", __name__, url_prefix="/api")
@@ -37,7 +38,7 @@ def edit_catalogue_template(business_id, catalogue_id):
             if "remove_splash" in request.form:
                 data["remove_splash"] = request.form["remove_splash"].lower() in {"true", "1"}
         except json.JSONDecodeError:
-            return jsonify({"message": "La configuración visual no es válida"}), 400
+            return jsonify({"message": _("La configuración visual no es válida")}), 400
         cover = request.files.get("cover")
         background = request.files.get("background")
         splash = request.files.get("splash")
@@ -54,7 +55,7 @@ def edit_catalogue_template(business_id, catalogue_id):
 def catalogue_cover(catalogue_id):
     filename = get_cover(get_jwt_identity(), catalogue_id)
     if not filename:
-        return jsonify({"message": "Portada no encontrada"}), 404
+        return jsonify({"message": _("Portada no encontrada")}), 404
     return storage.serve_file(current_app.config["CATALOGUE_COVER_FOLDER"], filename, private=True)
 
 
@@ -63,7 +64,7 @@ def catalogue_cover(catalogue_id):
 def catalogue_background(catalogue_id):
     filename = get_background(get_jwt_identity(), catalogue_id)
     if not filename:
-        return jsonify({"message": "Fondo no encontrado"}), 404
+        return jsonify({"message": _("Fondo no encontrado")}), 404
     return storage.serve_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], filename, private=True)
 
 
@@ -72,5 +73,5 @@ def catalogue_background(catalogue_id):
 def catalogue_splash(catalogue_id):
     filename = get_splash(get_jwt_identity(), catalogue_id)
     if not filename:
-        return jsonify({"message": "Bienvenida no encontrada"}), 404
+        return jsonify({"message": _("Bienvenida no encontrada")}), 404
     return storage.serve_file(current_app.config["CATALOGUE_SPLASH_FOLDER"], filename, private=True)

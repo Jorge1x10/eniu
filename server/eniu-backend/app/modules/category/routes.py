@@ -8,6 +8,7 @@ from .services import (
     list_categories,
     update_category,
 )
+from app.shared.i18n import _
 
 
 category_bp = Blueprint("categories", __name__, url_prefix="/api")
@@ -32,7 +33,7 @@ def get_catalogue_categories(business_id, catalogue_id):
 def new_category(business_id, catalogue_id):
     data = _json_body()
     if data is None:
-        return jsonify({"message": "Debes enviar información en formato JSON"}), 400
+        return jsonify({"message": _("Debes enviar información en formato JSON")}), 400
     result, status_code = create_category(
         get_jwt_identity(), business_id, catalogue_id, data
     )
@@ -53,7 +54,7 @@ def get_catalogue_category(business_id, catalogue_id, category_id):
 def edit_category(business_id, catalogue_id, category_id):
     data = _json_body()
     if data is None:
-        return jsonify({"message": "Debes enviar información en formato JSON"}), 400
+        return jsonify({"message": _("Debes enviar información en formato JSON")}), 400
     result, status_code = update_category(
         get_jwt_identity(), business_id, catalogue_id, category_id, data
     )

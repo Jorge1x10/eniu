@@ -8,6 +8,7 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.database.db import db
+from app.extensions import cache
 from app.modules.billing.model import BillingSubscription, StripeWebhookEvent
 from app.modules.billing import plans
 from app.modules.billing.plans import FREE, plan_payload
@@ -15,6 +16,7 @@ from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 from app.modules.template.model import CatalogueTemplate
 from app.modules.users.model import User
+from app.shared.i18n import _
 
 
 OPEN_SUBSCRIPTION_STATUSES = {"active", "trialing", "past_due", "unpaid", "incomplete", "paused"}
@@ -61,31 +63,104 @@ def _essential_price():
         limit=1,
     )
     if not prices.data:
-        raise RuntimeError("No se encontró el precio activo del Plan Esencial")
+        raise RuntimeError(_("No se encontró el precio activo del Plan Esencial"))
     price = prices.data[0]
     if not price.recurring or price.recurring.interval != "month":
-        raise RuntimeError("El precio del Plan Esencial no es mensual")
+        raise RuntimeError(_("El precio del Plan Esencial no es mensual"))
     return price
+
+
+# Stripe expresa los importes en la unidad mínima de la moneda, salvo en estas,
+# que no tienen fracción: ahí el importe ya viene entero.
+# https://docs.stripe.com/currencies#zero-decimal
+ZERO_DECIMAL_CURRENCIES = {
+    "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga",
+    "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf",
+}
+
+PRICE_CACHE_KEY = "billing:essential_price"
+PRICE_CACHE_SECONDS = 300
+
+
+def _amount_from_minor(minor, currency):
+    if minor is None:
+        return None
+    return minor if currency.lower() in ZERO_DECIMAL_CURRENCIES else minor / 100
+
+
+def essential_price_payload():
+    """Precio del Plan Esencial tal como lo cobra Stripe, con sus monedas.
+
+    Los clientes lo dibujan en lugar de llevar la cifra escrita a mano: un
+    importe cableado se queda atrás en cuanto el precio cambia en Stripe, y
+    desde que hay más de una moneda además sería incorrecto para media
+    audiencia. Se devuelven todas las opciones para que cada cliente muestre
+    la que corresponde; quién paga en qué moneda lo decide Checkout según la
+    ubicación del cliente, no esta respuesta.
+
+    Devuelve `None` si Stripe no está configurado o no contesta: es preferible
+    que la pantalla no enseñe precio a que enseñe uno inventado.
+    """
+    if not _stripe_configured():
+        return None
+
+    cached = cache.get(PRICE_CACHE_KEY)
+    if cached is not None:
+        return cached
+
+    try:
+        _configure_stripe()
+        prices = stripe.Price.list(
+            lookup_keys=[current_app.config["STRIPE_ESSENTIAL_LOOKUP_KEY"]],
+            active=True,
+            limit=1,
+            expand=["data.currency_options"],
+        )
+        if not prices.data:
+            return None
+        price = prices.data[0]
+
+        options = {}
+        for code, option in (price.get("currency_options") or {}).items():
+            amount = _amount_from_minor(option.get("unit_amount"), code)
+            if amount is not None:
+                options[code] = amount
+        # Un precio sin `currency_options` expandidas sigue teniendo la suya.
+        options.setdefault(
+            price.currency, _amount_from_minor(price.unit_amount, price.currency)
+        )
+
+        payload = {
+            "currency": price.currency,
+            "amount": options.get(price.currency),
+            "interval": price.recurring.interval if price.recurring else None,
+            "currencies": options,
+        }
+        cache.set(PRICE_CACHE_KEY, payload, timeout=PRICE_CACHE_SECONDS)
+        return payload
+    except stripe.StripeError as error:
+        current_app.logger.warning("Stripe price lookup failed: %s", _error_detail(error))
+        return None
 
 
 def get_subscription(user_id):
     user = _user(user_id)
     if not user:
-        return {"message": "Usuario no encontrado"}, 404
+        return {"message": _("Usuario no encontrado")}, 404
     plan = user.billing_subscription.to_plan_dict() if user.billing_subscription else plan_payload(FREE)
-    return {"plan": plan}, 200
+    return {"plan": plan, "price": essential_price_payload()}, 200
 
 
 def create_checkout(user_id):
     if not _stripe_configured():
-        return {"message": "Stripe no está configurado"}, 503
+        return {"message": _("Stripe no está configurado")}, 503
     user = _user(user_id)
     if not user:
-        return {"message": "Usuario no encontrado"}, 404
+        return {"message": _("Usuario no encontrado")}, 404
     record = _get_or_create_record(user)
     if record.stripe_subscription_id and record.status in OPEN_SUBSCRIPTION_STATUSES:
         db.session.rollback()
-        return {"message": "Ya existe una suscripción. Adminístrala desde el portal."}, 409
+        return {"message": _("Ya existe una suscripción. Adminístrala desde el portal.")}, 409
 
     try:
         _configure_stripe()
@@ -125,19 +200,19 @@ def create_checkout(user_id):
     except stripe.StripeError as error:
         db.session.rollback()
         current_app.logger.warning("Stripe checkout error: %s", _error_detail(error))
-        return {"message": "No fue posible iniciar la contratación"}, 502
+        return {"message": _("No fue posible iniciar la contratación")}, 502
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible preparar la suscripción"}, 500
+        return {"message": _("No fue posible preparar la suscripción")}, 500
 
 
 def create_portal(user_id):
     if not _stripe_configured():
-        return {"message": "Stripe no está configurado"}, 503
+        return {"message": _("Stripe no está configurado")}, 503
     user = _user(user_id)
     if not user or not user.billing_subscription or not user.billing_subscription.stripe_customer_id:
-        return {"message": "Aún no existe una cuenta de facturación"}, 404
+        return {"message": _("Aún no existe una cuenta de facturación")}, 404
     try:
         _configure_stripe()
         session = stripe.billing_portal.Session.create(
@@ -147,7 +222,7 @@ def create_portal(user_id):
         return {"url": session.url}, 201
     except stripe.StripeError as error:
         current_app.logger.warning("Stripe portal error: %s", _error_detail(error))
-        return {"message": "No fue posible abrir el portal de facturación"}, 502
+        return {"message": _("No fue posible abrir el portal de facturación")}, 502
 
 
 def _period_end(subscription):
@@ -280,7 +355,7 @@ def _invoice_subscription_id(invoice):
 
 def process_webhook(payload, signature):
     if not _stripe_configured(require_webhook=True):
-        return {"message": "Stripe no está configurado"}, 503
+        return {"message": _("Stripe no está configurado")}, 503
     _configure_stripe()
     try:
         event = _plain(
@@ -316,7 +391,7 @@ def process_webhook(payload, signature):
     except (stripe.StripeError, SQLAlchemyError) as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible procesar el webhook"}, 500
+        return {"message": _("No fue posible procesar el webhook")}, 500
 
 def cancel_subscription_for_user(user):
     """Cancela en Stripe la suscripción del usuario antes de borrar su cuenta.
@@ -330,7 +405,7 @@ def cancel_subscription_for_user(user):
     if not record or not record.stripe_subscription_id:
         return True, None
     if not _stripe_configured():
-        return False, "Stripe no está configurado"
+        return False, _("Stripe no está configurado")
     try:
         _configure_stripe()
         subscription = stripe.Subscription.retrieve(record.stripe_subscription_id)

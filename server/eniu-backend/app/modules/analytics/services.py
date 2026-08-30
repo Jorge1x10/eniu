@@ -12,13 +12,14 @@ from app.modules.billing.guards import ensure_analytics_access
 from app.modules.analytics.security import protected_value, secure_equal, tracking_key
 from app.modules.catalogue.model import Catalogue
 from app.modules.catalogue.services import catalogue_access
+from app.shared.i18n import _
 
 
 EVENT_TYPES = {"menu_view", "product_view", "category_select"}
 TARGET_BY_EVENT = {"menu_view": None, "product_view": "product", "category_select": "category"}
 SOURCES = ("qr", "copied_link", "social", "referral", "direct", "unknown")
 DEVICES = ("mobile", "tablet", "desktop", "unknown")
-SOURCE_LABELS = {"qr": "Código QR", "copied_link": "Enlace copiado", "social": "Redes sociales", "referral": "Sitio de referencia", "direct": "Acceso directo", "unknown": "Desconocido"}
+SOURCE_LABELS = {"qr": _("Código QR"), "copied_link": _("Enlace copiado"), "social": "Redes sociales", "referral": _("Sitio de referencia"), "direct": "Acceso directo", "unknown": "Desconocido"}
 DEVICE_LABELS = {"mobile": "Celular", "tablet": "Tablet", "desktop": "Computadora", "unknown": "Desconocido"}
 EVENT_FIELDS = {"type", "visitor_id", "session_id", "occurred_at", "source", "device_type", "target_type", "target_key"}
 ANONYMOUS_ID = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
@@ -33,17 +34,17 @@ class AnalyticsValidationError(ValueError):
 
 def _parse_occurred_at(value):
     if not isinstance(value, str) or len(value) > 35:
-        raise AnalyticsValidationError("occurred_at no es válido")
+        raise AnalyticsValidationError(_("occurred_at no es válido"))
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as error:
-        raise AnalyticsValidationError("occurred_at no es válido") from error
+        raise AnalyticsValidationError(_("occurred_at no es válido")) from error
     if parsed.tzinfo is None:
-        raise AnalyticsValidationError("occurred_at debe incluir zona horaria")
+        raise AnalyticsValidationError(_("occurred_at debe incluir zona horaria"))
     parsed = parsed.astimezone(timezone.utc)
     now = datetime.now(timezone.utc)
     if parsed > now + timedelta(minutes=5) or parsed < now - timedelta(days=7):
-        raise AnalyticsValidationError("occurred_at está fuera del rango permitido")
+        raise AnalyticsValidationError(_("occurred_at está fuera del rango permitido"))
     return parsed
 
 
@@ -51,33 +52,33 @@ def _target_for_event(catalogue, event_type, target_type, supplied_key):
     expected_type = TARGET_BY_EVENT[event_type]
     if expected_type is None:
         if target_type is not None or supplied_key is not None:
-            raise AnalyticsValidationError("menu_view no acepta un objetivo")
+            raise AnalyticsValidationError(_("menu_view no acepta un objetivo"))
         return None, None
     if target_type != expected_type or not isinstance(supplied_key, str) or not TRACKING_KEY.fullmatch(supplied_key):
-        raise AnalyticsValidationError("El objetivo del evento no es válido")
+        raise AnalyticsValidationError(_("El objetivo del evento no es válido"))
     entities = catalogue.products if expected_type == "product" else [item for item in catalogue.categories if item.is_visible]
     valid_key = next((tracking_key(catalogue.id, expected_type, entity.id) for entity in entities if secure_equal(tracking_key(catalogue.id, expected_type, entity.id), supplied_key)), None)
     if not valid_key:
-        raise AnalyticsValidationError("El objetivo no pertenece a este menú")
+        raise AnalyticsValidationError(_("El objetivo no pertenece a este menú"))
     return expected_type, valid_key
 
 
 def _validated_event(catalogue, raw):
     if not isinstance(raw, dict) or set(raw) != EVENT_FIELDS:
-        raise AnalyticsValidationError("Cada evento debe contener únicamente los campos permitidos")
+        raise AnalyticsValidationError(_("Cada evento debe contener únicamente los campos permitidos"))
     event_type = raw.get("type")
     if event_type not in EVENT_TYPES:
-        raise AnalyticsValidationError("El tipo de evento no está permitido")
+        raise AnalyticsValidationError(_("El tipo de evento no está permitido"))
     visitor_id = raw.get("visitor_id")
     session_id = raw.get("session_id")
     if not isinstance(visitor_id, str) or not ANONYMOUS_ID.fullmatch(visitor_id):
-        raise AnalyticsValidationError("visitor_id no es válido")
+        raise AnalyticsValidationError(_("visitor_id no es válido"))
     if not isinstance(session_id, str) or not ANONYMOUS_ID.fullmatch(session_id):
-        raise AnalyticsValidationError("session_id no es válido")
+        raise AnalyticsValidationError(_("session_id no es válido"))
     source = raw.get("source")
     device = raw.get("device_type")
     if source not in SOURCES or device not in DEVICES:
-        raise AnalyticsValidationError("La fuente o dispositivo no es válido")
+        raise AnalyticsValidationError(_("La fuente o dispositivo no es válido"))
     occurred_at = _parse_occurred_at(raw.get("occurred_at"))
     target_type, target_key = _target_for_event(catalogue, event_type, raw.get("target_type"), raw.get("target_key"))
     visitor_hash = protected_value("visitor", visitor_id)
@@ -101,13 +102,13 @@ def _validated_event(catalogue, raw):
 
 def record_events(public_slug, payload):
     if not isinstance(payload, dict) or set(payload) != {"events"} or not isinstance(payload.get("events"), list):
-        return {"message": "Debes enviar únicamente una lista de eventos"}, 400
+        return {"message": _("Debes enviar únicamente una lista de eventos")}, 400
     if not payload["events"] or len(payload["events"]) > MAX_EVENTS:
         return {"message": f"El lote debe contener entre 1 y {MAX_EVENTS} eventos"}, 400
     try:
         catalogue = Catalogue.query.filter_by(public_slug=public_slug, is_published=True).first()
         if not catalogue:
-            return {"message": "Este menú no está disponible"}, 404
+            return {"message": _("Este menú no está disponible")}, 404
         values = [_validated_event(catalogue, raw) for raw in payload["events"]]
         unique_values = {item["dedup_key"]: item for item in values}
         dialect = db.session.get_bind().dialect.name
@@ -134,7 +135,7 @@ def record_events(public_slug, payload):
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible registrar los eventos"}, 500
+        return {"message": _("No fue posible registrar los eventos")}, 500
 
 
 def _parse_period(args):
@@ -148,15 +149,15 @@ def _parse_period(args):
             if timezone_name == "America/Mexico_City":
                 zone = timezone(timedelta(hours=-6), name=timezone_name)
             else:
-                raise AnalyticsValidationError("La zona horaria no es válida")
+                raise AnalyticsValidationError(_("La zona horaria no es válida"))
     today = datetime.now(zone).date()
     try:
         start_date = date.fromisoformat(args.get("from", (today - timedelta(days=6)).isoformat()))
         end_date = date.fromisoformat(args.get("to", today.isoformat()))
     except (TypeError, ValueError) as error:
-        raise AnalyticsValidationError("Las fechas no son válidas") from error
+        raise AnalyticsValidationError(_("Las fechas no son válidas")) from error
     if start_date > end_date:
-        raise AnalyticsValidationError("La fecha inicial no puede ser posterior a la final")
+        raise AnalyticsValidationError(_("La fecha inicial no puede ser posterior a la final"))
     days = (end_date - start_date).days + 1
     if days > MAX_RANGE_DAYS:
         raise AnalyticsValidationError(f"El rango máximo es de {MAX_RANGE_DAYS} días")
@@ -211,10 +212,10 @@ def _top_targets(catalogue, start, end, target_type):
     ).group_by(AnalyticsEvent.target_key).order_by(func.count(AnalyticsEvent.id).desc()).limit(10).all()
     if target_type == "product":
         entities = {tracking_key(catalogue.id, "product", product.id): product for product in catalogue.products}
-        return [{"name": entities[key].name if key in entities else "Producto eliminado", "category_name": entities[key].category.name if key in entities and entities[key].category else "Sin categoría", "interactions": total, "is_available": entities[key].is_available if key in entities else False} for key, total in rows]
+        return [{"name": entities[key].name if key in entities else _("Producto eliminado"), "category_name": entities[key].category.name if key in entities and entities[key].category else _("Sin categoría"), "interactions": total, "is_available": entities[key].is_available if key in entities else False} for key, total in rows]
     entities = {tracking_key(catalogue.id, "category", category.id): category for category in catalogue.categories}
     total_selections = sum(total for _, total in rows)
-    return [{"name": entities[key].name if key in entities else "Categoría eliminada", "selections": total, "percentage": round(total * 100 / total_selections, 1) if total_selections else 0.0} for key, total in rows]
+    return [{"name": entities[key].name if key in entities else _("Categoría eliminada"), "selections": total, "percentage": round(total * 100 / total_selections, 1) if total_selections else 0.0} for key, total in rows]
 
 
 def get_analytics(owner_id, business_id, catalogue_id, args):
@@ -268,4 +269,4 @@ def get_analytics(owner_id, business_id, catalogue_id, args):
         return {"message": str(error)}, 400
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible consultar las analíticas"}, 500
+        return {"message": _("No fue posible consultar las analíticas")}, 500

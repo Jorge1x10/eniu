@@ -10,6 +10,7 @@ from .services import (
     list_products,
     update_product,
 )
+from app.shared.i18n import _
 
 
 product_bp = Blueprint("products", __name__, url_prefix="/api")
@@ -53,7 +54,7 @@ def get_catalogue_products(business_id, catalogue_id):
 def new_product(business_id, catalogue_id):
     data, images = _request_body()
     if data is None:
-        return jsonify({"message": "Debes enviar información en formato JSON"}), 400
+        return jsonify({"message": _("Debes enviar información en formato JSON")}), 400
     result, status_code = create_product(
         get_jwt_identity(), business_id, catalogue_id, data, images
     )
@@ -74,7 +75,7 @@ def get_catalogue_product(business_id, catalogue_id, product_id):
 def edit_product(business_id, catalogue_id, product_id):
     data, images = _request_body()
     if data is None:
-        return jsonify({"message": "Debes enviar información en formato JSON"}), 400
+        return jsonify({"message": _("Debes enviar información en formato JSON")}), 400
     result, status_code = update_product(
         get_jwt_identity(), business_id, catalogue_id, product_id, data, images
     )
@@ -94,7 +95,7 @@ def remove_product(business_id, catalogue_id, product_id):
 def product_image(product_id, filename):
     stored_filename = get_product_image(product_id, filename)
     if not stored_filename:
-        return jsonify({"message": "Imagen no encontrada"}), 404
+        return jsonify({"message": _("Imagen no encontrada")}), 404
     return storage.serve_file(
         current_app.config["PRODUCT_UPLOAD_FOLDER"], stored_filename, immutable=True
     )

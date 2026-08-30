@@ -20,6 +20,10 @@ class User(BaseModel):
     username = db.Column(db.String(50), nullable=True, unique=True)
     phone_number = db.Column(db.String(20), nullable=True, unique=True)
     name = db.Column(db.String(50), unique=False, nullable=True)
+    # Idioma elegido por el usuario, no el de su navegador o su teléfono: es lo
+    # que permite que Eniu le hable igual en la web y en el móvil, y que los
+    # correos salgan en el idioma correcto aunque nadie tenga la app abierta.
+    language = db.Column(db.String(5), nullable=False, default="es", server_default="es")
     auth_version = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     # Un checkbox que no deja rastro no prueba nada el día que haya que
     # demostrar que alguien aceptó, y qué versión aceptó.
@@ -48,6 +52,7 @@ class User(BaseModel):
             "phone_number": self.phone_number,
             "name": self.name,
             "profile_picture": self.profile_picture,
+            "language": self.language or "es",
             "auth_methods": {
                 "password": bool(self.password),
                 "google": bool(self.google_id),

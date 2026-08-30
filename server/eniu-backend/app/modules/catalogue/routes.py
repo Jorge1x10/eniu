@@ -10,6 +10,7 @@ from .services import (
     unpublish_catalogue,
     update_catalogue,
 )
+from app.shared.i18n import _
 
 
 catalogue_bp = Blueprint("catalogues", __name__, url_prefix="/api")
@@ -32,7 +33,7 @@ def get_business_catalogues(business_id):
 def new_catalogue(business_id):
     data = _json_body()
     if data is None:
-        return jsonify({"message": "Debes enviar información en formato JSON"}), 400
+        return jsonify({"message": _("Debes enviar información en formato JSON")}), 400
 
     result, status_code = create_catalogue(
         get_jwt_identity(),
@@ -58,7 +59,7 @@ def get_business_catalogue(business_id, catalogue_id):
 def edit_catalogue(business_id, catalogue_id):
     data = _json_body()
     if data is None:
-        return jsonify({"message": "Debes enviar información en formato JSON"}), 400
+        return jsonify({"message": _("Debes enviar información en formato JSON")}), 400
 
     result, status_code = update_catalogue(
         get_jwt_identity(),
