@@ -2,3 +2,8 @@
 Thumbs.db
 *.log
 **/.git.bak/
+
+# Claves privadas de Apple: la de Sign in with Apple y la de App Store Connect
+# API llegan como .p8 y se descargan una sola vez. Ninguna debe versionarse;
+# viven en el entorno de despliegue o en la máquina desde la que se publica.
+*.p8
