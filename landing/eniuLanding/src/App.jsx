@@ -7,11 +7,13 @@ import { SiteFooter, SiteHeader } from './components/Layout.jsx'
 import Home from './pages/Home.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Privacy from './pages/Privacy.jsx'
+import Support from './pages/Support.jsx'
 import Terms from './pages/Terms.jsx'
 
 const routes = {
   '/': { component: Home, title: 'Eniu — Tu menú, más simple y más tuyo' },
   '/primeros-pasos': { component: Onboarding, title: 'Primeros pasos con Eniu — Cómo funciona' },
+  '/soporte': { component: Support, title: 'Soporte — Eniu' },
   '/privacidad': { component: Privacy, title: 'Aviso de privacidad — Eniu' },
   '/terminos': { component: Terms, title: 'Términos y condiciones — Eniu' },
 }

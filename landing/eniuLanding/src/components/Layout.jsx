@@ -85,6 +85,7 @@ export function SiteFooter() {
         </div>
         <div className="footer-col">
           <h4>Contacto</h4>
+          <Link href="/soporte">Soporte y ayuda</Link>
           <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
           <a href={appUrl}>Crear mi menú</a>
         </div>
