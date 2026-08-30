@@ -104,6 +104,14 @@ class Config:
         "STRIPE_ESSENTIAL_LOOKUP_KEY",
         "eniu_essential_monthly",
     )
+    # Base de los menús publicados: de aquí sale el `/m/<slug>` que la app mete
+    # dentro del código QR. Dos condiciones que no son obvias y que ya rompieron
+    # los menús una vez:
+    #   - Tiene que apuntar a donde se sirve la ruta `/m/<slug>`, que es el
+    #     despliegue del panel (hoy menu.eniu.app), no al sitio público.
+    #   - Ese mismo origen tiene que estar en CORS_ORIGINS: el menú se dibuja en
+    #     el navegador del comensal y pide sus datos a esta API.
+    # Cambiarla invalida los códigos QR ya impresos, así que se decide una vez.
     PUBLIC_WEB_BASE_URL = os.getenv(
         "PUBLIC_WEB_BASE_URL",
         os.getenv("FRONT", "http://localhost:5173"),
