@@ -1,7 +1,7 @@
-import { LegalDoc, Seccion } from '../components/LegalDoc.jsx'
-import { ACTUALIZADA, CONTACTO, DOMICILIO, RESPONSABLE } from '../data/legal.js'
+import { LegalDoc, Seccion } from '../../components/LegalDoc.jsx'
+import { ACTUALIZADA, CONTACTO, DOMICILIO, RESPONSABLE } from '../../data/legal.js'
 
-export default function Privacy() {
+export default function PrivacyEs() {
   return (
     <LegalDoc title="Aviso de privacidad" updated={ACTUALIZADA}>
       <Seccion titulo="Quién trata tus datos">

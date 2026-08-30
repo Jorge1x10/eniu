@@ -7,3 +7,7 @@ export const DOMICILIO = 'Paseo del Origen 600, Club de Golf Santa Anita, Tlajom
 // La fecha del encabezado marca cuándo cambió el texto, no cuándo se movió de
 // sitio: mudar los documentos de dominio no los modifica.
 export const ACTUALIZADA = '29 de agosto de 2026'
+
+// La misma fecha, escrita como se escribe en cada idioma. Se mantienen juntas
+// para que actualizar el documento no deje una de las dos atrás.
+export const ACTUALIZADA_EN = 'August 29, 2026'

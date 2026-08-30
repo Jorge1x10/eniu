@@ -1,3 +1,5 @@
+import { useLanguage } from '../languageContext.js'
+
 /**
  * Envoltura de los dos documentos legales.
  *
@@ -6,10 +8,17 @@
  * compilada. El panel exige sesión, así que no sirve para eso.
  */
 export function LegalDoc({ title, updated, children }) {
+  const { legal } = useLanguage().content
+
   return (
     <main className="legal-page">
       <h1>{title}</h1>
-      <p className="legal-updated">Última actualización: {updated}</p>
+      <p className="legal-updated">{legal.updatedLabel} {updated}</p>
+      {/* Sólo la traducción lleva aviso: el original en español no tiene nada
+          que aclarar sobre sí mismo. */}
+      {legal.referenceNotice && (
+        <p className="legal-reference-notice">{legal.referenceNotice}</p>
+      )}
       {children}
     </main>
   )

@@ -1,8 +1,8 @@
-import { Link } from '../router.jsx'
-import { LegalDoc, Seccion } from '../components/LegalDoc.jsx'
-import { ACTUALIZADA, CONTACTO, RESPONSABLE } from '../data/legal.js'
+import { Link } from '../../router.jsx'
+import { LegalDoc, Seccion } from '../../components/LegalDoc.jsx'
+import { ACTUALIZADA, CONTACTO, RESPONSABLE } from '../../data/legal.js'
 
-export default function Terms() {
+export default function TermsEs() {
   return (
     <LegalDoc title="Términos y condiciones" updated={ACTUALIZADA}>
       <Seccion titulo="Qué es Eniu">
@@ -64,7 +64,7 @@ export default function Terms() {
       </Seccion>
 
       <Seccion titulo="Privacidad">
-        <p>El tratamiento de datos personales se describe en el <Link href="/privacidad">aviso de
+        <p>El tratamiento de datos personales se describe en el <Link href="privacy">aviso de
         privacidad</Link>, que forma parte de estos términos.</p>
       </Seccion>
 
