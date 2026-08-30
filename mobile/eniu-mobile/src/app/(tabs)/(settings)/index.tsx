@@ -1,19 +1,30 @@
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
+import Constants from 'expo-constants';
+
 import { BusinessPhotoField } from '@/components/business-photo';
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
 import { useEniuTheme } from '@/constants/eniu-theme';
-import { PRIVACY_URL } from '@/constants/legal';
+import { PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '@/constants/legal';
 import { useScreenTopPadding } from '@/constants/layout';
 import { useAuth } from '@/features/auth/auth-context';
 import { useBusiness } from '@/features/business/business-context';
 import { getMilestoneNotificationsEnabled, setMilestoneNotificationsEnabled } from '@/features/milestones/milestone-store';
 import { api } from '@/lib/api';
 import type { Business, User } from '@/types/models';
+
+function LinkRow({ label, url }: { label: string; url: string }) {
+  const theme = useEniuTheme();
+  return (
+    <Pressable accessibilityRole="link" onPress={() => Linking.openURL(url)} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+      <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5, textDecorationLine: 'underline' }}>{label}</Text>
+    </Pressable>
+  );
+}
 
 function Section({ label, children }: React.PropsWithChildren<{ label: string }>) {
   const theme = useEniuTheme();
@@ -101,9 +112,12 @@ export default function SettingsScreen() {
           <View style={{ flex: 1, gap: 2 }}><Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>Avisos de logros</Text><Text style={{ color: theme.muted, fontSize: 11.5 }}>Cuando alcances una meta de vistas</Text></View>
           <Switch value={milestoneNotifications} onValueChange={toggleMilestoneNotifications} trackColor={{ true: theme.yellowPressed }} />
         </View>
-        <Pressable accessibilityRole="link" onPress={() => Linking.openURL(PRIVACY_URL)} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-          <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5, textDecorationLine: 'underline' }}>Aviso de privacidad</Text>
-        </Pressable>
+        <LinkRow label="Ayuda y soporte" url={SUPPORT_URL} />
+        <LinkRow label="Términos y condiciones" url={TERMS_URL} />
+        <LinkRow label="Aviso de privacidad" url={PRIVACY_URL} />
+        {/* La versión es lo primero que se pide al reportar un fallo, y quien
+            lo reporta no tiene otro sitio donde consultarla. */}
+        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><Text style={{ color: theme.muted, fontWeight: '700', fontSize: 12.5 }}>Versión</Text><Text style={{ color: theme.muted, fontSize: 12.5 }}>{Constants.expoConfig?.version ?? '—'}</Text></View>
       </Section>
 
       <Button variant="danger" onPress={() => Alert.alert('Cerrar sesión', '¿Quieres salir de Eniu en este dispositivo?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Cerrar sesión', style: 'destructive', onPress: logout }])}>Cerrar sesión</Button>
