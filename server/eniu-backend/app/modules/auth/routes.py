@@ -203,7 +203,14 @@ def apple_auth():
     full_name = data.get("full_name")
     full_name = full_name.strip()[:50] if isinstance(full_name, str) else None
 
-    user, error = authenticate_apple_user(identity_token, full_name or None)
+    # Apple entrega el authorization code junto a la credencial; se canjea por
+    # el refresh token que hace falta para revocar la sesión al borrar la cuenta.
+    authorization_code = data.get("authorization_code")
+    authorization_code = authorization_code if isinstance(authorization_code, str) else None
+
+    user, error = authenticate_apple_user(
+        identity_token, full_name or None, authorization_code
+    )
 
     if error:
         return jsonify({

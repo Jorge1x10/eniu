@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from app import create_app
 from app.database.db import db
-from app.modules.auth.services import TERMS_VERSION
+from app.modules.auth.services import TERMS_VERSION, revoke_apple_token
 from app.modules.users.model import User
 
 
@@ -140,6 +140,53 @@ class AuthApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json["user"]["auth_methods"]["apple"])
         self.assertTrue(response.json["user"]["auth_methods"]["password"])
+
+    def test_apple_auth_stores_the_refresh_token_needed_to_revoke_later(self):
+        # Apple sólo entrega el refresh token al canjear el authorization code,
+        # y sin él no hay forma de revocar la sesión cuando borren la cuenta.
+        claims = {"sub": "apple-revocable", "email": "revocable@example.com", "email_verified": "true"}
+        with patch("app.modules.auth.services.exchange_apple_authorization_code",
+                   return_value="r-nuevo") as exchange:
+            response = self.apple_login(claims, authorization_code="code-1")
+
+        self.assertEqual(response.status_code, 200)
+        exchange.assert_called_once_with("code-1")
+        with self.app.app_context():
+            user = User.query.filter_by(apple_id="apple-revocable").first()
+            self.assertEqual(user.apple_refresh_token, "r-nuevo")
+
+    def test_apple_auth_keeps_the_previous_refresh_token_when_the_exchange_fails(self):
+        # Un canje fallido no debe borrar el token que sí sirve, ni impedir
+        # entrar: quedarse fuera de la cuenta es peor que no poder revocar.
+        claims = {"sub": "apple-conserva", "email": "conserva@example.com", "email_verified": "true"}
+        with patch("app.modules.auth.services.exchange_apple_authorization_code",
+                   return_value="r-bueno"):
+            self.apple_login(claims, authorization_code="code-1")
+
+        with patch("app.modules.auth.services.exchange_apple_authorization_code",
+                   return_value=None):
+            response = self.apple_login(claims, authorization_code="code-2")
+
+        self.assertEqual(response.status_code, 200)
+        with self.app.app_context():
+            user = User.query.filter_by(apple_id="apple-conserva").first()
+            self.assertEqual(user.apple_refresh_token, "r-bueno")
+
+    def test_apple_auth_without_authorization_code_never_calls_apple(self):
+        claims = {"sub": "apple-sin-code", "email": "sincode@example.com", "email_verified": "true"}
+        with patch("app.modules.auth.services.exchange_apple_authorization_code") as exchange:
+            response = self.apple_login(claims)
+
+        self.assertEqual(response.status_code, 200)
+        exchange.assert_not_called()
+
+    def test_revoking_without_the_apple_key_configured_fails_without_calling_apple(self):
+        # Mientras no estén las tres piezas de la clave privada, la revocación
+        # se rinde en local: nunca debe salir una petición a medio firmar.
+        with self.app.app_context():
+            with patch("app.modules.auth.services.requests.post") as post:
+                self.assertFalse(revoke_apple_token("r-cualquiera"))
+            post.assert_not_called()
 
     def test_apple_auth_rejects_email_linked_to_another_apple_id(self):
         self.apple_login({"sub": "apple-4", "email": "duena@example.com", "email_verified": "true"})

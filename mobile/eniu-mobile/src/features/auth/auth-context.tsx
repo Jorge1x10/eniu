@@ -13,7 +13,7 @@ type AuthContextValue = {
   // `username` es opcional: el alta ya no lo pide y el backend lo deriva del correo.
   register: (payload: { username?: string; email: string; phone: string; password: string }) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
-  loginWithApple: (identityToken: string, fullName?: string | null) => Promise<void>;
+  loginWithApple: (identityToken: string, fullName?: string | null, authorizationCode?: string | null) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: User) => void;
 };
@@ -65,8 +65,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   // Apple sólo entrega el nombre en la primera autorización y fuera del token,
   // por eso viaja aparte hacia el backend.
-  const loginWithApple = useCallback(async (identityToken: string, fullName?: string | null) => {
-    const data = await api.post<SessionResponse>('auth/apple', { identity_token: identityToken, full_name: fullName || undefined });
+  // El authorization code viaja junto a la credencial: el backend lo canjea por
+  // el refresh token que Apple exige para revocar la sesión al borrar la cuenta.
+  const loginWithApple = useCallback(async (identityToken: string, fullName?: string | null, authorizationCode?: string | null) => {
+    const data = await api.post<SessionResponse>('auth/apple', { identity_token: identityToken, full_name: fullName || undefined, authorization_code: authorizationCode || undefined });
     await startSession(data);
   }, [startSession]);
 

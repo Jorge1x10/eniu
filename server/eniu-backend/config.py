@@ -87,6 +87,15 @@ class Config:
         for value in os.getenv("APPLE_CLIENT_IDS", "com.eniu.app").split(",")
         if value.strip()
     ]
+    # Credenciales de la clave privada de Sign in with Apple (Keys, en el portal
+    # de desarrollador). Apple obliga a revocar la sesión cuando el usuario
+    # borra su cuenta, y su API de revocación exige firmar un client secret con
+    # esta clave. Sin las tres, el borrado sigue funcionando pero no revoca.
+    APPLE_TEAM_ID = os.getenv("APPLE_TEAM_ID")
+    APPLE_KEY_ID = os.getenv("APPLE_KEY_ID")
+    # El .p8 viaja en una variable de entorno, donde los saltos de línea suelen
+    # llegar escapados; sin deshacerlos la clave no se puede leer.
+    APPLE_PRIVATE_KEY = (os.getenv("APPLE_PRIVATE_KEY") or "").replace("\\n", "\n")
     # Prefer a restricted Stripe key (rk_) scoped to the resources used here.
     STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
     STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")

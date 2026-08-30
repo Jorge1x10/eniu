@@ -9,6 +9,10 @@ class User(BaseModel):
     __tablename__ = "users"
     google_id = db.Column(db.String(255), unique=True, nullable=True)
     apple_id = db.Column(db.String(255), unique=True, nullable=True)
+    # Apple exige revocar la sesión al borrar la cuenta, y su API de
+    # revocación pide este token. Se obtiene al canjear el authorization
+    # code del inicio de sesión y sólo sirve para eso.
+    apple_refresh_token = db.Column(db.String(255), nullable=True)
     profile_picture = db.Column(db.String(500), nullable=True)
     email = db.Column(db.String(120), nullable=False, unique=True)
     business = db.relationship("Business", back_populates="owner", cascade="all, delete-orphan")

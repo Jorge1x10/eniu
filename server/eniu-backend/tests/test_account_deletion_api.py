@@ -45,7 +45,9 @@ class AccountDeletionApiTestCase(unittest.TestCase):
             owner = User(email="owner@example.com", username="owner",
                          password=bcrypt.generate_password_hash(PASSWORD).decode())
             social = User(email="google@example.com", username="google", google_id="g-1")
-            db.session.add_all([owner, social])
+            apple = User(email="apple@example.com", username="apple", apple_id="a-1",
+                         apple_refresh_token="r-apple-1")
+            db.session.add_all([owner, social, apple])
             db.session.flush()
 
             business = Business(name="Cafe", owner_id=owner.id, photo_filename="negocio.png")
@@ -64,8 +66,10 @@ class AccountDeletionApiTestCase(unittest.TestCase):
 
             self.owner_id = str(owner.id)
             self.social_id = str(social.id)
+            self.apple_id = str(apple.id)
             self.owner_token = create_access_token(identity=self.owner_id)
             self.social_token = create_access_token(identity=self.social_id)
+            self.apple_token = create_access_token(identity=self.apple_id)
 
         for name in ("negocio.png", "portada.png", "fondo.png", "bienvenida.png", "producto.png"):
             Path(self.uploads.name, name).write_bytes(b"imagen")
@@ -153,6 +157,36 @@ class AccountDeletionApiTestCase(unittest.TestCase):
         with self.app.app_context():
             self.assertIsNotNone(db.session.get(User, UUID(self.owner_id)))
             self.assertEqual(Business.query.count(), 1)
+
+    def test_the_apple_session_is_revoked_when_the_account_is_deleted(self):
+        # Apple lo exige (guía 5.1.1 v): borrar la cuenta sin revocar el token
+        # deja la app autorizada en el Apple ID de alguien que ya se fue.
+        with patch("app.modules.users.services.revoke_apple_token", return_value=True) as revoke:
+            response = self.delete(self.apple_token, confirmation="eliminar")
+
+        self.assertEqual(response.status_code, 200)
+        revoke.assert_called_once_with("r-apple-1")
+        with self.app.app_context():
+            self.assertIsNone(db.session.get(User, UUID(self.apple_id)))
+
+    def test_a_failure_revoking_still_deletes_the_account(self):
+        # Al revés que con Stripe: dejar a alguien atrapado en una cuenta que
+        # pidió borrar es peor que una sesión colgada en Apple, y esa sí se
+        # puede revocar a mano desde el registro.
+        with patch("app.modules.users.services.revoke_apple_token", return_value=False) as revoke:
+            response = self.delete(self.apple_token, confirmation="eliminar")
+
+        self.assertEqual(response.status_code, 200)
+        revoke.assert_called_once()
+        with self.app.app_context():
+            self.assertIsNone(db.session.get(User, UUID(self.apple_id)))
+
+    def test_an_account_without_apple_never_calls_the_revocation(self):
+        with patch("app.modules.users.services.revoke_apple_token") as revoke:
+            response = self.delete(self.owner_token, password=PASSWORD)
+
+        self.assertEqual(response.status_code, 200)
+        revoke.assert_not_called()
 
     def test_deleting_requires_authentication(self):
         self.assertEqual(self.client.delete("/api/users/me", json={}).status_code, 401)

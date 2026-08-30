@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app import storage
 from app.database.db import db
 from app.extensions import bcrypt
+from app.modules.auth.services import revoke_apple_token
 from app.modules.billing.services import cancel_subscription_for_user
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
@@ -137,6 +138,15 @@ def delete_current_user(user_id, password=None, confirmation=None):
     if not cancelled:
         current_app.logger.warning("No se pudo cancelar la suscripción al borrar la cuenta: %s", detail)
         return {"message": "No fue posible cancelar tu suscripción. Inténtalo de nuevo en unos minutos."}, 502
+
+    # Apple exige revocar la sesión de Sign in with Apple al borrar la cuenta.
+    # Si falla se registra y se continúa: dejar a alguien atrapado en una cuenta
+    # que pidió borrar sería peor que quedarnos con una sesión colgada en Apple,
+    # y el registro deja rastro para reintentarlo a mano.
+    if user.apple_refresh_token and not revoke_apple_token(user.apple_refresh_token):
+        current_app.logger.warning(
+            "No se revocó la sesión de Apple del usuario %s al borrar su cuenta", user.id
+        )
 
     try:
         files = _stored_files(user)

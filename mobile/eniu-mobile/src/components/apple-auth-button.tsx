@@ -39,7 +39,7 @@ export function AppleAuthButton({ mode }: { mode: 'login' | 'register' }) {
         ],
       });
       if (!credential.identityToken) throw new Error('Apple no devolvió una credencial válida.');
-      await loginWithApple(credential.identityToken, joinName(credential.fullName));
+      await loginWithApple(credential.identityToken, joinName(credential.fullName), credential.authorizationCode);
       router.replace(mode === 'register' ? '/(onboarding)/business' : '/(tabs)/(home)');
     } catch (requestError) {
       // Cancelar no es un error que valga la pena mostrar.

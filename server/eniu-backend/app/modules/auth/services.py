@@ -11,6 +11,7 @@ from hashlib import sha256
 from uuid import UUID, uuid4
 
 import jwt as pyjwt
+import requests
 from flask_jwt_extended import create_access_token, create_refresh_token
 
 from app.modules.auth.mailer import build_password_reset_email, send_email
@@ -445,6 +446,12 @@ def authenticate_google_user(credential):
 
 APPLE_ISSUER = "https://appleid.apple.com"
 APPLE_KEYS_URL = "https://appleid.apple.com/auth/keys"
+APPLE_TOKEN_URL = "https://appleid.apple.com/auth/token"
+APPLE_REVOKE_URL = "https://appleid.apple.com/auth/revoke"
+
+# Apple acepta hasta seis meses, pero este secreto se usa y se tira en la misma
+# petición: cuanto menos viva, menos sirve si se filtra de un log.
+APPLE_CLIENT_SECRET_MINUTES = 5
 
 # El cliente cachea el JWKS de Apple, así que se crea una sola vez por proceso.
 _apple_jwk_client = None
@@ -473,12 +480,151 @@ def _apple_claims(identity_token):
     )
 
 
-def authenticate_apple_user(identity_token, full_name=None):
+def _apple_client_secret():
+    """Client secret de Apple: un JWT corto firmado con la clave privada.
+
+    Devuelve None si falta cualquiera de las tres piezas de configuración, para
+    que quien llame pueda seguir adelante sin revocar en vez de reventar.
+    """
+    config = current_app.config
+    team_id = config.get("APPLE_TEAM_ID")
+    key_id = config.get("APPLE_KEY_ID")
+    private_key = config.get("APPLE_PRIVATE_KEY")
+    client_ids = config.get("APPLE_CLIENT_IDS") or []
+
+    if not (team_id and key_id and private_key and client_ids):
+        return None, None
+
+    # El primero de la lista es el bundle id de la app, que es quien pide y
+    # revoca los tokens; el resto son audiencias que sólo se validan al entrar.
+    client_id = client_ids[0]
+    now = datetime.now(timezone.utc)
+
+    try:
+        secret = pyjwt.encode(
+            {
+                "iss": team_id,
+                "iat": now,
+                "exp": now + timedelta(minutes=APPLE_CLIENT_SECRET_MINUTES),
+                "aud": APPLE_ISSUER,
+                "sub": client_id,
+            },
+            private_key,
+            algorithm="ES256",
+            headers={"kid": key_id},
+        )
+
+    except Exception:
+        current_app.logger.exception("No se pudo firmar el client secret de Apple")
+        return None, None
+
+    return client_id, secret
+
+
+def exchange_apple_authorization_code(authorization_code):
+    """Canjea el authorization code del inicio de sesión por un refresh token.
+
+    Es el único momento en que Apple lo entrega, y sin él no hay forma de
+    revocar la sesión el día que el usuario borre su cuenta.
+    """
+    client_id, client_secret = _apple_client_secret()
+
+    if not client_secret:
+        return None
+
+    try:
+        response = requests.post(
+            APPLE_TOKEN_URL,
+            data={
+                "grant_type": "authorization_code",
+                "code": authorization_code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+            },
+            timeout=10,
+        )
+
+    except requests.RequestException:
+        current_app.logger.warning("No se pudo contactar a Apple para canjear el código")
+        return None
+
+    if response.status_code != 200:
+        # El cuerpo trae el motivo pero también el código; se registra sólo el
+        # estado para no dejar credenciales en los logs.
+        current_app.logger.warning(
+            "Apple rechazó el canje del authorization code (HTTP %s)", response.status_code
+        )
+        return None
+
+    try:
+        refresh_token = response.json().get("refresh_token")
+
+    except ValueError:
+        return None
+
+    return refresh_token or None
+
+
+def revoke_apple_token(refresh_token):
+    """Revoca la sesión de Sign in with Apple. True si Apple la dio por revocada."""
+    client_id, client_secret = _apple_client_secret()
+
+    if not client_secret:
+        current_app.logger.warning(
+            "Falta la clave de Sign in with Apple: no se pudo revocar la sesión"
+        )
+        return False
+
+    try:
+        response = requests.post(
+            APPLE_REVOKE_URL,
+            data={
+                "token": refresh_token,
+                "token_type_hint": "refresh_token",
+                "client_id": client_id,
+                "client_secret": client_secret,
+            },
+            timeout=10,
+        )
+
+    except requests.RequestException:
+        current_app.logger.warning("No se pudo contactar a Apple para revocar la sesión")
+        return False
+
+    if response.status_code != 200:
+        current_app.logger.warning(
+            "Apple rechazó la revocación (HTTP %s)", response.status_code
+        )
+        return False
+
+    return True
+
+
+def _store_apple_refresh_token(user, authorization_code):
+    """Guarda el refresh token de Apple, si se pudo conseguir.
+
+    Nunca interrumpe el inicio de sesión: que no se pueda revocar más adelante
+    es un problema, pero dejar a alguien fuera de su cuenta hoy es peor. El
+    valor anterior sólo se pisa cuando llega uno nuevo.
+    """
+    if not authorization_code:
+        return
+
+    refresh_token = exchange_apple_authorization_code(authorization_code)
+
+    if refresh_token:
+        user.apple_refresh_token = refresh_token
+
+
+def authenticate_apple_user(identity_token, full_name=None, authorization_code=None):
     """Autentica con Sign in with Apple.
 
     Apple sólo manda el nombre la primera vez que el usuario autoriza la app, y
     lo hace por fuera del token; por eso llega aparte en `full_name` y se guarda
     únicamente si todavía no hay uno.
+
+    El `authorization_code` se canjea por el refresh token que Apple pide para
+    revocar la sesión cuando el usuario borre su cuenta.
     """
     try:
         apple_data = _apple_claims(identity_token)
@@ -503,11 +649,13 @@ def authenticate_apple_user(identity_token, full_name=None):
         if full_name and not user.name:
             user.name = full_name
 
-            try:
-                db.session.commit()
+        _store_apple_refresh_token(user, authorization_code)
 
-            except Exception:
-                db.session.rollback()
+        try:
+            db.session.commit()
+
+        except Exception:
+            db.session.rollback()
 
         return user, None
 
@@ -554,6 +702,8 @@ def authenticate_apple_user(identity_token, full_name=None):
         )
 
         db.session.add(user)
+
+    _store_apple_refresh_token(user, authorization_code)
 
     try:
         db.session.commit()
