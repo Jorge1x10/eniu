@@ -1,3 +1,10 @@
 {
+  "redirects": [
+    {
+      "source": "/m/:path*",
+      "destination": "https://app.eniu.app/m/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

@@ -25,6 +25,12 @@ ningún botón lleve a un enlace muerto. En producción sale de `.env.production
 npm run build
 ```
 
+Los menús publicados se sirven desde el panel, en `/m/<slug>`, no desde aquí.
+`vercel.json` redirige `eniu.app/m/...` a `app.eniu.app/m/...` para que un
+enlace o un código QR con el dominio corto siga funcionando; la redirección es
+temporal (307) a propósito, porque esa dirección va impresa en códigos QR y una
+permanente se queda cacheada en el navegador de cada cliente sin vuelta atrás.
+
 El sitio se publica en Vercel desde `dist/`. Como es una SPA, hace falta que
 cualquier ruta devuelva `index.html`: Vercel sirve los archivos literalmente y
 `/terminos` daría 404, que es lo que rompía los enlaces de la app móvil. De eso
