@@ -7,6 +7,7 @@ import { useAuth } from "../../auth/hooks/useAuth";
 import { useApi } from "../../auth/services/useApi";
 import PasswordField from "../components/PasswordField";
 import { getStoredTheme, saveTheme } from "../utils/theme";
+import { PRIVACY_URL } from "../../../constants/legal";
 
 const TABS = [
   { id: "profile", label: "Perfil", icon: UserRound },
@@ -61,7 +62,7 @@ export default function SettingsPage() {
       </div>
 
       <p className="text-center text-xs text-[#777777]">
-        <Link to="/privacidad" className="font-semibold underline underline-offset-4 hover:text-[#111111]">Aviso de privacidad</Link>
+        <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-4 hover:text-[#111111]">Aviso de privacidad</a>
       </p>
     </section>
   );

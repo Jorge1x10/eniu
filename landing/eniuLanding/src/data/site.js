@@ -4,16 +4,12 @@
 
 export const appUrl = import.meta.env.VITE_APP_URL || '#empieza'
 
-// Los documentos legales viven en el panel y no se duplican aquí: dos copias
-// públicas del mismo texto acabarían diciendo cosas distintas, y la app móvil
-// y los formularios de registro ya apuntan a estas.
-// Sólo se deriva de `appUrl` cuando es una URL absoluta; en desarrollo vale
-// '#empieza' y concatenarle la ruta daría un enlace muerto.
-const panelUrl = /^https?:/.test(appUrl)
-  ? appUrl.replace(/\/register\/?$/, '')
-  : 'https://eniu.vercel.app'
-export const termsUrl = `${panelUrl}/terminos`
-export const privacyUrl = `${panelUrl}/privacidad`
+// Los documentos legales se publican aquí, en el sitio público, y no se
+// duplican en ningún otro lado: dos copias del mismo texto acabarían diciendo
+// cosas distintas. Este es además el dominio abierto y estable que pide App
+// Store Connect, y el que la app móvil lleva compilado.
+export const termsUrl = '/terminos'
+export const privacyUrl = '/privacidad'
 
 export const features = [
   { number: '01', title: 'Menú que sí se antoja', text: 'Organiza categorías, precios y fotografías en una experiencia clara para tus clientes.' },

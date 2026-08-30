@@ -4,6 +4,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { useApi } from "../services/useApi";
+import { PRIVACY_URL, TERMS_URL } from "../../../constants/legal";
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -221,9 +222,9 @@ export default function LoginForm() {
       {/* Sin casilla: quien ya tiene cuenta los aceptó en su día y volver a
           pedírselo al entrar sería ruido. El enlace sí conviene tenerlo a mano. */}
       <p className="text-center text-xs text-gray-500">
-        <Link to="/terminos" className="underline underline-offset-2 hover:text-[#111111]">Términos y condiciones</Link>
+        <a href={TERMS_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[#111111]">Términos y condiciones</a>
         {" · "}
-        <Link to="/privacidad" className="underline underline-offset-2 hover:text-[#111111]">Aviso de privacidad</Link>
+        <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[#111111]">Aviso de privacidad</a>
       </p>
     </form>
   );

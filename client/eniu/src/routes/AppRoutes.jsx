@@ -18,8 +18,6 @@ import QrPage from "../modules/Dashboard/pages/QrPage";
 import SettingsPage from "../modules/Settings/pages/SettingsPage";
 import ForgotPasswordPage from "../modules/Settings/pages/ForgotPasswordPage";
 import ResetPasswordPage from "../modules/Settings/pages/ResetPasswordPage";
-import PrivacyPolicyPage from "../modules/Legal/pages/PrivacyPolicyPage";
-import TermsPage from "../modules/Legal/pages/TermsPage";
 import AnalitycsPage from "../modules/Dashboard/pages/AnalitycsPage";
 import HomePage from "../modules/Dashboard/pages/HomePage";
 import BusinessPage from "../modules/Business/pages/BusinessPage";
@@ -63,9 +61,6 @@ export default function AppRoutes() {
       />
 
       <Route path="/m/:publicSlug" element={<PublicMenuPage />} />
-      {/* Pública y sin sesión: App Store Connect exige una URL abierta del aviso. */}
-      <Route path="/privacidad" element={<PrivacyPolicyPage />} />
-      <Route path="/terminos" element={<TermsPage />} />
 
       <Route element={<ProtectedRoute />}>
       

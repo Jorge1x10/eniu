@@ -92,8 +92,8 @@ export function SiteFooter() {
       <div className="footer-legal">
         <small>© {new Date().getFullYear()} Eniu. Hecho en México.</small>
         <div className="footer-legal-links">
-          <a href={termsUrl}>Términos y condiciones</a>
-          <a href={privacyUrl}>Aviso de privacidad</a>
+          <Link href={termsUrl}>Términos y condiciones</Link>
+          <Link href={privacyUrl}>Aviso de privacidad</Link>
         </div>
       </div>
     </footer>

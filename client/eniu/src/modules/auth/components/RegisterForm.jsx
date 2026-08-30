@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { GoogleLogin } from "@react-oauth/google";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import { PRIVACY_URL, TERMS_URL } from "../../../constants/legal";
 
 const TOTAL_STEPS = 3;
 const FIELD_CLASS =
@@ -156,8 +157,8 @@ export default function RegisterForm() {
             <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)}
               className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#E8C93D]" />
             <span className="text-sm leading-6 text-[#444444]">
-              Acepto los <Link to="/terminos" target="_blank" className="font-semibold text-[#111111] underline underline-offset-2">términos y condiciones</Link>
-              {" "}y el <Link to="/privacidad" target="_blank" className="font-semibold text-[#111111] underline underline-offset-2">aviso de privacidad</Link>.
+              Acepto los <a href={TERMS_URL} target="_blank" rel="noreferrer" className="font-semibold text-[#111111] underline underline-offset-2">términos y condiciones</a>
+              {" "}y el <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="font-semibold text-[#111111] underline underline-offset-2">aviso de privacidad</a>.
             </span>
           </label>
 
