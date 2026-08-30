@@ -57,7 +57,12 @@ class Config:
     MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
     MAIL_USERNAME = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
-    MAIL_FROM = os.getenv("MAIL_FROM", "no-reply@eniu.app")
+    # Por defecto se envía desde la cuenta con la que uno se autentica, que es
+    # la única dirección que la mayoría de servidores SMTP dejan usar. Gmail en
+    # concreto reescribe el remitente en silencio cuando no coincide, así que
+    # poner aquí una dirección distinta a `MAIL_USERNAME` no da error: da un
+    # correo que sale con otro remitente del que se creía.
+    MAIL_FROM = os.getenv("MAIL_FROM") or MAIL_USERNAME or "no-reply@eniu.app"
     MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() in {"1", "true", "yes", "on"}
     MAIL_SUPPRESS_SEND = False
     # Keep this value stable: changing it invalidates opaque analytics keys.
