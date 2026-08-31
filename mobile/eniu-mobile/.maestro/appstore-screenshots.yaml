@@ -16,7 +16,10 @@ appId: com.eniu.app
 - inputText: ${MAESTRO_EMAIL}
 - tapOn: "Tu contraseña"
 - inputText: ${MAESTRO_PASSWORD}
-- hideKeyboard
+# Sin hideKeyboard: en iOS lo implementa presionando "return", y como el
+# campo de contraseña tiene onSubmitEditing={submit}, dispara el login
+# solo con ocultar el teclado. El tap explícito de abajo llegaba tarde
+# porque la pantalla ya había cambiado a Inicio.
 - tapOn: "Iniciar sesión"
 - assertVisible: "Inicio"
 
