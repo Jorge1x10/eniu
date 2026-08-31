@@ -1,7 +1,10 @@
 // Datos del responsable. Una sola copia: el aviso de privacidad y los términos
 // los leen de aquí para que no puedan acabar diciendo cosas distintas.
 export const RESPONSABLE = 'Jorge Arturo Alvarado Díaz de León'
-export const CONTACTO = 'hola@eniu.app'
+// Ver la nota en `site.js`: provisional mientras `hola@eniu.app` no reciba.
+// Al migrar, cambiar las dos a la vez —esta es la que sale en los documentos
+// legales y la otra la que ve el visitante— para no ofrecer dos contactos.
+export const CONTACTO = 'eniumenu@gmail.com'
 export const DOMICILIO = 'Paseo del Origen 600, Club de Golf Santa Anita, Tlajomulco de Zuñiga, Jal., C.P. 45645'
 
 // La fecha del encabezado marca cuándo cambió el texto, no cuándo se movió de
