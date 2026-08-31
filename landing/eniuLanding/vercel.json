@@ -1,0 +1,15 @@
+{
+  "redirects": [
+    {
+      "source": "/m/:path*",
+      "destination": "https://menu.eniu.app/m/:path*",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

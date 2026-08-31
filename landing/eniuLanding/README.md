@@ -25,14 +25,26 @@ ningún botón lleve a un enlace muerto. En producción sale de `.env.production
 npm run build
 ```
 
-Además del `dist/` habitual, `scripts/prepare-sites-build.mjs` empaqueta todos
-los archivos estáticos en base64 dentro de `dist/server/index.js`, un worker de
-un solo archivo que los sirve. Ese worker devuelve `index.html` para cualquier
-ruta sin extensión, que es lo que hace que `/soporte` o `/terminos` funcionen
-al recargar o al compartir el enlace.
+Los menús publicados no se sirven desde aquí: viven en `menu.eniu.app/m/<slug>`,
+que es el mismo despliegue del panel bajo otro dominio. `vercel.json` redirige
+`eniu.app/m/...` allí, para que un enlace viejo con el dominio corto siga
+llegando. La redirección es temporal (307) a propósito: esa dirección acaba
+impresa en códigos QR sobre las mesas, y una permanente se queda cacheada en el
+navegador de cada cliente sin vuelta atrás.
 
-Un archivo nuevo con una extensión que el worker no conozca se serviría como
-binario: si añades una, agrégala a `CONTENT_TYPES` en `server/index.js`.
+El sitio se publica en Vercel desde `dist/`. Como es una SPA, hace falta que
+cualquier ruta devuelva `index.html`: Vercel sirve los archivos literalmente y
+`/terminos` daría 404, que es lo que rompía los enlaces de la app móvil. De eso
+se encarga la reescritura de `vercel.json`; Vercel busca primero en el sistema
+de archivos, así que las imágenes, `robots.txt` y `sitemap.xml` siguen
+sirviéndose tal cual.
+
+`npm run build` además empaqueta todos los estáticos en base64 dentro de
+`dist/server/index.js`, un worker de un solo archivo para hospedajes que lo
+admitan (`.openai/hosting.json`). Hace lo mismo que la reescritura: devuelve
+`index.html` para cualquier ruta sin extensión. Si añades un archivo con una
+extensión que no conozca, agrégala a `CONTENT_TYPES` en `server/index.js` o lo
+servirá como binario.
 
 ## Qué vive aquí y por qué
 
