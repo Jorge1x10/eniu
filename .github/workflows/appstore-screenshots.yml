@@ -29,6 +29,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/eniu-mobile/package-lock.json
+
+      - name: Instalar dependencias del proyecto
+        # eas-cli evalúa app.json localmente (resuelve el plugin de
+        # expo-router) para comandos como build:view, así que sin esto
+        # falla con "Failed to resolve plugin for module expo-router".
+        run: npm ci
 
       - name: Instalar EAS CLI y Maestro
         run: |
