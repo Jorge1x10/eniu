@@ -1,0 +1,31 @@
+# Recorrido para grabar el App Preview (video) que va junto a las capturas
+# en App Store Connect. Login con la cuenta demo y un paseo corto por las
+# cuatro pestañas en español, con una pausa en cada una para que la
+# grabación se vea legible y no como un flash de pantallas.
+#
+# Distinto del flujo de capturas (appstore-screenshots.yaml): éste no toma
+# screenshots ni cambia de idioma, solo navega con calma para la cámara.
+appId: com.eniu.app
+---
+- launchApp
+- tapOn: "correo@ejemplo.com"
+- inputText: ${MAESTRO_EMAIL}
+- tapOn: "Tu contraseña"
+- inputText: ${MAESTRO_PASSWORD}
+- hideKeyboard
+- tapOn: "Iniciar sesión"
+- assertVisible: "Inicio"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn: "Menús"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn: "Analíticas"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn: "Ajustes"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn: "Inicio"
+- waitForAnimationToEnd:
+    timeout: 2000

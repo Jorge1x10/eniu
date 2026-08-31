@@ -3,7 +3,8 @@ name: App Store Screenshots
 # Corre a mano: compila un build de simulador de iOS con EAS, lo instala en
 # un simulador de iPhone 16 Pro Max (la resolución de 6.9" que pide Apple) y
 # usa Maestro para loguearse con la cuenta demo y capturar cada pantalla en
-# español e inglés.
+# español e inglés. También graba un App Preview (video corto) del recorrido
+# en español para la misma sección de App Store Connect.
 #
 # Secrets que necesita este repo (Settings -> Secrets and variables -> Actions):
 #   EXPO_TOKEN               token de acceso de Expo (eas.dev -> Access tokens)
@@ -29,6 +30,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/eniu-mobile/package-lock.json
+
+      - name: Instalar dependencias del proyecto
+        # eas-cli evalúa app.json localmente (resuelve el plugin de
+        # expo-router) para comandos como build:view, así que sin esto
+        # falla con "Failed to resolve plugin for module expo-router".
+        run: npm ci
 
       - name: Instalar EAS CLI y Maestro
         run: |
@@ -108,9 +117,41 @@ jobs:
           MAESTRO_PASSWORD: ${{ secrets.EXPO_SCREENSHOT_PASSWORD }}
         run: maestro --device "$DEVICE_ID" test .maestro/appstore-screenshots.yaml
 
+      - name: Grabar App Preview
+        env:
+          MAESTRO_EMAIL: ${{ secrets.EXPO_SCREENSHOT_EMAIL }}
+          MAESTRO_PASSWORD: ${{ secrets.EXPO_SCREENSHOT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p previews
+
+          xcrun simctl io "$DEVICE_ID" recordVideo --codec=h264 --force previews/app-preview-raw.mov &
+          RECORD_PID=$!
+          sleep 2 # le da tiempo al grabador a arrancar antes de navegar
+
+          maestro --device "$DEVICE_ID" test .maestro/appstore-preview.yaml
+
+          sleep 1 # respiro final antes de cortar
+          kill -INT "$RECORD_PID"
+          wait "$RECORD_PID" || true
+
+          # Apple exige 30s como máximo para un App Preview; el recorte es
+          # un límite de seguridad por si algún paso tarda más de lo normal,
+          # no una edición real (el recorrido ya está pensado para durar
+          # bastante menos).
+          ffmpeg -y -i previews/app-preview-raw.mov -t 30 -c copy previews/app-preview-es.mov
+          rm previews/app-preview-raw.mov
+
       - name: Subir capturas
         uses: actions/upload-artifact@v4
         with:
           name: appstore-screenshots
           path: mobile/eniu-mobile/screenshots/*.png
+          if-no-files-found: error
+
+      - name: Subir App Preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: appstore-app-preview
+          path: mobile/eniu-mobile/previews/*.mov
           if-no-files-found: error
