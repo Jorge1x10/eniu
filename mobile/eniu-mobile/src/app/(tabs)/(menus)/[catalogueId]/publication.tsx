@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -27,12 +27,20 @@ export default function PublicationScreen() {
   const query = useQuery({ queryKey: key, queryFn: () => api.get<{ publication: Publication }>(base), enabled: Boolean(selectedBusiness && catalogueId) });
   const publication = query.data?.publication;
   const [justCopied, setJustCopied] = useState(false);
+  const [toggling, setToggling] = useState(false);
 
   async function toggle() {
-    if (!publication) return;
-    const data = await api.patch<{ publication: Publication }>(base, { is_published: !publication.is_published });
-    queryClient.setQueryData(key, data);
-    queryClient.invalidateQueries({ queryKey: ['catalogues', selectedBusiness?.id] });
+    if (!publication || toggling) return;
+    setToggling(true);
+    try {
+      const data = await api.patch<{ publication: Publication }>(base, { is_published: !publication.is_published });
+      queryClient.setQueryData(key, data);
+      queryClient.invalidateQueries({ queryKey: ['catalogues', selectedBusiness?.id] });
+    } catch (requestError) {
+      Alert.alert(t("No se pudo actualizar la publicación"), requestError instanceof Error ? requestError.message : t("Inténtalo de nuevo."));
+    } finally {
+      setToggling(false);
+    }
   }
   async function share() {
     if (publication?.public_url) await Share.share({ title: t("Mi menú digital"), message: publication.public_url, url: publication.public_url });
@@ -62,7 +70,7 @@ export default function PublicationScreen() {
           </View>
         </View>
 
-        {!publication.is_published ? <Button onPress={toggle}>{t("Publicar menú")}</Button> : null}
+        {!publication.is_published ? <Button onPress={toggle} loading={toggling}>{t("Publicar menú")}</Button> : null}
 
         {/* El slug se reserva al primer publicado y se conserva aunque luego se
             despublique, para que un QR ya impreso siga siendo válido. Pero
@@ -92,7 +100,15 @@ export default function PublicationScreen() {
           </View>
         ) : <Text style={{ color: theme.muted, textAlign: 'center' }}>{t("La URL se generará al publicar el menú.")}</Text>}
 
-        {publication.is_published ? <Pressable onPress={toggle} style={({ pressed }) => ({ minHeight: 52, borderRadius: 15, borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}><Text style={{ color: theme.danger, fontWeight: '700', fontSize: 14 }}>{t("Despublicar menú")}</Text></Pressable> : null}
+        {publication.is_published ? (
+          <Pressable
+            onPress={toggle}
+            disabled={toggling}
+            style={({ pressed }) => ({ minHeight: 52, borderRadius: 15, borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center', opacity: toggling ? 0.6 : pressed ? 0.7 : 1 })}
+          >
+            {toggling ? <ActivityIndicator color={theme.danger} /> : <Text style={{ color: theme.danger, fontWeight: '700', fontSize: 14 }}>{t("Despublicar menú")}</Text>}
+          </Pressable>
+        ) : null}
       </>}
     </ScrollView>
   );

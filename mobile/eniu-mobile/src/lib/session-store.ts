@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 const ACCESS_TOKEN = 'eniu.access_token';
 const REFRESH_TOKEN = 'eniu.refresh_token';
 const listeners = new Set<() => void>();
+const tokenListeners = new Set<() => void>();
 
 async function getItem(key: string) {
   if (Platform.OS === 'web') return globalThis.localStorage?.getItem(key) ?? null;
@@ -26,13 +27,20 @@ export const sessionStore = {
   async save(accessToken: string, refreshToken?: string | null) {
     await setItem(ACCESS_TOKEN, accessToken);
     if (refreshToken) await setItem(REFRESH_TOKEN, refreshToken);
+    tokenListeners.forEach((listener) => listener());
   },
   async clear() {
     await Promise.all([deleteItem(ACCESS_TOKEN), deleteItem(REFRESH_TOKEN)]);
     listeners.forEach((listener) => listener());
+    tokenListeners.forEach((listener) => listener());
   },
   subscribe(listener: () => void) {
     listeners.add(listener);
     return () => { listeners.delete(listener); };
+  },
+  /** A diferencia de `subscribe` (sólo cierre de sesión), avisa también cuando se guarda un token nuevo (p. ej. tras refrescar el access token). */
+  subscribeToken(listener: () => void) {
+    tokenListeners.add(listener);
+    return () => { tokenListeners.delete(listener); };
   },
 };

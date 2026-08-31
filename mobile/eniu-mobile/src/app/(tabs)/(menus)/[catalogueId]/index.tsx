@@ -38,6 +38,7 @@ export default function CatalogueDetailScreen() {
   const categories = useQuery({ queryKey: ['categories', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ categories: Category[] }>(`${base}/categories`), enabled: Boolean(selectedBusiness && catalogueId) });
   const counts: Record<string, number | undefined> = { products: products.data?.products.length, categories: categories.data?.categories.length };
   const [deleting, setDeleting] = useState(false);
+  const [togglingPublication, setTogglingPublication] = useState(false);
 
   // Esta pantalla queda montada en el stack de Menús. Si el usuario cambia de
   // negocio desde otra pestaña, el menú abierto ya no pertenece al negocio
@@ -52,11 +53,18 @@ export default function CatalogueDetailScreen() {
   const notFound = query.isError && query.error instanceof ApiError && query.error.status === 404;
 
   async function togglePublication() {
-    if (!selectedBusiness || !catalogue) return;
-    const path = `businesses/${selectedBusiness.id}/catalogues/${catalogue.id}/${catalogue.is_published ? 'unpublish' : 'publish'}`;
-    const data = await api.post<{ catalogue: Catalogue }>(path);
-    queryClient.setQueryData(catalogueKeys.detail(selectedBusiness.id, catalogue.id), data);
-    queryClient.invalidateQueries({ queryKey: catalogueKeys.all(selectedBusiness.id) });
+    if (!selectedBusiness || !catalogue || togglingPublication) return;
+    setTogglingPublication(true);
+    try {
+      const path = `businesses/${selectedBusiness.id}/catalogues/${catalogue.id}/${catalogue.is_published ? 'unpublish' : 'publish'}`;
+      const data = await api.post<{ catalogue: Catalogue }>(path);
+      queryClient.setQueryData(catalogueKeys.detail(selectedBusiness.id, catalogue.id), data);
+      queryClient.invalidateQueries({ queryKey: catalogueKeys.all(selectedBusiness.id) });
+    } catch (requestError) {
+      Alert.alert(t("No se pudo actualizar la publicación"), requestError instanceof Error ? requestError.message : t("Inténtalo de nuevo."));
+    } finally {
+      setTogglingPublication(false);
+    }
   }
 
   // El borrado va por pulsación larga y confirmación: se lleva por delante
@@ -93,7 +101,7 @@ export default function CatalogueDetailScreen() {
         <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: '#111111', padding: 20, gap: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <View style={{ minHeight: 26, justifyContent: 'center', borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : 'rgba(255,255,255,0.12)', paddingHorizontal: 10 }}><Text style={{ color: catalogue.is_published ? '#111111' : '#C7C7C7', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 }}>{catalogue.is_published ? 'PUBLICADO' : 'BORRADOR'}</Text></View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text style={{ color: '#C7C7C7', fontSize: 12, fontWeight: '600' }}>{t("Visible")}</Text><Switch value={catalogue.is_published} onValueChange={togglePublication} trackColor={{ true: theme.yellow }} /></View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text style={{ color: '#C7C7C7', fontSize: 12, fontWeight: '600' }}>{t("Visible")}</Text><Switch value={catalogue.is_published} onValueChange={togglePublication} disabled={togglingPublication} trackColor={{ true: theme.yellow }} /></View>
           </View>
           <View style={{ gap: 6 }}>
             <Text selectable style={{ color: '#FFFDF5', fontSize: 26, fontWeight: '800' }}>{catalogue.name}</Text>
