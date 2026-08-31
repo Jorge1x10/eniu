@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import SettingsPage from "./SettingsPage";
+import { LanguageProvider } from "../../../i18n/LanguageProvider";
 
 const mocks = vi.hoisted(() => ({
   auth: {}, business: {}, handlers: {}, navigate: vi.fn(),
@@ -23,7 +24,17 @@ vi.mock("react-router", async (importOriginal) => ({ ...(await importOriginal())
 const userData = { id: "user-1", name: "Jorge", username: "jorge", phone_number: "3312345678", email: "jorge@example.com", profile_picture: null, auth_methods: { password: true, google: false } };
 const businessData = { id: "business-1", name: "Café ENIU", description: "Café local", phone: "", whatsapp: "", address: "Centro", currency: "MXN", timezone: "America/Mexico_City" };
 
-function renderPage() { return render(<MemoryRouter><SettingsPage /></MemoryRouter>); }
+// Con el proveedor de idioma, igual que en `main.jsx`: el selector de idioma
+// de esta pantalla lo necesita para saber cuál está activo.
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <LanguageProvider>
+        <SettingsPage />
+      </LanguageProvider>
+    </MemoryRouter>,
+  );
+}
 
 describe("SettingsPage", () => {
   beforeEach(() => {

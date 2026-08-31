@@ -7,15 +7,19 @@ import { Button } from '@/components/ui/button';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useOnboarding, type MenuChoice } from '@/features/onboarding/onboarding-context';
 import { getStarterMenu } from '@/features/onboarding/starter-menus';
+import { useTranslation } from 'react-i18next';
+import { currentLocale } from '@/i18n/formats';
 
 export default function OnboardingMenuScreen() {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const insets = useSafeAreaInsets();
   const { draft, setMenuChoice } = useOnboarding();
 
   if (!draft.businessName) return <Redirect href="/(onboarding)/business" />;
   const starter = getStarterMenu(draft.businessType);
-  const currency = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+  const currency = new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: 'MXN' });
 
   // Igual que el paso 1: sólo se registra la elección, el alta ocurre en el paso 3.
   function choose(choice: MenuChoice) {
@@ -26,7 +30,7 @@ export default function OnboardingMenuScreen() {
   return (
     <ScrollView contentInsetAdjustmentBehavior="never" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, gap: 24, flexGrow: 1, backgroundColor: theme.background }}>
       <View style={{ gap: 10 }}>
-        <Text style={{ color: theme.yellowPressed, fontWeight: '700', fontSize: 14 }}>Paso 2 de 3</Text>
+        <Text style={{ color: theme.yellowPressed, fontWeight: '700', fontSize: 14 }}>{t("Paso 2 de 3")}</Text>
         <View style={{ flexDirection: 'row', gap: 5 }}>
           <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.yellow }} />
           <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.yellow }} />
@@ -35,15 +39,15 @@ export default function OnboardingMenuScreen() {
       </View>
 
       <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 8 }}>
-        <Text style={{ color: theme.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.6, lineHeight: 36 }}>Este es tu menú de arranque</Text>
-        <Text style={{ color: theme.muted, fontSize: 14, lineHeight: 21 }}>Ya tiene una categoría y {starter.products.length} productos de ejemplo. Edítalos cuando quieras.</Text>
+        <Text style={{ color: theme.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.6, lineHeight: 36 }}>{t("Este es tu menú de arranque")}</Text>
+        <Text style={{ color: theme.muted, fontSize: 14, lineHeight: 21 }}>{t("Ya tiene una categoría y")} {starter.products.length} {t("productos de ejemplo. Edítalos cuando quieras.")}</Text>
       </Animated.View>
 
       <Animated.View entering={FadeIn.duration(360).delay(80)} style={{ borderRadius: 22, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface, overflow: 'hidden' }}>
         <View style={{ backgroundColor: '#111111', padding: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <View style={{ gap: 3 }}>
-            <Text style={{ color: '#FFFDF5', fontSize: 19, fontWeight: '800' }}>Menú principal</Text>
-            <Text style={{ color: theme.yellow, fontSize: 11, fontWeight: '600' }}>Vista previa</Text>
+            <Text style={{ color: '#FFFDF5', fontSize: 19, fontWeight: '800' }}>{t("Menú principal")}</Text>
+            <Text style={{ color: theme.yellow, fontSize: 11, fontWeight: '600' }}>{t("Vista previa")}</Text>
           </View>
           <View style={{ minHeight: 26, justifyContent: 'center', borderRadius: 99, backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, paddingHorizontal: 10 }}><Text style={{ color: theme.muted, fontSize: 10, fontWeight: '800', letterSpacing: 0.3 }}>EJEMPLO</Text></View>
         </View>
@@ -61,8 +65,8 @@ export default function OnboardingMenuScreen() {
 
       <View style={{ flex: 1, minHeight: 12 }} />
       <View style={{ gap: 10 }}>
-        <Button onPress={() => choose('starter')}>Usar este menú</Button>
-        <Button variant="secondary" onPress={() => choose('blank')}>Empezar en blanco</Button>
+        <Button onPress={() => choose('starter')}>{t("Usar este menú")}</Button>
+        <Button variant="secondary" onPress={() => choose('blank')}>{t("Empezar en blanco")}</Button>
       </View>
     </ScrollView>
   );

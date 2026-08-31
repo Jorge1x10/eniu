@@ -19,6 +19,7 @@ from io import BytesIO
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.datastructures import FileStorage
+from app.shared.i18n import _
 
 # Lado mayor permitido. Coincide con el perfil de mayor calidad de los
 # clientes, para que una imagen que el dueño ya subió en "alta" pase intacta en
@@ -84,14 +85,14 @@ def optimize(source):
         # que se pueden mirar formato y dimensiones sin pagar la memoria.
         image = Image.open(source.stream)
     except (UnidentifiedImageError, OSError) as error:
-        raise InvalidImage("El archivo no contiene una imagen válida") from error
+        raise InvalidImage(_("El archivo no contiene una imagen válida")) from error
 
     if image.format not in ACCEPTED_FORMATS:
-        raise InvalidImage("Las imágenes deben ser JPG, PNG o WebP")
+        raise InvalidImage(_("Las imágenes deben ser JPG, PNG o WebP"))
 
     width, height = image.size
     if width * height > MAX_PIXELS:
-        raise InvalidImage("La imagen tiene demasiados píxeles. Redúcela antes de subirla.")
+        raise InvalidImage(_("La imagen tiene demasiados píxeles. Redúcela antes de subirla."))
 
     try:
         # Ya viene en el formato de salida y dentro del presupuesto: guardarla
@@ -128,6 +129,6 @@ def optimize(source):
         rendered.save(destination, format="WEBP", quality=WEBP_QUALITY, method=4)
         return _as_upload(destination), OUTPUT_EXTENSION
     except (OSError, ValueError) as error:
-        raise InvalidImage("No fue posible procesar la imagen") from error
+        raise InvalidImage(_("No fue posible procesar la imagen")) from error
     finally:
         image.close()

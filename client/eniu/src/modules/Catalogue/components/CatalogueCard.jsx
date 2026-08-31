@@ -2,13 +2,15 @@ import { CalendarDays, Pencil, Send, Trash2, Undo2 } from "lucide-react";
 import { Link } from "react-router";
 
 import CatalogueStatusBadge from "./CatalogueStatusBadge";
+import { useTranslation } from "react-i18next";
+import { currentLocale } from "../../../i18n/formats";
 
 function formatDate(value) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
 
-  return new Intl.DateTimeFormat("es-MX", {
+  return new Intl.DateTimeFormat(currentLocale(), {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -22,6 +24,8 @@ export default function CatalogueCard({
   onTogglePublished,
   onDelete,
 }) {
+  const { t } = useTranslation();
+
   const updatedAt = formatDate(catalogue.updated_at);
 
   return (
@@ -33,14 +37,14 @@ export default function CatalogueCard({
             {catalogue.name}
           </h2>
           <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-[#666666]">
-            {catalogue.description || "Sin descripción"}
+            {catalogue.description || t("Sin descripción")}
           </p>
         </div>
       </div>
 
       {updatedAt && (
         <p className="mt-4 flex items-center gap-2 text-xs text-[#777777]">
-          <CalendarDays size={14} /> Actualizado el {updatedAt}
+          <CalendarDays size={14} /> {t("Actualizado el")} {updatedAt}
         </p>
       )}
 
@@ -50,7 +54,7 @@ export default function CatalogueCard({
           state={{ catalogue }}
           className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#FFE05A] px-3.5 py-2 text-sm font-semibold text-[#111111] hover:bg-[#E8C93D]"
         >
-          <Pencil size={15} /> Administrar
+          <Pencil size={15} /> {t("Administrar")}
         </Link>
         <button
           type="button"

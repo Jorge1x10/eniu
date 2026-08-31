@@ -6,6 +6,7 @@ from app import images, storage
 from app.database.db import db
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
+from app.shared.i18n import _
 
 
 ALLOWED_PHOTO_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
@@ -39,7 +40,7 @@ def create_business(owner_id, data):
 
     if not name:
         return {
-            "message": "El nombre del negocio es obligatorio"
+            "message": _("El nombre del negocio es obligatorio")
         }, 400
 
     blocked = ensure_can_create_business(owner_id)
@@ -53,7 +54,7 @@ def create_business(owner_id, data):
 
     if existing_business:
         return {
-            "message": "Ya tienes un negocio con ese nombre"
+            "message": _("Ya tienes un negocio con ese nombre")
         }, 409
 
     business = Business(
@@ -65,7 +66,7 @@ def create_business(owner_id, data):
         db.session.commit()
 
         return {
-            "message": "Negocio registrado correctamente",
+            "message": _("Negocio registrado correctamente"),
             "business": business.to_dict()
         }, 201
 
@@ -73,7 +74,7 @@ def create_business(owner_id, data):
         db.session.rollback()
 
         return {
-            "message": "No fue posible registrar el negocio"
+            "message": _("No fue posible registrar el negocio")
         }, 500
 
 def get_businesses_by_owner(owner_id):
@@ -94,12 +95,12 @@ def get_businesses_by_owner(owner_id):
 
     except (ValueError, TypeError):
         return {
-            "message": "El identificador del usuario no es válido"
+            "message": _("El identificador del usuario no es válido")
         }, 400
 
     except SQLAlchemyError:
         return {
-            "message": "No fue posible consultar los negocios"
+            "message": _("No fue posible consultar los negocios")
         }, 500
 
 
@@ -133,7 +134,7 @@ def update_business(owner_id, business_id, data, photo=None):
         owner_uuid = UUID(owner_id)
         business_uuid = UUID(business_id)
     except (ValueError, TypeError):
-        return {"message": "El identificador del negocio no es válido"}, 400
+        return {"message": _("El identificador del negocio no es válido")}, 400
 
     business = Business.query.filter_by(
         id=business_uuid,
@@ -141,7 +142,7 @@ def update_business(owner_id, business_id, data, photo=None):
     ).first()
 
     if not business:
-        return {"message": "Negocio no encontrado"}, 404
+        return {"message": _("Negocio no encontrado")}, 404
 
     new_photo_filename = None
     old_photo_filename = business.photo_filename
@@ -150,7 +151,7 @@ def update_business(owner_id, business_id, data, photo=None):
         name, has_name = _optional_text(data, "name", 64)
         if has_name:
             if not name:
-                return {"message": "El nombre del negocio es obligatorio"}, 400
+                return {"message": _("El nombre del negocio es obligatorio")}, 400
 
             duplicate = Business.query.filter(
                 Business.owner_id == owner_uuid,
@@ -158,7 +159,7 @@ def update_business(owner_id, business_id, data, photo=None):
                 Business.id != business_uuid,
             ).first()
             if duplicate:
-                return {"message": "Ya tienes un negocio con ese nombre"}, 409
+                return {"message": _("Ya tienes un negocio con ese nombre")}, 409
             business.name = name
 
         field_lengths = {
@@ -173,14 +174,14 @@ def update_business(owner_id, business_id, data, photo=None):
             value, was_sent = _optional_text(data, field, max_length)
             if was_sent:
                 if field == "timezone" and not value:
-                    return {"message": "La zona horaria es obligatoria"}, 400
+                    return {"message": _("La zona horaria es obligatoria")}, 400
                 setattr(business, field, value)
 
         currency, has_currency = _optional_text(data, "currency", 3)
         if has_currency:
             currency = currency.upper() if currency else "MXN"
             if len(currency) != 3 or not currency.isalpha():
-                return {"message": "La moneda debe tener un código de 3 letras"}, 400
+                return {"message": _("La moneda debe tener un código de 3 letras")}, 400
             business.currency = currency
 
         if "is_active" in data:
@@ -196,13 +197,13 @@ def update_business(owner_id, business_id, data, photo=None):
                 or photo.mimetype not in ALLOWED_PHOTO_MIMETYPES
             ):
                 return {
-                    "message": "La foto debe ser JPG, PNG o WebP"
+                    "message": _("La foto debe ser JPG, PNG o WebP")
                 }, 400
             expected_type = "jpeg" if extension in {"jpg", "jpeg"} else extension
             if _detected_photo_type(photo) != expected_type:
-                return {"message": "El archivo no contiene una foto válida"}, 400
+                return {"message": _("El archivo no contiene una foto válida")}, 400
             if _photo_size(photo) > MAX_PHOTO_BYTES:
-                return {"message": "La foto puede pesar máximo 5 MB"}, 400
+                return {"message": _("La foto puede pesar máximo 5 MB")}, 400
 
             try:
                 optimized, extension = images.optimize(photo)
@@ -222,7 +223,7 @@ def update_business(owner_id, business_id, data, photo=None):
             _delete_photo(old_photo_filename)
 
         return {
-            "message": "Negocio actualizado correctamente",
+            "message": _("Negocio actualizado correctamente"),
             "business": business.to_dict(),
         }, 200
 
@@ -234,4 +235,4 @@ def update_business(owner_id, business_id, data, photo=None):
         db.session.rollback()
         _delete_photo(new_photo_filename)
         current_app.logger.exception(error)
-        return {"message": "No fue posible actualizar el negocio"}, 500
+        return {"message": _("No fue posible actualizar el negocio")}, 500

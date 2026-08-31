@@ -15,6 +15,7 @@ from .services import (
     revoke_other_sessions,
     update_user_profile,
 )
+from app.shared.i18n import _
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
@@ -39,7 +40,7 @@ def register():
 
     if error:
         return jsonify({
-            "message": error.get("message", "No fue posible registrar al usuario"),
+            "message": error.get("message", _("No fue posible registrar al usuario")),
             "code": error.get("code"),
         }), 400 if error.get("code") == "invalid_password" else 409
     
@@ -52,7 +53,7 @@ def register():
     )
 
     return jsonify({
-        "message": "Usuario registrado correctamente",
+        "message": _("Usuario registrado correctamente"),
         "user": user.to_dict(),
         "access_token": access_token,
         "refresh_token": refresh_token
@@ -65,7 +66,7 @@ def login():
 
     if not data:
         return jsonify({
-            "message": "Debes enviar información en formato JSON"
+            "message": _("Debes enviar información en formato JSON")
         }), 400
 
     identifier = data.get("identifier")
@@ -73,7 +74,7 @@ def login():
 
     if not identifier or not password:
         return jsonify({
-            "message": "Usuario/correo y contraseña son obligatorios"
+            "message": _("Usuario/correo y contraseña son obligatorios")
         }), 400
 
     user = authenticate_user(identifier, password)
@@ -93,7 +94,7 @@ def login():
     )
 
     return jsonify({
-        "message": "Inicio de sesión correcto",
+        "message": _("Inicio de sesión correcto"),
         "user": user.to_dict(),
         "access_token": access_token,
         "refresh_token": refresh_token
@@ -107,7 +108,7 @@ def get_current_user():
 
     if not user:
         return jsonify({
-            "message": "Usuario no encontrado"
+            "message": _("Usuario no encontrado")
         }), 404
 
     return jsonify({
@@ -136,7 +137,7 @@ def complete_profile():
 
     if not data:
         return jsonify({
-            "message": "No se enviaron datos"
+            "message": _("No se enviaron datos")
         }), 400
 
     user, error = update_user_profile(user_id, data)
@@ -147,7 +148,7 @@ def complete_profile():
         }), 400
 
     return jsonify({
-        "message": "Perfil actualizado correctamente",
+        "message": _("Perfil actualizado correctamente"),
         "user": user.to_dict()
     }), 200
 
@@ -160,14 +161,14 @@ def google_auth():
 
     if not credential:
         return jsonify({
-            "message": "La credencial de Google es obligatoria"
+            "message": _("La credencial de Google es obligatoria")
         }), 400
 
     user, error = authenticate_google_user(credential)
 
     if error:
         return jsonify({
-            "message": error.get("message", "No fue posible autenticar con Google"),
+            "message": error.get("message", _("No fue posible autenticar con Google")),
             "code": error.get("code"),
         }), 401
 
@@ -180,7 +181,7 @@ def google_auth():
     )
 
     return jsonify({
-        "message": "Autenticación con Google correcta",
+        "message": _("Autenticación con Google correcta"),
         "user": user.to_dict(),
         "access_token": access_token,
         "refresh_token": refresh_token
@@ -195,7 +196,7 @@ def apple_auth():
 
     if not identity_token:
         return jsonify({
-            "message": "La credencial de Apple es obligatoria"
+            "message": _("La credencial de Apple es obligatoria")
         }), 400
 
     # Apple entrega el nombre sólo en la primera autorización, así que el
@@ -214,7 +215,7 @@ def apple_auth():
 
     if error:
         return jsonify({
-            "message": error.get("message", "No fue posible autenticar con Apple"),
+            "message": error.get("message", _("No fue posible autenticar con Apple")),
             "code": error.get("code"),
         }), 401
 
@@ -227,7 +228,7 @@ def apple_auth():
     )
 
     return jsonify({
-        "message": "Autenticación con Apple correcta",
+        "message": _("Autenticación con Apple correcta"),
         "user": user.to_dict(),
         "access_token": access_token,
         "refresh_token": refresh_token
@@ -239,16 +240,16 @@ def apple_auth():
 @limiter.limit("10 per hour")
 def update_password():
     if request.content_length and request.content_length > 16 * 1024:
-        return jsonify({"message": "La solicitud es demasiado grande"}), 400
+        return jsonify({"message": _("La solicitud es demasiado grande")}), 400
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
-        return jsonify({"message": "Debes enviar información en formato JSON"}), 400
+        return jsonify({"message": _("Debes enviar información en formato JSON")}), 400
     allowed = {"current_password", "new_password"}
     unknown = set(data) - allowed
     if unknown:
-        return jsonify({"message": "Se enviaron campos no permitidos", "fields": sorted(unknown)}), 400
+        return jsonify({"message": _("Se enviaron campos no permitidos"), "fields": sorted(unknown)}), 400
     if not all(data.get(field) for field in allowed):
-        return jsonify({"message": "La contraseña actual y la nueva son obligatorias"}), 400
+        return jsonify({"message": _("La contraseña actual y la nueva son obligatorias")}), 400
 
     tokens, error, status = change_password(
         get_jwt_identity(), data["current_password"], data["new_password"]
@@ -256,7 +257,7 @@ def update_password():
     if error:
         return jsonify({"message": error}), status
     return jsonify({
-        "message": "Contraseña actualizada correctamente",
+        "message": _("Contraseña actualizada correctamente"),
         **tokens,
     }), 200
 
@@ -268,14 +269,14 @@ def revoke_sessions():
     if error:
         return jsonify({"message": error}), status
     return jsonify({
-        "message": "Las demás sesiones fueron cerradas",
+        "message": _("Las demás sesiones fueron cerradas"),
         **tokens,
     }), 200
 
 
 RESET_REQUEST_MESSAGE = (
-    "Si existe una cuenta asociada, recibirás instrucciones para "
-    "restablecer tu contraseña."
+    _("Si existe una cuenta asociada, recibirás instrucciones para "
+    "restablecer tu contraseña.")
 )
 
 
@@ -299,21 +300,21 @@ def forgot_password():
 @limiter.limit("10 per hour")
 def confirm_password_reset():
     if request.content_length and request.content_length > 16 * 1024:
-        return jsonify({"message": "La solicitud es demasiado grande"}), 400
+        return jsonify({"message": _("La solicitud es demasiado grande")}), 400
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
-        return jsonify({"message": "Debes enviar información en formato JSON"}), 400
+        return jsonify({"message": _("Debes enviar información en formato JSON")}), 400
     unknown = set(data) - {"token", "new_password"}
     if unknown:
-        return jsonify({"message": "Se enviaron campos no permitidos"}), 400
+        return jsonify({"message": _("Se enviaron campos no permitidos")}), 400
     token = data.get("token")
     new_password = data.get("new_password")
     if not isinstance(token, str) or not token or not isinstance(new_password, str):
-        return jsonify({"message": "El enlace y la nueva contraseña son obligatorios"}), 400
+        return jsonify({"message": _("El enlace y la nueva contraseña son obligatorios")}), 400
 
     error, status = reset_password(token, new_password)
     if error:
         return jsonify({"message": error}), status
     return jsonify({
-        "message": "Tu contraseña fue actualizada. Ya puedes iniciar sesión."
+        "message": _("Tu contraseña fue actualizada. Ya puedes iniciar sesión.")
     }), 200

@@ -14,6 +14,7 @@ from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 from app.modules.products.model import Product
 from app.modules.users.model import User
+from app.shared.i18n import _
 
 
 def _blocked(message, limit=None):
@@ -47,9 +48,9 @@ def ensure_can_create_business(owner_id):
     if plans.within_limit(current, maximum):
         return None
     return _blocked(
-        f"Tu plan actual permite {maximum} negocio."
+        _("Tu plan actual permite {limit} negocio.", limit=maximum)
         if maximum == 1 else
-        f"Tu plan actual permite hasta {maximum} negocios.",
+        _("Tu plan actual permite hasta {limit} negocios.", limit=maximum),
         maximum,
     )
 
@@ -61,9 +62,9 @@ def ensure_can_create_catalogue(owner_id, business_id):
     if plans.within_limit(current, maximum):
         return None
     return _blocked(
-        f"Tu plan actual permite {maximum} menú por negocio."
+        _("Tu plan actual permite {limit} menú por negocio.", limit=maximum)
         if maximum == 1 else
-        f"Tu plan actual permite hasta {maximum} menús por negocio.",
+        _("Tu plan actual permite hasta {limit} menús por negocio.", limit=maximum),
         maximum,
     )
 
@@ -74,13 +75,16 @@ def ensure_can_create_product(owner_id, catalogue_id):
     current = Product.query.filter_by(catalogue_id=catalogue_id).count()
     if plans.within_limit(current, maximum):
         return None
-    return _blocked(f"Tu plan actual permite hasta {maximum} productos por menú.", maximum)
+    return _blocked(
+        _("Tu plan actual permite hasta {limit} productos por menú.", limit=maximum),
+        maximum,
+    )
 
 
 def ensure_analytics_access(owner_id):
     if limits_for_owner(owner_id)["allow_analytics"]:
         return None
-    return _blocked("Tu plan actual no incluye analíticas.")
+    return _blocked(_("Tu plan actual no incluye analíticas."))
 
 
 def ensure_template_allowed(owner_id, template_key=None, theme=None, cover_upload=False,
@@ -108,29 +112,29 @@ def ensure_template_allowed(owner_id, template_key=None, theme=None, cover_uploa
 
     # Subir una imagen sí es siempre un intento de usar la función.
     if cover_upload and not limits["allow_cover"]:
-        return _blocked("Tu plan actual no incluye portada en el menú.")
+        return _blocked(_("Tu plan actual no incluye portada en el menú."))
     if background_upload and not limits["allow_background"]:
-        return _blocked("Tu plan actual no incluye imagen de fondo en el menú.")
+        return _blocked(_("Tu plan actual no incluye imagen de fondo en el menú."))
     if splash_upload and not limits["allow_splash"]:
-        return _blocked("Tu plan actual no incluye la pantalla de bienvenida del menú.")
+        return _blocked(_("Tu plan actual no incluye la pantalla de bienvenida del menú."))
 
     if changed(template_key, current.get("template_key")) and not plans.allows_template(plan_key, template_key):
-        return _blocked("Tu plan actual sólo incluye la plantilla básica.")
+        return _blocked(_("Tu plan actual sólo incluye la plantilla básica."))
 
     font_key = theme.get("font_key")
     if changed(font_key, current_theme.get("font_key")) and not plans.allows_font(plan_key, font_key):
-        return _blocked("Tu plan actual sólo incluye la tipografía básica.")
+        return _blocked(_("Tu plan actual sólo incluye la tipografía básica."))
 
     if not limits["allow_cover"] and theme.get("show_cover") is True and current_theme.get("show_cover") is not True:
-        return _blocked("Tu plan actual no incluye portada en el menú.")
+        return _blocked(_("Tu plan actual no incluye portada en el menú."))
 
     if not limits["allow_background"] and changed(theme.get("background_opacity"), current_theme.get("background_opacity")):
-        return _blocked("Tu plan actual no incluye la personalización del fondo.")
+        return _blocked(_("Tu plan actual no incluye la personalización del fondo."))
 
     if not limits["allow_splash"]:
         turning_on = requested_splash.get("enabled") is True and current_splash.get("enabled") is not True
         if turning_on or changed(requested_splash.get("duration"), current_splash.get("duration")):
-            return _blocked("Tu plan actual no incluye la pantalla de bienvenida del menú.")
+            return _blocked(_("Tu plan actual no incluye la pantalla de bienvenida del menú."))
 
     return None
 

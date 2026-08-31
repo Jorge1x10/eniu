@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { CheckIcon } from '@/components/ui/icons';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { normalizeHex, readableOn } from '@/features/templates/menu-theme';
+import { useTranslation } from 'react-i18next';
 
 function hslToHex(hue: number, saturation: number, lightness: number) {
   const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
@@ -45,6 +46,8 @@ function Swatch({ color, selected, onPress }: { color: string; selected: boolean
  * memoria; el campo de texto sigue ahí para quien traiga el color de su marca.
  */
 export function ColorField({ label, hint, value, original, error, onChange }: { label: string; hint?: string; value: string; original?: string; error?: string; onChange: (value: string) => void }) {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -67,7 +70,7 @@ export function ColorField({ label, hint, value, original, error, onChange }: { 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>{label}</Text>
         {original && normalizeHex(value) !== normalizeHex(original) ? (
-          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => onChange(original)}><Text style={{ color: theme.yellowPressed, fontSize: 12, fontWeight: '700' }}>Restaurar</Text></Pressable>
+          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => onChange(original)}><Text style={{ color: theme.yellowPressed, fontSize: 12, fontWeight: '700' }}>{t("Restaurar")}</Text></Pressable>
         ) : null}
       </View>
       <Pressable
@@ -81,7 +84,7 @@ export function ColorField({ label, hint, value, original, error, onChange }: { 
           <Text style={{ color: theme.text, fontSize: 14.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{value.toUpperCase()}</Text>
           {hint ? <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 11.5, marginTop: 1 }}>{hint}</Text> : null}
         </View>
-        <Text style={{ color: theme.yellowPressed, fontSize: 12.5, fontWeight: '800' }}>Cambiar</Text>
+        <Text style={{ color: theme.yellowPressed, fontSize: 12.5, fontWeight: '800' }}>{t("Cambiar")}</Text>
       </Pressable>
       {error ? <Text style={{ color: theme.danger, fontSize: 12 }}>{error}</Text> : null}
 
@@ -111,8 +114,8 @@ export function ColorField({ label, hint, value, original, error, onChange }: { 
               ))}
             </ScrollView>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Button variant="secondary" style={{ flex: 1 }} onPress={() => setOpen(false)}>Cancelar</Button>
-              <Button style={{ flex: 1 }} disabled={!valid} onPress={confirm}>Usar color</Button>
+              <Button variant="secondary" style={{ flex: 1 }} onPress={() => setOpen(false)}>{t("Cancelar")}</Button>
+              <Button style={{ flex: 1 }} disabled={!valid} onPress={confirm}>{t("Usar color")}</Button>
             </View>
           </View>
         </View>

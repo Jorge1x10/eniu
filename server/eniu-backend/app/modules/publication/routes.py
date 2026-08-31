@@ -14,6 +14,7 @@ from .services import (
     get_public_splash,
     get_publication,
 )
+from app.shared.i18n import _
 
 
 publication_bp = Blueprint("publication", __name__, url_prefix="/api")
@@ -31,7 +32,7 @@ def publication_status(business_id, catalogue_id):
 def update_publication(business_id, catalogue_id):
     data = request.get_json(silent=True)
     if not isinstance(data, dict) or set(data) != {"is_published"}:
-        return jsonify({"message": "Debes enviar únicamente is_published"}), 400
+        return jsonify({"message": _("Debes enviar únicamente is_published")}), 400
     result, status = change_publication(
         get_jwt_identity(), business_id, catalogue_id, data["is_published"]
     )
@@ -60,7 +61,7 @@ def public_menu(public_slug):
 def public_cover(public_slug):
     filename = get_public_cover(public_slug)
     if not filename:
-        return jsonify({"message": "Imagen no encontrada"}), 404
+        return jsonify({"message": _("Imagen no encontrada")}), 404
     return storage.serve_file(current_app.config["CATALOGUE_COVER_FOLDER"], filename)
 
 
@@ -68,7 +69,7 @@ def public_cover(public_slug):
 def public_background(public_slug):
     filename = get_public_background(public_slug)
     if not filename:
-        return jsonify({"message": "Imagen no encontrada"}), 404
+        return jsonify({"message": _("Imagen no encontrada")}), 404
     return storage.serve_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], filename)
 
 
@@ -76,7 +77,7 @@ def public_background(public_slug):
 def public_splash(public_slug):
     filename = get_public_splash(public_slug)
     if not filename:
-        return jsonify({"message": "Imagen no encontrada"}), 404
+        return jsonify({"message": _("Imagen no encontrada")}), 404
     return storage.serve_file(current_app.config["CATALOGUE_SPLASH_FOLDER"], filename)
 
 
@@ -84,5 +85,5 @@ def public_splash(public_slug):
 def public_product_image(public_slug, section_index, product_index):
     filename = get_public_product_image(public_slug, section_index, product_index)
     if not filename:
-        return jsonify({"message": "Imagen no encontrada"}), 404
+        return jsonify({"message": _("Imagen no encontrada")}), 404
     return storage.serve_file(current_app.config["PRODUCT_UPLOAD_FOLDER"], filename)

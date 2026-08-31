@@ -4,11 +4,14 @@ import { KeyboardAvoidingView, ScrollView, Text, useColorScheme, View } from 're
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useEniuTheme } from '@/constants/eniu-theme';
+import { useTranslation } from 'react-i18next';
 
 const logoLight = require('../../assets/brand/app-icon-light.png');
 const logoDark = require('../../assets/brand/app-icon-dark.png');
 
 export function AuthShell({ title, subtitle, children }: PropsWithChildren<{ title: string; subtitle: string }>) {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const isDark = useColorScheme() === 'dark';
   const insets = useSafeAreaInsets();
@@ -20,7 +23,7 @@ export function AuthShell({ title, subtitle, children }: PropsWithChildren<{ tit
             <Image source={isDark ? logoDark : logoLight} style={{ width: 56, height: 56, borderRadius: 16 }} contentFit="cover" />
             <View style={{ gap: 2, flex: 1 }}>
               <Text style={{ color: theme.text, fontSize: 20, fontWeight: '900', letterSpacing: -0.6 }}>eniu</Text>
-              <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 17 }}>Administra tu menú desde un solo lugar.</Text>
+              <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 17 }}>{t("Administra tu menú desde un solo lugar.")}</Text>
             </View>
           </View>
           <View style={{ gap: 8 }}>

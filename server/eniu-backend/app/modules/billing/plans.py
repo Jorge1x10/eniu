@@ -6,6 +6,8 @@ lugar de cablearlos: así cambiar un límite no obliga a publicar una versión
 nueva en las tiendas.
 """
 
+from app.shared.i18n import _
+
 FREE = "free"
 ESSENTIAL = "essential"
 PRO = "pro"
@@ -117,7 +119,10 @@ def plan_payload(plan_key, effective_key=None, status="inactive", has_access=Fal
     effective_key = effective_key or plan_key
     return {
         "key": plan_key,
-        "name": limits_for(plan_key)["name"],
+        # El nombre se traduce aquí y no en `PLANS` porque ese diccionario es la
+        # fuente en español que sirve de clave del catálogo. Los clientes
+        # también reciben `key`, por si prefieren rotularlo ellos mismos.
+        "name": _(limits_for(plan_key)["name"]),
         "status": status,
         "has_access": has_access,
         "cancel_at_period_end": cancel_at_period_end,

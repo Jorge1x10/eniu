@@ -8,6 +8,7 @@ from app.database.db import db
 from app.modules.billing.guards import ensure_can_create_catalogue
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
+from app.shared.i18n import _
 
 
 def _uuid(value):
@@ -22,15 +23,15 @@ def _business_access(owner_id, business_id):
     business_uuid = _uuid(business_id)
 
     if not owner_uuid:
-        return None, ({"message": "El identificador del usuario no es válido"}, 400)
+        return None, ({"message": _("El identificador del usuario no es válido")}, 400)
     if not business_uuid:
-        return None, ({"message": "Negocio no encontrado"}, 404)
+        return None, ({"message": _("Negocio no encontrado")}, 404)
 
     business = db.session.get(Business, business_uuid)
     if not business:
-        return None, ({"message": "Negocio no encontrado"}, 404)
+        return None, ({"message": _("Negocio no encontrado")}, 404)
     if business.owner_id != owner_uuid:
-        return None, ({"message": "No tienes acceso a este negocio"}, 403)
+        return None, ({"message": _("No tienes acceso a este negocio")}, 403)
 
     return business, None
 
@@ -53,7 +54,7 @@ def catalogue_access(owner_id, business_id, catalogue_id):
 
     catalogue = _catalogue_for_business(business.id, catalogue_id)
     if not catalogue:
-        return None, ({"message": "Catálogo no encontrado"}, 404)
+        return None, ({"message": _("Catálogo no encontrado")}, 404)
 
     return catalogue, None
 
@@ -61,18 +62,18 @@ def catalogue_access(owner_id, business_id, catalogue_id):
 def _name(data, required=False):
     if "name" not in data:
         if required:
-            raise ValueError("El nombre del catálogo es obligatorio")
+            raise ValueError(_("El nombre del catálogo es obligatorio"))
         return None, False
 
     value = data.get("name")
     if not isinstance(value, str):
-        raise ValueError("El nombre del catálogo no es válido")
+        raise ValueError(_("El nombre del catálogo no es válido"))
 
     value = value.strip()
     if not value:
-        raise ValueError("El nombre del catálogo es obligatorio")
+        raise ValueError(_("El nombre del catálogo es obligatorio"))
     if len(value) > 64:
-        raise ValueError("El nombre del catálogo no puede superar 64 caracteres")
+        raise ValueError(_("El nombre del catálogo no puede superar 64 caracteres"))
 
     return value, True
 
@@ -85,7 +86,7 @@ def _description(data):
     if value is None:
         return None, True
     if not isinstance(value, str):
-        raise ValueError("La descripción no es válida")
+        raise ValueError(_("La descripción no es válida"))
 
     return value.strip() or None, True
 
@@ -98,7 +99,7 @@ def _template_id(data):
     if value is None:
         return None, True
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-        raise ValueError("template_id debe ser un entero positivo o null")
+        raise ValueError(_("template_id debe ser un entero positivo o null"))
 
     return value, True
 
@@ -128,7 +129,7 @@ def list_catalogues(owner_id, business_id):
         return {"catalogues": [catalogue.to_dict() for catalogue in catalogues]}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible consultar los catálogos"}, 500
+        return {"message": _("No fue posible consultar los catálogos")}, 500
 
 
 def create_catalogue(owner_id, business_id, data):
@@ -141,12 +142,12 @@ def create_catalogue(owner_id, business_id, data):
         if blocked:
             return blocked
 
-        name, _ = _name(data, required=True)
-        description, _ = _description(data)
-        template_id, _ = _template_id(data)
+        name, _ignored_error = _name(data, required=True)
+        description, _ignored_error = _description(data)
+        template_id, _ignored_error = _template_id(data)
 
         if _duplicate_name(business.id, name):
-            return {"message": "Ya existe un catálogo con ese nombre"}, 409
+            return {"message": _("Ya existe un catálogo con ese nombre")}, 409
 
         catalogue = Catalogue(
             business_id=business.id,
@@ -166,11 +167,11 @@ def create_catalogue(owner_id, business_id, data):
         return {"message": str(error)}, 400
     except IntegrityError:
         db.session.rollback()
-        return {"message": "Ya existe un catálogo con ese nombre"}, 409
+        return {"message": _("Ya existe un catálogo con ese nombre")}, 409
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible crear el catálogo"}, 500
+        return {"message": _("No fue posible crear el catálogo")}, 500
 
 
 def get_catalogue(owner_id, business_id, catalogue_id):
@@ -181,12 +182,12 @@ def get_catalogue(owner_id, business_id, catalogue_id):
 
         catalogue = _catalogue_for_business(business.id, catalogue_id)
         if not catalogue:
-            return {"message": "Catálogo no encontrado"}, 404
+            return {"message": _("Catálogo no encontrado")}, 404
 
         return {"catalogue": catalogue.to_dict()}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible consultar el catálogo"}, 500
+        return {"message": _("No fue posible consultar el catálogo")}, 500
 
 
 def update_catalogue(owner_id, business_id, catalogue_id, data):
@@ -197,18 +198,18 @@ def update_catalogue(owner_id, business_id, catalogue_id, data):
 
         catalogue = _catalogue_for_business(business.id, catalogue_id)
         if not catalogue:
-            return {"message": "Catálogo no encontrado"}, 404
+            return {"message": _("Catálogo no encontrado")}, 404
 
         name, has_name = _name(data)
         description, has_description = _description(data)
         template_id, has_template_id = _template_id(data)
 
         if not any((has_name, has_description, has_template_id)):
-            return {"message": "No se enviaron campos editables"}, 400
+            return {"message": _("No se enviaron campos editables")}, 400
 
         if has_name:
             if _duplicate_name(business.id, name, exclude_id=catalogue.id):
-                return {"message": "Ya existe un catálogo con ese nombre"}, 409
+                return {"message": _("Ya existe un catálogo con ese nombre")}, 409
             catalogue.name = name
         if has_description:
             catalogue.description = description
@@ -224,11 +225,11 @@ def update_catalogue(owner_id, business_id, catalogue_id, data):
         return {"message": str(error)}, 400
     except IntegrityError:
         db.session.rollback()
-        return {"message": "Ya existe un catálogo con ese nombre"}, 409
+        return {"message": _("Ya existe un catálogo con ese nombre")}, 409
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible actualizar el catálogo"}, 500
+        return {"message": _("No fue posible actualizar el catálogo")}, 500
 
 
 def delete_catalogue(owner_id, business_id, catalogue_id):
@@ -239,7 +240,7 @@ def delete_catalogue(owner_id, business_id, catalogue_id):
 
         catalogue = _catalogue_for_business(business.id, catalogue_id)
         if not catalogue:
-            return {"message": "Catálogo no encontrado"}, 404
+            return {"message": _("Catálogo no encontrado")}, 404
 
         product_pictures = [
             picture
@@ -258,11 +259,11 @@ def delete_catalogue(owner_id, business_id, catalogue_id):
         if cover_filename:
             from app.modules.template.services import _delete_cover
             _delete_cover(cover_filename)
-        return {"message": "Catálogo eliminado correctamente"}, 200
+        return {"message": _("Catálogo eliminado correctamente")}, 200
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible eliminar el catálogo"}, 500
+        return {"message": _("No fue posible eliminar el catálogo")}, 500
 
 
 def publish_catalogue(owner_id, business_id, catalogue_id):
@@ -284,5 +285,5 @@ def unpublish_catalogue(owner_id, business_id, catalogue_id):
     catalogue, error = catalogue_access(owner_id, business_id, catalogue_id)
     if error:
         return error
-    return {"message": "Catálogo despublicado correctamente", "catalogue": catalogue.to_dict()}, 200
+    return {"message": _("Catálogo despublicado correctamente"), "catalogue": catalogue.to_dict()}, 200
 

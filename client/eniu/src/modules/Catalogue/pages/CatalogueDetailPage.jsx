@@ -22,8 +22,11 @@ import {
   getCatalogueErrorMessage,
   useCatalogueService,
 } from "../services/catalogueService";
+import { useTranslation } from "react-i18next";
 
 export default function CatalogueDetailPage() {
+  const { t } = useTranslation();
+
   const { businessId, catalogueId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -82,7 +85,7 @@ export default function CatalogueDetailPage() {
       if (response.status === 404) forgetCatalogue(businessId, catalogueId);
       setLoadError(getCatalogueErrorMessage(
         response,
-        "No pudimos cargar el menú. Intenta nuevamente."
+        t("No pudimos cargar el menú. Intenta nuevamente.")
       ));
       setIsLoading(false);
       return;
@@ -117,7 +120,7 @@ export default function CatalogueDetailPage() {
     const name = form.name.trim();
     const description = form.description.trim();
     if (!name) {
-      setActionError("El nombre del menú es obligatorio.");
+      setActionError(t("El nombre del menú es obligatorio."));
       return;
     }
 
@@ -131,7 +134,7 @@ export default function CatalogueDetailPage() {
     if (!response.ok) {
       setActionError(getCatalogueErrorMessage(
         response,
-        "No pudimos guardar los cambios."
+        t("No pudimos guardar los cambios.")
       ));
       return;
     }
@@ -142,7 +145,7 @@ export default function CatalogueDetailPage() {
       name: updatedCatalogue.name || "",
       description: updatedCatalogue.description || "",
     });
-    setSuccessMessage("La información del menú se actualizó correctamente.");
+    setSuccessMessage(t("La información del menú se actualizó correctamente."));
   }
 
   async function handleTogglePublished() {
@@ -160,7 +163,7 @@ export default function CatalogueDetailPage() {
     if (!response.ok) {
       setActionError(getCatalogueErrorMessage(
         response,
-        "No pudimos cambiar el estado del menú."
+        t("No pudimos cambiar el estado del menú.")
       ));
       return;
     }
@@ -168,8 +171,8 @@ export default function CatalogueDetailPage() {
     setCatalogue(response.data.catalogue);
     setSuccessMessage(
       response.data.catalogue.is_published
-        ? "El menú se publicó correctamente."
-        : "El menú volvió a borrador."
+        ? t("El menú se publicó correctamente.")
+        : t("El menú volvió a borrador.")
     );
   }
 
@@ -185,21 +188,21 @@ export default function CatalogueDetailPage() {
   if (loadError || !catalogue) {
     return (
       <section className="mx-auto max-w-3xl rounded-2xl border border-[#E9DDB7] bg-white p-8 text-center shadow-sm">
-        <h1 className="text-xl font-bold text-[#111111]">No pudimos abrir este menú</h1>
+        <h1 className="text-xl font-bold text-[#111111]">{t("No pudimos abrir este menú")}</h1>
         <p role="alert" className="mt-2 text-[#666666]">{loadError}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link
             to={`/dashboard/businesses/${businessId}/catalogues`}
             className="cursor-pointer rounded-xl border border-[#D9D9D9] px-4 py-2.5 font-semibold text-[#2A2A2A]"
           >
-            Volver a Menús
+            {t("Volver a Menús")}
           </Link>
           <button
             type="button"
             onClick={() => loadCatalogue()}
             className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#FFE05A] px-4 py-2.5 font-semibold text-[#111111] hover:bg-[#E8C93D]"
           >
-            <RefreshCw size={17} /> Reintentar
+            <RefreshCw size={17} /> {t("Reintentar")}
           </button>
         </div>
       </section>
@@ -217,13 +220,13 @@ export default function CatalogueDetailPage() {
         to={`/dashboard/businesses/${businessId}/catalogues`}
         className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#666666] hover:text-[#111111]"
       >
-        <ArrowLeft size={17} /> Volver a Menús
+        <ArrowLeft size={17} /> {t("Volver a Menús")}
       </Link>
 
       <header className="rounded-2xl border border-[#E9DDB7] bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-[#8A7420]">{business?.name || "Negocio"}</p>
+            <p className="text-sm font-semibold text-[#8A7420]">{business?.name || t("Negocio")}</p>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <h1 className="truncate text-3xl font-bold text-[#111111]">{catalogue.name}</h1>
               <CatalogueStatusBadge isPublished={catalogue.is_published} />
@@ -247,7 +250,7 @@ export default function CatalogueDetailPage() {
               disabled={isPublishing || isSaving}
               className="flex cursor-pointer items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Trash2 size={17} /> Eliminar
+              <Trash2 size={17} /> {t("Eliminar")}
             </button>
           </div>
         </div>
@@ -267,21 +270,21 @@ export default function CatalogueDetailPage() {
       <form onSubmit={handleSave} className="rounded-2xl border border-[#E9DDB7] bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-[#111111]">Información general</h2>
-            <p className="mt-1 text-sm text-[#666666]">Edita el nombre y la descripción del menú.</p>
+            <h2 className="text-xl font-bold text-[#111111]">{t("Información general")}</h2>
+            <p className="mt-1 text-sm text-[#666666]">{t("Edita el nombre y la descripción del menú.")}</p>
           </div>
           <button
             type="submit"
             disabled={isSaving || !hasChanges || !form.name.trim()}
             className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#2A2A2A] px-4 py-2.5 font-semibold text-white hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Save size={17} /> {isSaving ? "Guardando..." : "Guardar cambios"}
+            <Save size={17} /> {isSaving ? "Guardando..." : t("Guardar cambios")}
           </button>
         </div>
 
         <div className="mt-6 grid gap-5">
           <label>
-            <span className="mb-2 block text-sm font-semibold text-[#2A2A2A]">Nombre del menú</span>
+            <span className="mb-2 block text-sm font-semibold text-[#2A2A2A]">{t("Nombre del menú")}</span>
             <input
               value={form.name}
               onChange={(event) => {
@@ -295,7 +298,7 @@ export default function CatalogueDetailPage() {
             />
           </label>
           <label>
-            <span className="mb-2 block text-sm font-semibold text-[#2A2A2A]">Descripción</span>
+            <span className="mb-2 block text-sm font-semibold text-[#2A2A2A]">{t("Descripción")}</span>
             <textarea
               value={form.description}
               onChange={(event) => {
@@ -305,7 +308,7 @@ export default function CatalogueDetailPage() {
               rows={4}
               disabled={isSaving}
               className="w-full resize-y rounded-xl border border-[#D9D9D9] bg-[#FFFDF5] px-4 py-3 outline-none focus:border-[#E8C93D] focus:ring-2 focus:ring-[#FFE05A]/40 disabled:opacity-60"
-              placeholder="Agrega una descripción opcional"
+              placeholder={t("Agrega una descripción opcional")}
             />
           </label>
         </div>
@@ -318,7 +321,7 @@ export default function CatalogueDetailPage() {
         >
           <div className="flex items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFE05A] text-[#111111]"><FolderOpen size={21} /></div>
-            <div><h2 className="font-bold text-[#111111]">Categorías</h2><p className="mt-1 text-sm text-[#666666]">Organiza los productos de este menú.</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">Administrar categorías</span></div>
+            <div><h2 className="font-bold text-[#111111]">{t("Categorías")}</h2><p className="mt-1 text-sm text-[#666666]">{t("Organiza los productos de este menú.")}</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">{t("Administrar categorías")}</span></div>
           </div>
         </Link>
         <Link
@@ -327,7 +330,7 @@ export default function CatalogueDetailPage() {
         >
           <div className="flex items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFE05A] text-[#111111]"><PackageOpen size={21} /></div>
-            <div><h2 className="font-bold text-[#111111]">Productos</h2><p className="mt-1 text-sm text-[#666666]">Crea productos con o sin categoría.</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">Administrar productos</span></div>
+            <div><h2 className="font-bold text-[#111111]">{t("Productos")}</h2><p className="mt-1 text-sm text-[#666666]">{t("Crea productos con o sin categoría.")}</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">{t("Administrar productos")}</span></div>
           </div>
         </Link>
         <Link
@@ -336,7 +339,7 @@ export default function CatalogueDetailPage() {
         >
           <div className="flex items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFE05A] text-[#111111]"><Palette size={21} /></div>
-            <div><h2 className="font-bold text-[#111111]">Plantillas</h2><p className="mt-1 text-sm text-[#666666]">Elige el diseño y personaliza la identidad del menú.</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">Personalizar plantilla</span></div>
+            <div><h2 className="font-bold text-[#111111]">{t("Plantillas")}</h2><p className="mt-1 text-sm text-[#666666]">{t("Elige el diseño y personaliza la identidad del menú.")}</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">{t("Personalizar plantilla")}</span></div>
           </div>
         </Link>
         <Link
@@ -345,7 +348,7 @@ export default function CatalogueDetailPage() {
         >
           <div className="flex items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFE05A] text-[#111111]"><QrCode size={21} /></div>
-            <div><h2 className="font-bold text-[#111111]">URL y código QR</h2><p className="mt-1 text-sm text-[#666666]">Publica y comparte este menú con tus clientes.</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">Administrar publicación</span></div>
+            <div><h2 className="font-bold text-[#111111]">{t("URL y código QR")}</h2><p className="mt-1 text-sm text-[#666666]">{t("Publica y comparte este menú con tus clientes.")}</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">{t("Administrar publicación")}</span></div>
           </div>
         </Link>
         <Link
@@ -354,7 +357,7 @@ export default function CatalogueDetailPage() {
         >
           <div className="flex items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFE05A] text-[#111111]"><BarChart3 size={21} /></div>
-            <div><h2 className="font-bold text-[#111111]">Analíticas</h2><p className="mt-1 text-sm text-[#666666]">Consulta visitas, interés, dispositivos y fuentes de acceso.</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">Ver analíticas</span></div>
+            <div><h2 className="font-bold text-[#111111]">{t("Analíticas")}</h2><p className="mt-1 text-sm text-[#666666]">{t("Consulta visitas, interés, dispositivos y fuentes de acceso.")}</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">{t("Ver analíticas")}</span></div>
           </div>
         </Link>
       </div>
@@ -372,8 +375,10 @@ export default function CatalogueDetailPage() {
 }
 
 function DetailLoading() {
+  const { t } = useTranslation();
+
   return (
-    <div aria-label="Cargando menú" className="mx-auto max-w-7xl animate-pulse space-y-6">
+    <div aria-label={t("Cargando menú")} className="mx-auto max-w-7xl animate-pulse space-y-6">
       <div className="h-6 w-32 rounded bg-[#D9D9D9]" />
       <div className="h-36 rounded-2xl border border-[#E9DDB7] bg-white" />
       <div className="h-72 rounded-2xl border border-[#E9DDB7] bg-white" />

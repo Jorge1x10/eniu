@@ -11,8 +11,11 @@ import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { useOnboarding } from '@/features/onboarding/onboarding-context';
 import { businessTypes, type BusinessType } from '@/features/onboarding/starter-menus';
+import { useTranslation } from 'react-i18next';
 
 export default function OnboardingBusinessScreen() {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const insets = useSafeAreaInsets();
   const { businesses } = useBusiness();
@@ -26,7 +29,7 @@ export default function OnboardingBusinessScreen() {
 
   // Sólo se guarda en memoria: el negocio se crea de verdad en el paso 3.
   function submit() {
-    if (!name.trim()) { setError('Escribe el nombre de tu negocio.'); return; }
+    if (!name.trim()) { setError(t("Escribe el nombre de tu negocio.")); return; }
     setError('');
     setBusinessDraft(name.trim(), type);
     router.push('/(onboarding)/menu');
@@ -44,8 +47,8 @@ export default function OnboardingBusinessScreen() {
       <ScrollView contentInsetAdjustmentBehavior="never" keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, gap: 28, flexGrow: 1 }}>
         <View style={{ gap: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ color: theme.yellowPressed, fontWeight: '700', fontSize: 14 }}>Paso 1 de 3</Text>
-            <Pressable onPress={skip}><Text style={{ color: theme.muted, fontWeight: '700', fontSize: 14 }}>Saltar</Text></Pressable>
+            <Text style={{ color: theme.yellowPressed, fontWeight: '700', fontSize: 14 }}>{t("Paso 1 de 3")}</Text>
+            <Pressable onPress={skip}><Text style={{ color: theme.muted, fontWeight: '700', fontSize: 14 }}>{t("Saltar")}</Text></Pressable>
           </View>
           <View style={{ flexDirection: 'row', gap: 5 }}>
             <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.yellow }} />
@@ -55,17 +58,17 @@ export default function OnboardingBusinessScreen() {
         </View>
 
         <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 8 }}>
-          <Text style={{ color: theme.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.6, lineHeight: 36 }}>¿Cómo se llama tu negocio?</Text>
-          <Text style={{ color: theme.muted, fontSize: 14, lineHeight: 21 }}>Así lo verán tus clientes en el menú.</Text>
+          <Text style={{ color: theme.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.6, lineHeight: 36 }}>{t("¿Cómo se llama tu negocio?")}</Text>
+          <Text style={{ color: theme.muted, fontSize: 14, lineHeight: 21 }}>{t("Así lo verán tus clientes en el menú.")}</Text>
         </Animated.View>
 
         <Feedback message={error} />
         <Animated.View entering={FadeInDown.duration(320).delay(60)}>
-          <FormField label="Nombre" value={name} onChangeText={setName} maxLength={64} placeholder="Taquería Doña Mague" />
+          <FormField label={t("Nombre")} value={name} onChangeText={setName} maxLength={64} placeholder={t("Taquería Doña Mague")} />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.duration(320).delay(120)} style={{ gap: 10 }}>
-          <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>Tipo de negocio</Text>
+          <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>{t("Tipo de negocio")}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{businessTypes.map((option) => {
             const selected = option.key === type;
             return <Animated.View key={option.key} layout={LinearTransition.duration(180)}><Pressable onPress={() => setType(option.key)} style={({ pressed }) => ({ minHeight: 40, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 99, backgroundColor: selected ? theme.yellow : theme.surface, borderWidth: 1, borderColor: selected ? theme.yellowPressed : theme.border, opacity: pressed ? 0.75 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}><Text style={{ color: selected ? theme.onYellow : theme.text, fontSize: 13, fontWeight: selected ? '700' : '600' }}>{option.label}</Text></Pressable></Animated.View>;
@@ -73,12 +76,12 @@ export default function OnboardingBusinessScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeIn.duration(320).delay(180)} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, padding: 16, gap: 6 }}>
-          <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>Te armamos el menú de arranque</Text>
-          <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>Cargamos categorías y productos de ejemplo según tu tipo de negocio. Cambias los nombres y precios y listo.</Text>
+          <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>{t("Te armamos el menú de arranque")}</Text>
+          <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Cargamos categorías y productos de ejemplo según tu tipo de negocio. Cambias los nombres y precios y listo.")}</Text>
         </Animated.View>
 
         <View style={{ flex: 1, minHeight: 12 }} />
-        <Button onPress={submit}>Continuar</Button>
+        <Button onPress={submit}>{t("Continuar")}</Button>
       </ScrollView>
     </KeyboardAvoidingView>
   );

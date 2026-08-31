@@ -8,6 +8,7 @@ import { useEniuTheme } from '@/constants/eniu-theme';
 import { resolveMediaUrl } from '@/lib/api';
 import { pickImages, type ImageQuality, type PickedPicture } from '@/lib/image-file';
 import type { ProductPicture } from '@/types/models';
+import { useTranslation } from 'react-i18next';
 
 export const MAX_PICTURES = 5;
 
@@ -17,6 +18,8 @@ export type { PickedPicture };
 export type DefaultKey = string | null;
 
 function Thumb({ uri, isDefault, onMakeDefault, onRemove }: { uri: string; isDefault: boolean; onMakeDefault: () => void; onRemove: () => void }) {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   return (
     <View style={{ width: 92, height: 92, borderRadius: 16, borderCurve: 'continuous', overflow: 'hidden', borderWidth: isDefault ? 2 : 1, borderColor: isDefault ? theme.yellow : theme.border, backgroundColor: theme.surfaceAlt }}>
@@ -24,7 +27,7 @@ function Thumb({ uri, isDefault, onMakeDefault, onRemove }: { uri: string; isDef
       <View style={{ position: 'absolute', top: 4, left: 4, right: 4, flexDirection: 'row', justifyContent: 'space-between' }}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={isDefault ? 'Imagen principal' : 'Usar como imagen principal'}
+          accessibilityLabel={isDefault ? t("Imagen principal") : t("Usar como imagen principal")}
           onPress={onMakeDefault}
           hitSlop={6}
           style={({ pressed }) => ({ width: 26, height: 26, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: isDefault ? theme.yellow : 'rgba(17,17,17,0.55)', opacity: pressed ? 0.7 : 1 })}
@@ -58,6 +61,8 @@ type Props = {
 };
 
 export function ProductImagePicker({ existing, picked, defaultKey, onChangeExisting, onChangePicked, onChangeDefault, onError, disabled }: Props) {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const [quality, setQuality] = useState<ImageQuality>('alta');
   const [working, setWorking] = useState(false);
@@ -65,7 +70,7 @@ export function ProductImagePicker({ existing, picked, defaultKey, onChangeExist
 
   async function add() {
     const remaining = MAX_PICTURES - total;
-    if (remaining <= 0) { Alert.alert('Límite de fotos', `Puedes agregar máximo ${MAX_PICTURES} imágenes por producto.`); return; }
+    if (remaining <= 0) { Alert.alert(t("Límite de fotos"), `Puedes agregar máximo ${MAX_PICTURES} imágenes por producto.`); return; }
     setWorking(true);
     try {
       // `pickImages` ya convierte cada foto a un formato que la API acepta: la
@@ -75,7 +80,7 @@ export function ProductImagePicker({ existing, picked, defaultKey, onChangeExist
       onChangePicked([...picked, ...pictures]);
       if (!defaultKey && !existing.length) onChangeDefault('new:0');
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'No fue posible preparar las imágenes.');
+      onError(error instanceof Error ? error.message : t("No fue posible preparar las imágenes."));
     } finally {
       setWorking(false);
     }
@@ -99,7 +104,7 @@ export function ProductImagePicker({ existing, picked, defaultKey, onChangeExist
 
   return (
     <View style={{ gap: 12 }}>
-      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '800' }}>Fotos</Text>
+      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '800' }}>{t("Fotos")}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
         {existing.map((picture) => (
           <Thumb key={picture.id} uri={resolveMediaUrl(picture.url) || picture.url} isDefault={defaultKey === picture.id} onMakeDefault={() => onChangeDefault(picture.id)} onRemove={() => removeExisting(picture.id)} />
@@ -117,13 +122,13 @@ export function ProductImagePicker({ existing, picked, defaultKey, onChangeExist
           >
             {working ? <ActivityIndicator color={theme.yellowPressed} /> : <>
               <ImageIcon color={theme.yellowPressed} size={22} />
-              <Text style={{ color: theme.yellowPressed, fontSize: 11, fontWeight: '800' }}>Agregar</Text>
+              <Text style={{ color: theme.yellowPressed, fontSize: 11, fontWeight: '800' }}>{t("Agregar")}</Text>
             </>}
           </Pressable>
         ) : null}
       </ScrollView>
       <ImageQualitySelector value={quality} onChange={setQuality} />
-      <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17 }}>Se convierten solas al formato que acepta el menú. Máximo {MAX_PICTURES} por producto. Toca la estrella para elegir la principal.</Text>
+      <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17 }}>{t("Se convierten solas al formato que acepta el menú. Máximo")} {MAX_PICTURES} {t("por producto. Toca la estrella para elegir la principal.")}</Text>
     </View>
   );
 }

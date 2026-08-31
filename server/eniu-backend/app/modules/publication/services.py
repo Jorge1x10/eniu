@@ -12,6 +12,7 @@ from app.modules.catalogue.services import catalogue_access
 from app.modules.category.model import Category
 from app.modules.products.model import Product
 from app.modules.publication.serializer import main_picture, serialize_public_menu
+from app.shared.i18n import _
 
 
 def _slugify(value):
@@ -52,12 +53,12 @@ def get_publication(owner_id, business_id, catalogue_id):
         return {"publication": publication_payload(catalogue)}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible consultar la publicación"}, 500
+        return {"message": _("No fue posible consultar la publicación")}, 500
 
 
 def change_publication(owner_id, business_id, catalogue_id, is_published):
     if not isinstance(is_published, bool):
-        return {"message": "is_published debe ser verdadero o falso"}, 400
+        return {"message": _("is_published debe ser verdadero o falso")}, 400
     try:
         catalogue, error = catalogue_access(owner_id, business_id, catalogue_id)
         if error:
@@ -66,7 +67,7 @@ def change_publication(owner_id, business_id, catalogue_id, is_published):
             if not catalogue.public_slug:
                 catalogue.public_slug = _available_slug(catalogue)
                 if not catalogue.public_slug:
-                    return {"message": "No fue posible generar una URL única"}, 409
+                    return {"message": _("No fue posible generar una URL única")}, 409
             if not catalogue.is_published:
                 catalogue.is_published = True
                 catalogue.published_at = utc_now()
@@ -77,11 +78,11 @@ def change_publication(owner_id, business_id, catalogue_id, is_published):
         return {"publication": publication_payload(catalogue)}, 200
     except IntegrityError:
         db.session.rollback()
-        return {"message": "No fue posible generar una URL única"}, 409
+        return {"message": _("No fue posible generar una URL única")}, 409
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible actualizar la publicación"}, 500
+        return {"message": _("No fue posible actualizar la publicación")}, 500
 
 
 def get_preview(owner_id, business_id, catalogue_id):
@@ -92,18 +93,18 @@ def get_preview(owner_id, business_id, catalogue_id):
         return {"menu": serialize_public_menu(catalogue)}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible cargar la vista previa"}, 500
+        return {"message": _("No fue posible cargar la vista previa")}, 500
 
 
 def get_public_menu(public_slug):
     try:
         catalogue = Catalogue.query.filter_by(public_slug=public_slug, is_published=True).first()
         if not catalogue:
-            return {"message": "Este menú no está disponible"}, 404
+            return {"message": _("Este menú no está disponible")}, 404
         return {"menu": serialize_public_menu(catalogue)}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible cargar el menú"}, 500
+        return {"message": _("No fue posible cargar el menú")}, 500
 
 
 def get_public_cover(public_slug):

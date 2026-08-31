@@ -13,6 +13,7 @@ import {
 import { prepareImage } from "../../../services/imageFile";
 import { useApi } from "../../auth/services/useApi";
 import { useBusiness } from "../services/useBusiness";
+import { useTranslation } from "react-i18next";
 
 const EMPTY_FORM = {
   name: "",
@@ -34,6 +35,8 @@ function resolvePhotoUrl(photoUrl) {
 }
 
 export default function BusinessPage() {
+  const { t } = useTranslation();
+
   const { businessId } = useParams();
   const {
     businesses,
@@ -126,7 +129,7 @@ export default function BusinessPage() {
     event.preventDefault();
 
     if (!form.name.trim()) {
-      setError("El nombre del negocio es obligatorio");
+      setError(t("El nombre del negocio es obligatorio"));
       return;
     }
 
@@ -146,7 +149,7 @@ export default function BusinessPage() {
     setIsSaving(false);
 
     if (!response.ok) {
-      setError(response.data?.message || "No fue posible guardar los cambios");
+      setError(response.data?.message || t("No fue posible guardar los cambios"));
       return;
     }
 
@@ -155,13 +158,13 @@ export default function BusinessPage() {
     setPhotoFile(null);
     setPhotoPreview(null);
     setRemovePhoto(false);
-    setSuccessMessage("Los datos del negocio se actualizaron correctamente");
+    setSuccessMessage(t("Los datos del negocio se actualizaron correctamente"));
   }
 
   if (isLoadingBusinesses) {
     return (
       <div className="rounded-2xl bg-white p-6 text-[#666666] shadow-sm">
-        Cargando negocio...
+       {t("Cargando negocio...")}
       </div>
     );
   }
@@ -183,7 +186,7 @@ export default function BusinessPage() {
                 type="button"
                 onClick={startEditing}
                 className="group relative flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-[#FFE05A] text-[#111111]"
-                aria-label="Editar foto del negocio"
+                aria-label={t("Editar foto del negocio")}
               >
                 {savedPhotoUrl ? (
                   <img
@@ -199,7 +202,7 @@ export default function BusinessPage() {
                 </span>
               </button>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[#777777]">Negocio seleccionado</p>
+                <p className="text-sm font-medium text-[#777777]">{t("Negocio seleccionado")}</p>
                 <h1 className="truncate text-3xl font-bold text-[#111111]">
                   {business.name}
                 </h1>
@@ -211,7 +214,7 @@ export default function BusinessPage() {
               onClick={startEditing}
               className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-[#FFE05A] px-4 py-2.5 font-semibold text-[#111111] transition hover:bg-[#E8C93D]"
             >
-              <Pencil size={17} /> Editar
+              <Pencil size={17} /> {t("Editar")}
             </button>
           </div>
 
@@ -222,13 +225,13 @@ export default function BusinessPage() {
           )}
 
           <button type="button" onClick={startEditing} className="mt-5 block w-full cursor-pointer text-left text-[#666666]">
-            {business.description || "Selecciona para agregar una descripción"}
+            {business.description || t("Selecciona para agregar una descripción")}
           </button>
 
           <div className="mt-6 grid gap-3 border-t border-[#F0E8D2] pt-6 sm:grid-cols-2 lg:grid-cols-3">
-            <InfoButton icon={MapPin} label="Dirección" value={business.address} onClick={startEditing} />
-            <InfoButton icon={Globe2} label="Sitio web" value={business.website} onClick={startEditing} />
-            <InfoButton icon={CircleDollarSign} label="Moneda" value={business.currency} onClick={startEditing} />
+            <InfoButton icon={MapPin} label={t("Dirección")} value={business.address} onClick={startEditing} />
+            <InfoButton icon={Globe2} label={t("Sitio web")} value={business.website} onClick={startEditing} />
+            <InfoButton icon={CircleDollarSign} label={t("Moneda")} value={business.currency} onClick={startEditing} />
           </div>
         </div>
       </div>
@@ -241,8 +244,8 @@ export default function BusinessPage() {
           >
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-[#111111]">Editar negocio</h2>
-                <p className="mt-1 text-sm text-[#666666]">Completa únicamente la información que quieras mostrar.</p>
+                <h2 className="text-2xl font-bold text-[#111111]">{t("Editar negocio")}</h2>
+                <p className="mt-1 text-sm text-[#666666]">{t("Completa únicamente la información que quieras mostrar.")}</p>
               </div>
               <button type="button" onClick={cancelEditing} disabled={isSaving} className="cursor-pointer rounded-lg p-2 hover:bg-black/5 disabled:cursor-not-allowed">
                 <X size={20} />
@@ -250,38 +253,38 @@ export default function BusinessPage() {
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Nombre" name="name" value={form.name} onChange={updateField} maxLength={64} required />
-              <Field label="Moneda" name="currency" value={form.currency} onChange={updateField} maxLength={3} placeholder="MXN" required />
-              <Field label="Dirección" name="address" value={form.address} onChange={updateField} className="sm:col-span-2" />
-              <Field label="Sitio web" name="website" type="url" value={form.website} onChange={updateField} placeholder="https://..." className="sm:col-span-2" />
+              <Field label={t("Nombre")} name="name" value={form.name} onChange={updateField} maxLength={64} required />
+              <Field label={t("Moneda")} name="currency" value={form.currency} onChange={updateField} maxLength={3} placeholder="MXN" required />
+              <Field label={t("Dirección")} name="address" value={form.address} onChange={updateField} className="sm:col-span-2" />
+              <Field label={t("Sitio web")} name="website" type="url" value={form.website} onChange={updateField} placeholder="https://..." className="sm:col-span-2" />
 
               <label className="sm:col-span-2">
-                <span className="mb-2 block text-sm font-semibold text-[#2A2A2A]">Descripción</span>
+                <span className="mb-2 block text-sm font-semibold text-[#2A2A2A]">{t("Descripción")}</span>
                 <textarea name="description" value={form.description} onChange={updateField} rows={4} className="w-full resize-y rounded-xl border border-[#D9D9D9] bg-white px-4 py-3 outline-none focus:border-[#E8C93D] focus:ring-2 focus:ring-[#FFE05A]/40" />
               </label>
 
               <div className="sm:col-span-2">
-                <span className="mb-2 block text-sm font-semibold text-[#2A2A2A]">Foto del lugar (opcional)</span>
+                <span className="mb-2 block text-sm font-semibold text-[#2A2A2A]">{t("Foto del lugar (opcional)")}</span>
                 <div className="overflow-hidden rounded-xl border border-dashed border-[#CDBD87] bg-white">
-                  {visiblePhoto && <img src={visiblePhoto} alt="Vista previa" className="h-52 w-full object-cover" />}
+                  {visiblePhoto && <img src={visiblePhoto} alt={t("Vista previa")} className="h-52 w-full object-cover" />}
                   <div className="flex flex-wrap items-center gap-3 p-4">
                     <label className="cursor-pointer rounded-lg bg-[#2A2A2A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3A3A3A]">
-                      {visiblePhoto ? "Cambiar foto" : "Seleccionar foto"}
+                      {visiblePhoto ? t("Cambiar foto") : t("Seleccionar foto")}
                       <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoChange} className="sr-only" />
                     </label>
                     {visiblePhoto && (
                       <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); setRemovePhoto(true); }} className="cursor-pointer text-sm font-semibold text-red-600">
-                        Quitar foto
+                       {t("Quitar foto")}
                       </button>
                     )}
-                    <span className="text-xs text-[#777777]">JPG, PNG o WebP. Máximo 5 MB.</span>
+                    <span className="text-xs text-[#777777]">{t("JPG, PNG o WebP. Máximo 5 MB.")}</span>
                   </div>
                 </div>
               </div>
 
               <label className="flex items-center gap-3 sm:col-span-2">
                 <input type="checkbox" name="is_active" checked={form.is_active} onChange={updateField} className="h-5 w-5 accent-[#E8C93D]" />
-                <span className="text-sm font-semibold text-[#2A2A2A]">Negocio activo</span>
+                <span className="text-sm font-semibold text-[#2A2A2A]">{t("Negocio activo")}</span>
               </label>
             </div>
 
@@ -289,10 +292,10 @@ export default function BusinessPage() {
 
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={cancelEditing} disabled={isSaving} className="cursor-pointer rounded-xl px-4 py-2.5 font-semibold text-[#2A2A2A] hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-50">
-                Cancelar
+               {t("Cancelar")}
               </button>
               <button type="submit" disabled={isSaving} className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold text-[#111111] hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50">
-                <Save size={17} /> {isSaving ? "Guardando..." : "Guardar cambios"}
+                <Save size={17} /> {isSaving ? "Guardando..." : t("Guardar cambios")}
               </button>
             </div>
           </form>
@@ -303,12 +306,14 @@ export default function BusinessPage() {
 }
 
 function InfoButton({ icon: Icon, label, value, onClick }) {
+  const { t } = useTranslation();
+
   return (
     <button type="button" onClick={onClick} className="flex cursor-pointer items-start gap-3 rounded-xl p-3 text-left transition hover:bg-[#FFF8DE]">
       <Icon className="mt-0.5 shrink-0 text-[#8A7420]" size={18} />
       <span className="min-w-0">
         <span className="block text-xs font-semibold uppercase tracking-wide text-[#888888]">{label}</span>
-        <span className="mt-1 block break-word text-sm text-[#333333]">{value || "Selecciona para configurar"}</span>
+        <span className="mt-1 block break-word text-sm text-[#333333]">{value || t("Selecciona para configurar")}</span>
       </span>
     </button>
   );

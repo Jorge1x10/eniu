@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { BookOpen, X } from "lucide-react";
 
 import { getCatalogueErrorMessage } from "../services/catalogueService";
+import { useTranslation } from "react-i18next";
 
 export default function CreateCatalogueModal({ onClose, onCreate, onCreated }) {
+  const { t } = useTranslation();
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [fieldError, setFieldError] = useState("");
@@ -57,7 +60,7 @@ export default function CreateCatalogueModal({ onClose, onCreate, onCreated }) {
     const normalizedName = name.trim();
     const normalizedDescription = description.trim();
     if (!normalizedName) {
-      setFieldError("Escribe el nombre del menú.");
+      setFieldError(t("Escribe el nombre del menú."));
       nameInputRef.current?.focus();
       return;
     }
@@ -77,7 +80,7 @@ export default function CreateCatalogueModal({ onClose, onCreate, onCreated }) {
     if (!response.ok) {
       setRequestError(getCatalogueErrorMessage(
         response,
-        "No pudimos crear el menú. Intenta nuevamente."
+        t("No pudimos crear el menú. Intenta nuevamente.")
       ));
       return;
     }
@@ -106,10 +109,10 @@ export default function CreateCatalogueModal({ onClose, onCreate, onCreated }) {
             </div>
             <div>
               <h2 id="create-catalogue-title" className="text-xl font-bold text-[#111111]">
-                Crear menú
+                {t("Crear menú")}
               </h2>
               <p className="mt-1 text-sm text-[#666666]">
-                Comienza con la información principal.
+                {t("Comienza con la información principal.")}
               </p>
             </div>
           </div>
@@ -117,7 +120,7 @@ export default function CreateCatalogueModal({ onClose, onCreate, onCreated }) {
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            aria-label="Cerrar modal"
+            aria-label={t("Cerrar modal")}
             className="cursor-pointer rounded-lg p-2 text-[#666666] hover:bg-[#E9DDB7]/50 disabled:cursor-not-allowed"
           >
             <X size={20} />
@@ -126,7 +129,7 @@ export default function CreateCatalogueModal({ onClose, onCreate, onCreated }) {
 
         <form onSubmit={handleSubmit} noValidate>
           <label htmlFor="catalogue-name" className="block text-sm font-semibold text-[#2A2A2A]">
-            Nombre del menú
+            {t("Nombre del menú")}
           </label>
           <input
             ref={nameInputRef}
@@ -142,7 +145,7 @@ export default function CreateCatalogueModal({ onClose, onCreate, onCreated }) {
             aria-invalid={Boolean(fieldError)}
             aria-describedby={fieldError ? "catalogue-name-error" : undefined}
             className="mt-2 w-full rounded-xl border border-[#D9D9D9] bg-white px-4 py-3 outline-none focus:border-[#E8C93D] focus:ring-2 focus:ring-[#FFE05A]/40 disabled:opacity-60"
-            placeholder="Ej. Menú principal"
+            placeholder={t("Ej. Menú principal")}
           />
           {fieldError && (
             <p id="catalogue-name-error" className="mt-2 text-sm text-red-700">
@@ -151,7 +154,7 @@ export default function CreateCatalogueModal({ onClose, onCreate, onCreated }) {
           )}
 
           <label htmlFor="catalogue-description" className="mt-5 block text-sm font-semibold text-[#2A2A2A]">
-            Descripción <span className="font-normal text-[#777777]">(opcional)</span>
+            {t("Descripción")} <span className="font-normal text-[#777777]">{t("(opcional)")}</span>
           </label>
           <textarea
             id="catalogue-description"
@@ -163,7 +166,7 @@ export default function CreateCatalogueModal({ onClose, onCreate, onCreated }) {
             disabled={isSubmitting}
             rows={4}
             className="mt-2 w-full resize-y rounded-xl border border-[#D9D9D9] bg-white px-4 py-3 outline-none focus:border-[#E8C93D] focus:ring-2 focus:ring-[#FFE05A]/40 disabled:opacity-60"
-            placeholder="Nuestro menú general"
+            placeholder={t("Nuestro menú general")}
           />
 
           {requestError && (
@@ -179,14 +182,14 @@ export default function CreateCatalogueModal({ onClose, onCreate, onCreated }) {
               disabled={isSubmitting}
               className="cursor-pointer rounded-xl px-4 py-2.5 font-semibold text-[#2A2A2A] hover:bg-[#E9DDB7]/50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Cancelar
+              {t("Cancelar")}
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !name.trim()}
               className="cursor-pointer rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold text-[#111111] hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting ? "Creando..." : "Crear menú"}
+              {isSubmitting ? "Creando..." : t("Crear menú")}
             </button>
           </div>
         </form>

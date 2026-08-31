@@ -1,4 +1,5 @@
 import { IMAGE_QUALITIES } from "../../../services/imageFile";
+import { useTranslation } from "react-i18next";
 
 /**
  * Deja que el dueño decida cuánta calidad conserva al subir una foto, igual
@@ -9,9 +10,11 @@ import { IMAGE_QUALITIES } from "../../../services/imageFile";
  * rápido en un celular con mala señal.
  */
 export default function ImageQualitySelector({ value, onChange, disabled = false }) {
+  const { t } = useTranslation();
+
   return (
     <fieldset className="mt-3" disabled={disabled}>
-      <legend className="text-sm font-semibold text-[#2A2A2A]">Calidad de las fotos</legend>
+      <legend className="text-sm font-semibold text-[#2A2A2A]">{t("Calidad de las fotos")}</legend>
       <div className="mt-2 grid grid-cols-3 gap-2">
         {IMAGE_QUALITIES.map((option) => {
           const selected = option.key === value;
@@ -27,9 +30,9 @@ export default function ImageQualitySelector({ value, onChange, disabled = false
                   : "cursor-pointer border-[#D9D9D9] bg-white hover:bg-[#FFF8DE]"
               }`}
             >
-              <span className="block text-sm font-bold text-[#2A2A2A]">{option.label}</span>
+              <span className="block text-sm font-bold text-[#2A2A2A]">{t(option.label)}</span>
               <span className={`block text-xs ${selected ? "text-[#5E501A]" : "text-[#777777]"}`}>
-                {option.hint}
+                {t(option.hint)}
               </span>
             </button>
           );

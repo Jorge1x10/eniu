@@ -13,6 +13,7 @@ import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, deleteCatalogue, getCatalogue } from '@/features/catalogues/catalogue-api';
 import { ApiError, api } from '@/lib/api';
 import type { Catalogue, Category, Product } from '@/types/models';
+import { useTranslation } from 'react-i18next';
 
 // Mismas tarjetas que el panel web: bloque de identidad arriba y la acción bajo
 // una línea divisoria, a todo el ancho de la pantalla.
@@ -24,6 +25,8 @@ const actions = [
 ] as const;
 
 export default function CatalogueDetailScreen() {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const queryClient = useQueryClient();
   const { catalogueId } = useLocalSearchParams<{ catalogueId: string }>();
@@ -62,10 +65,10 @@ export default function CatalogueDetailScreen() {
     if (!selectedBusiness || !catalogue || deleting) return;
     Alert.alert(
       `Eliminar «${catalogue.name}»`,
-      'También se eliminan sus productos y categorías. Esta acción no se puede deshacer.',
+      t("También se eliminan sus productos y categorías. Esta acción no se puede deshacer."),
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: remove },
+        { text: t("Cancelar"), style: 'cancel' },
+        { text: t("Eliminar"), style: 'destructive', onPress: remove },
       ],
     );
   }
@@ -80,28 +83,28 @@ export default function CatalogueDetailScreen() {
       router.replace('/(tabs)/(menus)');
     } catch (requestError) {
       setDeleting(false);
-      Alert.alert('No se pudo eliminar', requestError instanceof Error ? requestError.message : 'Inténtalo de nuevo.');
+      Alert.alert(t("No se pudo eliminar"), requestError instanceof Error ? requestError.message : t("Inténtalo de nuevo."));
     }
   }
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 16, backgroundColor: theme.background }}>
-      {query.isLoading ? <LoadingState /> : notFound ? <ErrorState message="Este menú ya no existe o pertenece a otro negocio." action="Volver a Menús" onAction={() => router.replace('/(tabs)/(menus)')} /> : query.isError || !catalogue ? <ErrorState message="No pudimos cargar este menú." onRetry={() => query.refetch()} /> : <>
+      {query.isLoading ? <LoadingState /> : notFound ? <ErrorState message={t("Este menú ya no existe o pertenece a otro negocio.")} action={t("Volver a Menús")} onAction={() => router.replace('/(tabs)/(menus)')} /> : query.isError || !catalogue ? <ErrorState message={t("No pudimos cargar este menú.")} error={query.error} onRetry={() => query.refetch()} /> : <>
         <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: '#111111', padding: 20, gap: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <View style={{ minHeight: 26, justifyContent: 'center', borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : 'rgba(255,255,255,0.12)', paddingHorizontal: 10 }}><Text style={{ color: catalogue.is_published ? '#111111' : '#C7C7C7', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 }}>{catalogue.is_published ? 'PUBLICADO' : 'BORRADOR'}</Text></View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text style={{ color: '#C7C7C7', fontSize: 12, fontWeight: '600' }}>Visible</Text><Switch value={catalogue.is_published} onValueChange={togglePublication} trackColor={{ true: theme.yellow }} /></View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text style={{ color: '#C7C7C7', fontSize: 12, fontWeight: '600' }}>{t("Visible")}</Text><Switch value={catalogue.is_published} onValueChange={togglePublication} trackColor={{ true: theme.yellow }} /></View>
           </View>
           <View style={{ gap: 6 }}>
             <Text selectable style={{ color: '#FFFDF5', fontSize: 26, fontWeight: '800' }}>{catalogue.name}</Text>
-            <Text style={{ color: '#C7C7C7', fontSize: 13, lineHeight: 20 }}>{catalogue.description || 'Sin descripción'}</Text>
+            <Text style={{ color: '#C7C7C7', fontSize: 13, lineHeight: 20 }}>{catalogue.description || t("Sin descripción")}</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 14, alignItems: 'stretch' }}>
             <MenuSkeleton width={86} padding={9} />
             <View style={{ flex: 1, minWidth: 0, gap: 10, justifyContent: 'flex-end' }}>
               {catalogue.public_slug ? <Text numberOfLines={1} style={{ color: '#C7C7C7', fontSize: 12 }}>eniu.mx/m/{catalogue.public_slug}</Text> : null}
               <Link href={{ pathname: '/(tabs)/(menus)/[catalogueId]/publication', params: { catalogueId } }} asChild>
-                <Pressable style={({ pressed }) => ({ height: 42, borderRadius: 13, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}><Text style={{ color: '#111111', fontWeight: '700', fontSize: 13.5 }}>Ver como cliente</Text></Pressable>
+                <Pressable style={({ pressed }) => ({ height: 42, borderRadius: 13, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}><Text style={{ color: '#111111', fontWeight: '700', fontSize: 13.5 }}>{t("Ver como cliente")}</Text></Pressable>
               </Link>
             </View>
           </View>
@@ -113,7 +116,7 @@ export default function CatalogueDetailScreen() {
           const published = action.route === 'publication' ? catalogue.is_published : null;
           const status = unit
             ? { label: count == null ? '—' : `${count} ${count === 1 ? unit[0] : unit[1]}`, on: Boolean(count) }
-            : published == null ? null : { label: published ? 'Publicado' : 'Sin publicar', on: published };
+            : published == null ? null : { label: published ? 'Publicado' : t("Sin publicar"), on: published };
           return (
             <Animated.View key={action.route} entering={FadeInDown.duration(300).delay(index * 70)}>
             <Link href={{ pathname: `/(tabs)/(menus)/[catalogueId]/${action.route}`, params: { catalogueId } }} asChild>
@@ -153,10 +156,10 @@ export default function CatalogueDetailScreen() {
             style={({ pressed }) => ({ minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, borderRadius: 16, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface, opacity: deleting ? 0.6 : pressed ? 0.75 : 1 })}
           >
             {deleting ? <ActivityIndicator color={theme.danger} /> : <TrashIcon color={theme.danger} size={15} />}
-            <Text style={{ color: theme.danger, fontSize: 14, fontWeight: '800' }}>{deleting ? 'Eliminando…' : 'Eliminar menú'}</Text>
+            <Text style={{ color: theme.danger, fontSize: 14, fontWeight: '800' }}>{deleting ? 'Eliminando…' : t("Eliminar menú")}</Text>
           </Pressable>
           <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 16, textAlign: 'center' }}>
-            Mantén pulsado para eliminarlo. Se borran también sus productos y categorías.
+            {t("Mantén pulsado para eliminarlo. Se borran también sus productos y categorías.")}
           </Text>
         </View>
       </>}

@@ -6,8 +6,11 @@ import { Divider } from '@/components/ui/divider';
 import { ChevronRightIcon } from '@/components/ui/icons';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import type { Catalogue } from '@/types/models';
+import { useTranslation } from 'react-i18next';
 
 export function CatalogueCard({ catalogue }: { catalogue: Catalogue }) {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   return (
     <Link href={{ pathname: '/(tabs)/(menus)/[catalogueId]', params: { catalogueId: catalogue.id } }} asChild>
@@ -21,12 +24,12 @@ export function CatalogueCard({ catalogue }: { catalogue: Catalogue }) {
               <Text numberOfLines={1} style={{ flex: 1, color: theme.text, fontSize: 17, fontWeight: '900' }}>{catalogue.name}</Text>
               <View style={{ borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : theme.surfaceAlt, paddingHorizontal: 9, paddingVertical: 4 }}><Text style={{ color: catalogue.is_published ? '#111111' : theme.muted, fontSize: 10, fontWeight: '800', letterSpacing: 0.3 }}>{catalogue.is_published ? 'PUBLICADO' : 'BORRADOR'}</Text></View>
             </View>
-            <Text numberOfLines={2} style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{catalogue.description || 'Sin descripción'}</Text>
+            <Text numberOfLines={2} style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{catalogue.description || t("Sin descripción")}</Text>
           </View>
         </View>
         <Divider />
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 16, paddingVertical: 12 }}>
-          <Text style={{ color: theme.yellowPressed, fontSize: 13, fontWeight: '800' }}>Administrar menú</Text>
+          <Text style={{ color: theme.yellowPressed, fontSize: 13, fontWeight: '800' }}>{t("Administrar menú")}</Text>
           <View style={{ width: 30, height: 30, borderRadius: 999, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center' }}><ChevronRightIcon color="#111111" size={12} /></View>
         </View>
       </Pressable>

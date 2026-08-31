@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { Trash2, X } from "lucide-react";
 
 import { getCatalogueErrorMessage } from "../services/catalogueService";
+import { useTranslation } from "react-i18next";
 
 export default function DeleteCatalogueModal({ catalogue, onClose, onDelete, onDeleted }) {
+  const { t } = useTranslation();
+
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
   const dialogRef = useRef(null);
@@ -57,7 +60,7 @@ export default function DeleteCatalogueModal({ catalogue, onClose, onDelete, onD
     if (!response.ok) {
       setError(getCatalogueErrorMessage(
         response,
-        "No pudimos eliminar el menú. Intenta nuevamente."
+        t("No pudimos eliminar el menú. Intenta nuevamente.")
       ));
       return;
     }
@@ -88,7 +91,7 @@ export default function DeleteCatalogueModal({ catalogue, onClose, onDelete, onD
             type="button"
             onClick={onClose}
             disabled={isDeleting}
-            aria-label="Cerrar confirmación"
+            aria-label={t("Cerrar confirmación")}
             className="cursor-pointer rounded-lg p-2 text-[#666666] hover:bg-black/5 disabled:cursor-not-allowed"
           >
             <X size={20} />
@@ -96,10 +99,10 @@ export default function DeleteCatalogueModal({ catalogue, onClose, onDelete, onD
         </div>
 
         <h2 id="delete-catalogue-title" className="mt-5 text-xl font-bold text-[#111111]">
-          ¿Eliminar este menú?
+          {t("¿Eliminar este menú?")}
         </h2>
         <p id="delete-catalogue-description" className="mt-2 text-sm leading-6 text-[#666666]">
-          Se eliminará <strong className="text-[#111111]">{catalogue.name}</strong> y todo su contenido. No podrás recuperarlo.
+          {t("Se eliminará")} <strong className="text-[#111111]">{catalogue.name}</strong> {t("y todo su contenido. No podrás recuperarlo.")}
         </p>
 
         {error && (
@@ -115,7 +118,7 @@ export default function DeleteCatalogueModal({ catalogue, onClose, onDelete, onD
             disabled={isDeleting}
             className="cursor-pointer rounded-xl px-4 py-2.5 font-semibold text-[#2A2A2A] hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Cancelar
+            {t("Cancelar")}
           </button>
           <button
             ref={confirmRef}
@@ -124,7 +127,7 @@ export default function DeleteCatalogueModal({ catalogue, onClose, onDelete, onD
             disabled={isDeleting}
             className="cursor-pointer rounded-xl bg-[#DC2626] px-4 py-2.5 font-semibold text-white hover:bg-[#B91C1C] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isDeleting ? "Eliminando..." : "Eliminar menú"}
+            {isDeleting ? "Eliminando..." : t("Eliminar menú")}
           </button>
         </div>
       </div>

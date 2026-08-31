@@ -5,8 +5,11 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { useApi } from "../services/useApi";
 import { PRIVACY_URL, TERMS_URL } from "../../../constants/legal";
+import { useTranslation } from "react-i18next";
 
 export default function LoginForm() {
+  const { t } = useTranslation();
+
   const navigate = useNavigate();
   const location = useLocation();
   const [serverError, setServerError] = useState("");
@@ -37,7 +40,7 @@ export default function LoginForm() {
 
     if (!response.ok) {
       setServerError(
-        response.data?.message || "No fue posible iniciar sesión.",
+        response.data?.message || t("No fue posible iniciar sesión."),
       );
       return;
     }
@@ -52,7 +55,7 @@ export default function LoginForm() {
     const credential = credentialResponse.credential;
 
     if (!credential) {
-      setServerError("Google no devolvió una credencial válida.");
+      setServerError(t("Google no devolvió una credencial válida."));
       return;
     }
 
@@ -62,7 +65,7 @@ export default function LoginForm() {
 
     if (!response.ok) {
       setServerError(
-        response.data?.message || "No fue posible iniciar sesión con Google.",
+        response.data?.message || t("No fue posible iniciar sesión con Google."),
       );
       return;
     }
@@ -86,10 +89,10 @@ export default function LoginForm() {
       className="w-full max-w-md space-y-5"
     >
       <div>
-        <h1 className="text-3xl font-bold text-[#111111]">Inicia sesión</h1>
+        <h1 className="text-3xl font-bold text-[#111111]">{t("Inicia sesión")}</h1>
 
         <p className="mt-2 text-sm text-gray-600">
-          Accede para administrar tus menús.
+         {t("Accede para administrar tus menús.")}
         </p>
       </div>
 
@@ -101,7 +104,7 @@ export default function LoginForm() {
 
       {location.state?.passwordReset && (
         <div role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-          Tu contraseña fue actualizada. Ya puedes iniciar sesión.
+         {t("Tu contraseña fue actualizada. Ya puedes iniciar sesión.")}
         </div>
       )}
 
@@ -110,13 +113,13 @@ export default function LoginForm() {
           htmlFor="identifier"
           className="mb-1 block text-sm font-medium text-[#111111]"
         >
-          Correo o nombre de usuario
+         {t("Correo o nombre de usuario")}
         </label>
 
         <input
           id="identifier"
           type="text"
-          placeholder="correo@ejemplo.com"
+          placeholder={t("correo@ejemplo.com")}
           autoComplete="username"
           className="
             w-full rounded-lg border border-[#D9D9D9]
@@ -125,7 +128,7 @@ export default function LoginForm() {
             focus:ring-2 focus:ring-[#FFE05A]
           "
           {...register("identifier", {
-            required: "Ingresa tu correo o nombre de usuario",
+            required: t("Ingresa tu correo o nombre de usuario"),
           })}
         />
 
@@ -142,21 +145,21 @@ export default function LoginForm() {
             htmlFor="password"
             className="text-sm font-medium text-[#111111]"
           >
-            Contraseña
+           {t("Contraseña")}
           </label>
 
           <Link
             to="/forgot-password"
             className="text-sm font-medium text-[#111111] underline"
           >
-            ¿Olvidaste tu contraseña?
+           {t("¿Olvidaste tu contraseña?")}
           </Link>
         </div>
 
         <input
           id="password"
           type="password"
-          placeholder="Ingresa tu contraseña"
+          placeholder={t("Ingresa tu contraseña")}
           autoComplete="current-password"
           className="
             w-full rounded-lg border border-[#D9D9D9]
@@ -165,7 +168,7 @@ export default function LoginForm() {
             focus:ring-2 focus:ring-[#FFE05A]
             "
           {...register("password", {
-            required: "La contraseña es obligatoria",
+            required: t("La contraseña es obligatoria"),
           })}
         />
 
@@ -185,25 +188,25 @@ export default function LoginForm() {
           disabled:opacity-60 cursor-pointer
         "
       >
-        {isLoginLoading ? "Iniciando sesión..." : "Iniciar sesión"}
+        {isLoginLoading ? t("Iniciando sesión...") : t("Iniciar sesión")}
       </button>
 
       <div className="flex items-center gap-3">
         <div className="h-px flex-1 bg-[#D9D9D9]" />
 
-        <span className="text-sm text-gray-500">o continúa con</span>
+        <span className="text-sm text-gray-500">{t("o continúa con")}</span>
 
         <div className="h-px flex-1 bg-[#D9D9D9]" />
       </div>
 
       <div className="flex justify-center">
         {isGoogleLoading ? (
-          <p className="text-sm text-gray-600">Validando cuenta de Google...</p>
+          <p className="text-sm text-gray-600">{t("Validando cuenta de Google...")}</p>
         ) : (
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={() =>
-              setServerError("No fue posible continuar con Google.")
+              setServerError(t("No fue posible continuar con Google."))
             }
             text="signin_with"
             shape="rectangular"
@@ -213,18 +216,18 @@ export default function LoginForm() {
       </div>
 
       <p className="text-center text-sm text-gray-600">
-        ¿Todavía no tienes una cuenta?{" "}
+       {t("¿Todavía no tienes una cuenta?")}{" "}
         <Link to="/register" className="font-semibold text-[#111111] underline">
-          Regístrate
+         {t("Regístrate")}
         </Link>
       </p>
 
       {/* Sin casilla: quien ya tiene cuenta los aceptó en su día y volver a
           pedírselo al entrar sería ruido. El enlace sí conviene tenerlo a mano. */}
       <p className="text-center text-xs text-gray-500">
-        <a href={TERMS_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[#111111]">Términos y condiciones</a>
+        <a href={TERMS_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[#111111]">{t("Términos y condiciones")}</a>
         {" · "}
-        <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[#111111]">Aviso de privacidad</a>
+        <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[#111111]">{t("Aviso de privacidad")}</a>
       </p>
     </form>
   );
