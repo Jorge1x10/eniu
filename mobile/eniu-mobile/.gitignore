@@ -50,5 +50,6 @@ credentials.json
 *.mobileprovision
 *.keystore
 
-# Capturas generadas al correr .maestro/appstore-screenshots.yaml en local
+# Capturas y App Preview generados al correr los flujos de .maestro/ en local
 screenshots/
+previews/
