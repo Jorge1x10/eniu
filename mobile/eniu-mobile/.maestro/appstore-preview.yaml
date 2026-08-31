@@ -12,7 +12,7 @@ appId: com.eniu.app
 - inputText: ${MAESTRO_EMAIL}
 - tapOn: "Tu contraseña"
 - inputText: ${MAESTRO_PASSWORD}
-- hideKeyboard
+# Sin hideKeyboard: ver la nota en appstore-screenshots.yaml.
 - tapOn: "Iniciar sesión"
 - assertVisible: "Inicio"
 - waitForAnimationToEnd:

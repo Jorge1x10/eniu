@@ -117,6 +117,14 @@ jobs:
           MAESTRO_PASSWORD: ${{ secrets.EXPO_SCREENSHOT_PASSWORD }}
         run: maestro --device "$DEVICE_ID" test .maestro/appstore-screenshots.yaml
 
+      - name: Subir depuración de Maestro (si algo falla)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-debug
+          path: ~/.maestro/tests
+          if-no-files-found: ignore
+
       - name: Grabar App Preview
         env:
           MAESTRO_EMAIL: ${{ secrets.EXPO_SCREENSHOT_EMAIL }}
