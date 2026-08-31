@@ -127,6 +127,6 @@ describe('rutas por idioma', () => {
     expect(resolveHref('#planes', 'es')).toBe('/#planes')
     expect(resolveHref('#planes', 'en')).toBe('/en#planes')
     expect(resolveHref('https://eniu.app', 'en')).toBe('https://eniu.app')
-    expect(resolveHref('mailto:hola@eniu.app', 'en')).toBe('mailto:hola@eniu.app')
+    expect(resolveHref('mailto:eniumenu@gmail.com', 'en')).toBe('mailto:eniumenu@gmail.com')
   })
 })
