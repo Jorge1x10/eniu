@@ -199,7 +199,7 @@ export default function TemplateScreen() {
         <Button loading={saving} disabled={!dirty} onPress={save} style={{ paddingHorizontal: 18 }}>{t("Guardar")}</Button>
       </View>
       <Feedback message={error} /><Feedback message={success} tone="success" />
-      {problems.contrast ? <Feedback message={`${problems.contrast} Ajústalo antes de guardar.`} /> : null}
+      {problems.contrast ? <Feedback message={t("{{error}} Ajústalo antes de guardar.", { error: problems.contrast })} /> : null}
 
       <View style={{ gap: 11, alignItems: 'center' }}>
         <View style={{ alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 8 }}>

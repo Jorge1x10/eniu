@@ -23,6 +23,7 @@ function resolvePhotoUrl(photoUrl) {
 }
 
 function BusinessAvatar({ business, className, iconSize = 18 }) {
+  const { t } = useTranslation();
   const photoUrl = resolvePhotoUrl(business?.photo_url);
 
   return (
@@ -30,7 +31,7 @@ function BusinessAvatar({ business, className, iconSize = 18 }) {
       {photoUrl ? (
         <img
           src={photoUrl}
-          alt={`Foto de ${business.name}`}
+          alt={t("Foto de {{name}}", { name: business.name })}
           className="h-full w-full object-cover"
         />
       ) : (
@@ -204,7 +205,7 @@ export default function BusinessSelector({ onCreateBusiness }) {
           ) : (
             <p className="flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#AAAAAA]">
               <Lock size={16} className="mt-0.5 shrink-0" />
-             {t("Tu plan actual permite")} {limits.max_businesses === 1 ? t("un negocio") : `${limits.max_businesses} negocios`}.
+             {t("Tu plan actual permite")} {limits.max_businesses === 1 ? t("un negocio") : t("{{count}} negocios", { count: limits.max_businesses })}.
             </p>
           )}
         </div>

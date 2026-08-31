@@ -70,7 +70,7 @@ export function ProductImagePicker({ existing, picked, defaultKey, onChangeExist
 
   async function add() {
     const remaining = MAX_PICTURES - total;
-    if (remaining <= 0) { Alert.alert(t("Límite de fotos"), `Puedes agregar máximo ${MAX_PICTURES} imágenes por producto.`); return; }
+    if (remaining <= 0) { Alert.alert(t("Límite de fotos"), t("Puedes agregar máximo {{limit}} imágenes por producto.", { limit: MAX_PICTURES })); return; }
     setWorking(true);
     try {
       // `pickImages` ya convierte cada foto a un formato que la API acepta: la

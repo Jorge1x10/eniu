@@ -69,6 +69,17 @@ function looksLikeUiText(value) {
   return SPANISH.test(text);
 }
 
+/**
+ * Texto de una plantilla `\`...${x}...\`` con los huecos marcados.
+ *
+ * Estas se colaron durante la traduccion: el verificador solo miraba literales
+ * normales y texto JSX, asi que frases enteras armadas con una variable en
+ * medio pasaron desapercibidas y se quedaron en espanol.
+ */
+function templateText(node) {
+  return node.quasis.map((quasi) => quasi.value.cooked ?? "").join("{}");
+}
+
 /** Cadenas que ya son argumento de `t()` o `i18n.t()`. */
 function translatedNodes(ast) {
   const wrapped = new Set();
@@ -147,6 +158,14 @@ function findUntranslated() {
         findings.push({ file: rel, line: node.loc.start.line, text: node.value });
       }
 
+      if (
+        node.type === "TemplateLiteral" &&
+        !wrapped.has(node) &&
+        parent?.type !== "TaggedTemplateExpression" &&
+        looksLikeUiText(templateText(node).replace(/\{\}/g, " "))
+      ) {
+        findings.push({ file: rel, line: node.loc.start.line, text: templateText(node) });
+      }
       for (const key of Object.keys(node)) {
         if (key === "loc" || key.endsWith("Comments")) continue;
         const child = node[key];

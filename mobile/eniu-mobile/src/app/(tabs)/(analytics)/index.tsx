@@ -51,7 +51,7 @@ export default function AnalyticsScreen() {
             <Text style={{ color: '#C7C7C7', fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Vistas del menú")}</Text>
             <Text selectable style={{ color: theme.yellow, fontSize: 38, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 42 }}>{total.toLocaleString(currentLocale())}</Text>
           </View>
-          <View accessibilityLabel={`Gráfica de vistas, total ${total}`} style={{ height: 150, flexDirection: 'row', alignItems: 'flex-end', gap: 3 }}>{points.map((point) => <View key={point.date} style={{ flex: 1, minHeight: 4, height: `${Math.max(3, Number(point.views || 0) * 100 / max)}%`, borderRadius: 3, backgroundColor: Number(point.views || 0) === max && max > 0 ? theme.yellow : '#555555' }} />)}</View>
+          <View accessibilityLabel={t("Gráfica de vistas, total {{total}}", { total: total })} style={{ height: 150, flexDirection: 'row', alignItems: 'flex-end', gap: 3 }}>{points.map((point) => <View key={point.date} style={{ flex: 1, minHeight: 4, height: `${Math.max(3, Number(point.views || 0) * 100 / max)}%`, borderRadius: 3, backgroundColor: Number(point.views || 0) === max && max > 0 ? theme.yellow : '#555555' }} />)}</View>
           {points.length ? <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ color: '#8A8578', fontSize: 10.5, fontWeight: '600' }}>{shortDate(points[0].date)}</Text>
             {busiest && Number(busiest.views) > 0 ? <Text style={{ color: theme.yellow, fontSize: 10.5, fontWeight: '600' }}>{shortDate(busiest.date)} · {Number(busiest.views).toLocaleString(currentLocale())} vistas</Text> : null}

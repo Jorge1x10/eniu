@@ -42,7 +42,7 @@ export default function CategoriesScreen() {
     finally { setSaving(false); }
   }
   function remove(category: Category) {
-    Alert.alert(t("Eliminar categoría"), `Los productos de “${category.name}” quedarán sin categoría.`, [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Eliminar"), style: 'destructive', onPress: async () => { try { await api.delete(`${base}/${category.id}`); queryClient.setQueryData<{ categories: Category[] }>(key, (current) => ({ categories: (current?.categories ?? []).filter((item) => item.id !== category.id) })); } catch (requestError) { Alert.alert(t("No se pudo eliminar"), requestError instanceof Error ? requestError.message : t("Intenta nuevamente.")); } } }]);
+    Alert.alert(t("Eliminar categoría"), t("Los productos de “{{name}}” quedarán sin categoría.", { name: category.name }), [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Eliminar"), style: 'destructive', onPress: async () => { try { await api.delete(`${base}/${category.id}`); queryClient.setQueryData<{ categories: Category[] }>(key, (current) => ({ categories: (current?.categories ?? []).filter((item) => item.id !== category.id) })); } catch (requestError) { Alert.alert(t("No se pudo eliminar"), requestError instanceof Error ? requestError.message : t("Intenta nuevamente.")); } } }]);
   }
 
   const categories = query.data?.categories ?? [];

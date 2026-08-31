@@ -355,7 +355,7 @@ function ProfileForm({ user, setUser }) {
 
   const displayName = user.name || user.username || user.email;
   return <Card title={t("Mi perfil")} description={t("El correo no puede modificarse hasta contar con un proceso de verificación seguro.")}>
-    <div className="mb-6 flex items-center gap-4 rounded-2xl bg-[#FFF8DE] p-4">{user.profile_picture ? <img src={user.profile_picture} alt={`Foto de ${displayName}`} referrerPolicy="no-referrer" className="h-14 w-14 rounded-full object-cover" /> : <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FFE05A] text-xl font-bold">{displayName.charAt(0).toUpperCase()}</div>}<div><p className="font-bold text-[#111111]">{displayName}</p><p className="mt-1 text-xs text-[#777777]">{t("La foto se administra mediante tu proveedor de acceso.")}</p></div></div>
+    <div className="mb-6 flex items-center gap-4 rounded-2xl bg-[#FFF8DE] p-4">{user.profile_picture ? <img src={user.profile_picture} alt={t("Foto de {{name}}", { name: displayName })} referrerPolicy="no-referrer" className="h-14 w-14 rounded-full object-cover" /> : <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FFE05A] text-xl font-bold">{displayName.charAt(0).toUpperCase()}</div>}<div><p className="font-bold text-[#111111]">{displayName}</p><p className="mt-1 text-xs text-[#777777]">{t("La foto se administra mediante tu proveedor de acceso.")}</p></div></div>
     <form onSubmit={submit} className="grid gap-5 sm:grid-cols-2" noValidate>
       <Field id="profile-name" name="name" label={t("Nombre visible")} autoComplete="name" maxLength={50} value={form.name} onChange={update} />
       <Field id="profile-username" name="username" label={t("Nombre de usuario")} autoComplete="username" maxLength={50} value={form.username} onChange={update} help={t("Letras, números, puntos y guion bajo.")} />
@@ -386,7 +386,7 @@ function BusinessSettings({ business, isLoading, updateBusiness }) {
     updateBusiness(response.data.business); setError(""); setSuccess(t("Los datos del negocio se actualizaron correctamente."));
   }
 
-  return <Card title={t("Mi negocio")} description={`Editando la información esencial de ${business.name}.`}><form onSubmit={submit} className="grid gap-5 sm:grid-cols-2" noValidate>
+  return <Card title={t("Mi negocio")} description={t("Editando la información esencial de {{name}}.", { name: business.name })}><form onSubmit={submit} className="grid gap-5 sm:grid-cols-2" noValidate>
     <Field id="business-name" name="name" label={t("Nombre del negocio")} maxLength={64} required value={form.name} onChange={update} />
     <Field id="business-currency" name="currency" label={t("Moneda")} maxLength={3} required value={form.currency} onChange={update} help={t("Código de tres letras, por ejemplo MXN.")} />
     <Field id="business-phone" name="phone" label={t("Teléfono")} type="tel" autoComplete="tel" maxLength={20} value={form.phone} onChange={update} />

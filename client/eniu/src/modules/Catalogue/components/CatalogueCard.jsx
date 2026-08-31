@@ -69,7 +69,7 @@ export default function CatalogueCard({
           type="button"
           onClick={() => onDelete(catalogue)}
           disabled={isProcessing}
-          aria-label={`Eliminar ${catalogue.name}`}
+          aria-label={t("Eliminar {{name}}", { name: catalogue.name })}
           className="ml-auto cursor-pointer rounded-xl p-2 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Trash2 size={18} />

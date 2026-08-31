@@ -69,7 +69,7 @@ export function ImageField({ title, emptyText, source, quality, onPicked, onRemo
       const pictures = await pickImages({ limit: 1, quality });
       if (pictures?.[0]) onPicked(pictures[0]);
     } catch (error) {
-      onError(error instanceof Error ? error.message : `No fue posible preparar ${lower}.`);
+      onError(error instanceof Error ? error.message : t("No fue posible preparar {{name}}.", { name: lower }));
     } finally {
       setWorking(false);
     }
@@ -95,13 +95,13 @@ export function ImageField({ title, emptyText, source, quality, onPicked, onRemo
           >
             {working ? <ActivityIndicator color={theme.onYellow} /> : <>
               <ImageIcon color={theme.onYellow} size={16} />
-              <Text style={{ color: theme.onYellow, fontSize: 13.5, fontWeight: '800' }}>{source ? `Cambiar ${lower}` : `Elegir ${lower}`}</Text>
+              <Text style={{ color: theme.onYellow, fontSize: 13.5, fontWeight: '800' }}>{source ? t("Cambiar {{name}}", { name: lower }) : t("Elegir {{name}}", { name: lower })}</Text>
             </>}
           </Pressable>
           {source && onRemove ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Quitar ${lower}`}
+              accessibilityLabel={t("Quitar {{name}}", { name: lower })}
               disabled={disabled || working}
               onPress={onRemove}
               style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 12, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}

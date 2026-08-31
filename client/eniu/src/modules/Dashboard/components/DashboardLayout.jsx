@@ -89,7 +89,7 @@ export default function DashboardNav({ isOpen = false, onClose = () => {} }) {
         {user.profile_picture ? (
           <img
             src={user.profile_picture}
-            alt={`Foto de ${displayUser}`}
+            alt={t("Foto de {{name}}", { name: displayUser })}
             referrerPolicy="no-referrer"
             className="h-11 w-11 rounded-full object-cover"
           />

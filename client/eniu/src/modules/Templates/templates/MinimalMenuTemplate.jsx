@@ -4,6 +4,7 @@ import { Availability, CategoryNavigation, EmptyMenu, MenuCover, MenuFooter } fr
 import MenuBackground from "../components/MenuBackground";
 import { FONT_REGISTRY } from "../utils/themeDefaults";
 import { buildSections, mainProductImage, menuCurrency } from "./menuData";
+import i18n from "../../../i18n";
 
 export default function MinimalMenuTemplate({ business, catalogue, categories, products, theme, coverUrl, onCategorySelect, showEniuBadge = false }) {
   const sections = buildSections(categories, products);
@@ -20,5 +21,5 @@ export default function MinimalMenuTemplate({ business, catalogue, categories, p
 
 function MinimalProductRow({ product, theme }) {
   const image = mainProductImage(product);
-  return <article data-analytics-product-key={product.tracking_key || undefined} className={`flex gap-3 border-b border-current/15 py-4 ${product.is_available ? "" : "opacity-60"}`}>{theme.show_product_images && image && <img src={image} alt={`Imagen de ${product.name}`} className="h-16 w-16 shrink-0 rounded-lg object-cover" />}<div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><h3 className="font-semibold">{product.name}</h3><strong className="shrink-0 text-sm">{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</strong></div>{product.description && <p className="mt-1 text-xs leading-5 opacity-60">{product.description}</p>}<div className="mt-1"><Availability available={product.is_available} /></div></div></article>;
+  return <article data-analytics-product-key={product.tracking_key || undefined} className={`flex gap-3 border-b border-current/15 py-4 ${product.is_available ? "" : "opacity-60"}`}>{theme.show_product_images && image && <img src={image} alt={i18n.t("Imagen de {{name}}", { name: product.name })} className="h-16 w-16 shrink-0 rounded-lg object-cover" />}<div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><h3 className="font-semibold">{product.name}</h3><strong className="shrink-0 text-sm">{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</strong></div>{product.description && <p className="mt-1 text-xs leading-5 opacity-60">{product.description}</p>}<div className="mt-1"><Availability available={product.is_available} /></div></div></article>;
 }

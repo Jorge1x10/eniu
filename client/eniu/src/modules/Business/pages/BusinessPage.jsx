@@ -191,7 +191,7 @@ export default function BusinessPage() {
                 {savedPhotoUrl ? (
                   <img
                     src={savedPhotoUrl}
-                    alt={`Foto de ${business.name}`}
+                    alt={t("Foto de {{name}}", { name: business.name })}
                     className="h-full w-full object-cover"
                   />
                 ) : (
