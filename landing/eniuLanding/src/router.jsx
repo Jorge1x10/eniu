@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { RouterContext, useRouter } from './routerContext.js'
+import { LanguageContext } from './languageContext.js'
+import { contentFor, languageFromPath, resolveHref } from './content/index.js'
 
 // Enrutado mínimo con la History API: el sitio son tres páginas y no vale la
 // pena sumar una dependencia. El worker de `server/index.js` ya devuelve
@@ -37,20 +39,44 @@ export function RouterProvider({ children }) {
   }, [])
 
   const value = useMemo(() => ({ ...route, navigate }), [route, navigate])
-  return <RouterContext.Provider value={value}>{children}</RouterContext.Provider>
+
+  // El idioma se deduce de la ruta y no de un estado aparte: así la dirección
+  // es siempre la verdad, y compartir un enlace comparte también el idioma.
+  const language = languageFromPath(route.path)
+  const languageValue = useMemo(
+    () => ({ language, content: contentFor(language) }),
+    [language],
+  )
+
+  return (
+    <RouterContext.Provider value={value}>
+      <LanguageContext.Provider value={languageValue}>
+        {children}
+      </LanguageContext.Provider>
+    </RouterContext.Provider>
+  )
 }
 
+/**
+ * Enlace interno que se queda en el idioma en curso.
+ *
+ * `href` admite una clave de página (`"onboarding"`), un ancla (`"#planes"`) o
+ * una ruta literal. Declarar el destino por clave evita que un enlace escrito
+ * a mano mande a alguien que lee en inglés de vuelta a la versión en español.
+ */
 export function Link({ href, onClick, children, ...rest }) {
   const { navigate } = useRouter()
+  const { language } = useContext(LanguageContext)
+  const target = resolveHref(href, language)
 
   function handleClick(event) {
     onClick?.(event)
-    const external = /^(https?:|mailto:|tel:)/.test(href)
+    const external = /^(https?:|mailto:|tel:)/.test(target)
     if (external || event.defaultPrevented || event.button !== 0) return
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
-    navigate(href)
+    navigate(target)
   }
 
-  return <a href={href} onClick={handleClick} {...rest}>{children}</a>
+  return <a href={target} onClick={handleClick} {...rest}>{children}</a>
 }

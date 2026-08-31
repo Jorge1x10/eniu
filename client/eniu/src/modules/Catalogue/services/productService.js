@@ -1,15 +1,18 @@
 import { useCallback } from "react";
 
 import { useApi } from "../../auth/services/useApi";
+import i18n from "../../../i18n";
 
 export function getProductErrorMessage(response, fallback) {
-  if (response?.status === 403) return "No tienes permiso para administrar este menú.";
-  if (response?.status === 404) return "El menú o el producto ya no existe.";
+  if (response?.status === 403) return i18n.t("No tienes permiso para administrar este menú.");
+  if (response?.status === 404) return i18n.t("El menú o el producto ya no existe.");
   if (response?.status === 400) {
-    if (response.data?.message?.includes("no pertenece")) {
-      return "La categoría seleccionada no pertenece a este menú.";
+    // Se comprueba el código y no el texto: el mensaje del backend cambia con
+    // el idioma del usuario, el código no.
+    if (response.data?.code === "category_not_in_catalogue") {
+      return i18n.t("La categoría seleccionada no pertenece a este menú.");
     }
-    return response.data?.message || "Revisa la información ingresada.";
+    return response.data?.message || i18n.t("Revisa la información ingresada.");
   }
   return response?.data?.message || fallback;
 }

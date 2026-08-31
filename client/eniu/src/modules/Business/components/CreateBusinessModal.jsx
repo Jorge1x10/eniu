@@ -2,10 +2,13 @@ import { useEffect,useState } from 'react';
 import { useApi } from '../../auth/services/useApi';
 import { useBusiness } from '../services/useBusiness';
 import { Building2, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 
 
 export default function CreateBusinessModal({ isOpen, onClose }) {
+  const { t } = useTranslation();
+
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,7 +40,7 @@ export default function CreateBusinessModal({ isOpen, onClose }) {
     const normalizedName = name.trim();
 
     if (!normalizedName) {
-      setError("Escribe el nombre de tu negocio");
+      setError(t("Escribe el nombre de tu negocio"));
       return;
     }
 
@@ -53,7 +56,7 @@ export default function CreateBusinessModal({ isOpen, onClose }) {
     if (!response.ok) {
       setError(
         response.data?.message ||
-          "No fue posible crear el negocio"
+          t("No fue posible crear el negocio")
       );
       return;
     }
@@ -99,11 +102,11 @@ export default function CreateBusinessModal({ isOpen, onClose }) {
                 id="create-business-title"
                 className="text-xl font-bold text-[#111111]"
               >
-                Crea tu negocio
+               {t("Crea tu negocio")}
               </h2>
 
               <p className="mt-1 text-sm text-[#666666]">
-                Después podrás completar su información y personalización.
+               {t("Después podrás completar su información y personalización.")}
               </p>
             </div>
           </div>
@@ -112,7 +115,7 @@ export default function CreateBusinessModal({ isOpen, onClose }) {
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
-            aria-label="Cerrar"
+            aria-label={t("Cerrar")}
             className="rounded-lg p-2 text-[#666666] transition hover:bg-[#E9DDB7]/50 hover:text-[#111111] disabled:cursor-not-allowed"
           >
             <X size={20} />
@@ -124,7 +127,7 @@ export default function CreateBusinessModal({ isOpen, onClose }) {
             htmlFor="business-name"
             className="mb-2 block text-sm font-semibold text-[#2A2A2A]"
           >
-            Nombre del negocio
+           {t("Nombre del negocio")}
           </label>
 
           <input
@@ -138,7 +141,7 @@ export default function CreateBusinessModal({ isOpen, onClose }) {
             maxLength={120}
             autoFocus
             disabled={isSubmitting}
-            placeholder="Ej. La Pizzería Santa Anita"
+            placeholder={t("Ej. La Pizzería Santa Anita")}
             className="w-full rounded-xl border border-[#D9D9D9] bg-white px-4 py-3 text-[#111111] outline-none transition placeholder:text-[#999999] focus:border-[#E8C93D] focus:ring-2 focus:ring-[#FFE05A]/40 disabled:cursor-not-allowed disabled:opacity-60"
           />
 
@@ -155,7 +158,7 @@ export default function CreateBusinessModal({ isOpen, onClose }) {
               disabled={isSubmitting}
               className="rounded-xl px-4 py-2.5 font-semibold text-[#2A2A2A] transition hover:bg-[#E9DDB7]/50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Cancelar
+             {t("Cancelar")}
             </button>
 
             <button
@@ -163,7 +166,7 @@ export default function CreateBusinessModal({ isOpen, onClose }) {
               disabled={isSubmitting || !name.trim()}
               className="rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold text-[#111111] transition hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting ? "Creando..." : "Crear negocio"}
+              {isSubmitting ? "Creando..." : t("Crear negocio")}
             </button>
           </div>
         </form>

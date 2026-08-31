@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { ImageIcon, TrashIcon } from '@/components/ui/icons';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { IMAGE_QUALITIES, pickImages, type ImageQuality, type PickedPicture } from '@/lib/image-file';
+import { useTranslation } from 'react-i18next';
 
 type Source = { uri: string; headers?: Record<string, string> } | null;
 
@@ -14,10 +15,12 @@ type Source = { uri: string; headers?: Record<string, string> } | null;
  * se comprime lo decide el usuario.
  */
 export function ImageQualitySelector({ value, onChange }: { value: ImageQuality; onChange: (value: ImageQuality) => void }) {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   return (
     <View style={{ gap: 7 }}>
-      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>Calidad de las fotos</Text>
+      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>{t("Calidad de las fotos")}</Text>
       <View style={{ flexDirection: 'row', gap: 7 }}>
         {IMAGE_QUALITIES.map((option) => {
           const on = option.key === value;
@@ -29,8 +32,8 @@ export function ImageQualitySelector({ value, onChange }: { value: ImageQuality;
               onPress={() => onChange(option.key)}
               style={({ pressed }) => ({ flex: 1, minHeight: 52, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center', gap: 2, borderRadius: 13, borderCurve: 'continuous', backgroundColor: on ? theme.yellow : theme.surface, borderWidth: 1, borderColor: on ? theme.yellowPressed : theme.border, opacity: pressed ? 0.75 : 1 })}
             >
-              <Text style={{ color: on ? theme.onYellow : theme.text, fontSize: 13, fontWeight: '800' }}>{option.label}</Text>
-              <Text numberOfLines={1} style={{ color: on ? theme.onYellow : theme.muted, fontSize: 10, opacity: on ? 0.75 : 1 }}>{option.hint}</Text>
+              <Text style={{ color: on ? theme.onYellow : theme.text, fontSize: 13, fontWeight: '800' }}>{t(option.label)}</Text>
+              <Text numberOfLines={1} style={{ color: on ? theme.onYellow : theme.muted, fontSize: 10, opacity: on ? 0.75 : 1 }}>{t(option.hint)}</Text>
             </Pressable>
           );
         })}
@@ -54,6 +57,8 @@ type Props = {
 
 /** Tarjeta de «elegir / cambiar / quitar» para la portada, el fondo y el logo. */
 export function ImageField({ title, emptyText, source, quality, onPicked, onRemove, onError, height = 140, disabled, note }: Props) {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const [working, setWorking] = useState(false);
   const lower = title.toLowerCase();
@@ -105,7 +110,7 @@ export function ImageField({ title, emptyText, source, quality, onPicked, onRemo
             </Pressable>
           ) : null}
         </View>
-        <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17 }}>{note ?? 'Se convierte automáticamente a un formato compatible. Máximo 5 MB.'}</Text>
+        <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17 }}>{note ?? t("Se convierte automáticamente a un formato compatible. Máximo 5 MB.")}</Text>
       </View>
     </View>
   );

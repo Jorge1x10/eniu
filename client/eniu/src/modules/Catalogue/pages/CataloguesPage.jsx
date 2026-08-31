@@ -13,8 +13,11 @@ import {
   getCatalogueErrorMessage,
   useCatalogueService,
 } from "../services/catalogueService";
+import { useTranslation } from "react-i18next";
 
 export default function CataloguesPage() {
+  const { t } = useTranslation();
+
   const { businessId } = useParams();
   const navigate = useNavigate();
   const {
@@ -62,7 +65,7 @@ export default function CataloguesPage() {
       setCatalogues([]);
       setLoadError(getCatalogueErrorMessage(
         response,
-        "No pudimos cargar los menús. Intenta nuevamente."
+        t("No pudimos cargar los menús. Intenta nuevamente.")
       ));
       setIsLoading(false);
       return;
@@ -109,7 +112,7 @@ export default function CataloguesPage() {
     if (!response.ok) {
       setActionError(getCatalogueErrorMessage(
         response,
-        "No pudimos cambiar el estado del menú."
+        t("No pudimos cambiar el estado del menú.")
       ));
       return;
     }
@@ -120,8 +123,8 @@ export default function CataloguesPage() {
     ));
     setSuccessMessage(
       updatedCatalogue.is_published
-        ? "El menú se publicó correctamente."
-        : "El menú volvió a borrador."
+        ? t("El menú se publicó correctamente.")
+        : t("El menú volvió a borrador.")
     );
   }
 
@@ -129,7 +132,7 @@ export default function CataloguesPage() {
     forgetCatalogue(businessId, catalogueId);
     setCatalogues((current) => current.filter((item) => item.id !== catalogueId));
     setCatalogueToDelete(null);
-    setSuccessMessage("El menú se eliminó correctamente.");
+    setSuccessMessage(t("El menú se eliminó correctamente."));
   }
 
   function retryLoading() {
@@ -141,15 +144,15 @@ export default function CataloguesPage() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-[#8A7420]">
-            {isLoadingBusinesses ? "Cargando negocio..." : business?.name || "Negocio"}
+            {isLoadingBusinesses ? t("Cargando negocio...") : business?.name || t("Negocio")}
           </p>
-          <h1 className="mt-1 text-3xl font-bold text-[#111111]">Menús</h1>
+          <h1 className="mt-1 text-3xl font-bold text-[#111111]">{t("Menús")}</h1>
           <p className="mt-1 text-sm text-[#666666]">
-            Administra los menús que compartes con tus clientes.
+           {t("Administra los menús que compartes con tus clientes.")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {atMenuLimit && <PlanBadge label="Más menús en Esencial" />}
+          {atMenuLimit && <PlanBadge label={t("Más menús en Esencial")} />}
           <button
             type="button"
             onClick={() => setIsCreateOpen(true)}
@@ -157,7 +160,7 @@ export default function CataloguesPage() {
             title={atMenuLimit ? `Tu plan actual permite ${limits.max_catalogues_per_business} menú por negocio.` : undefined}
             className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold text-[#111111] hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Plus size={18} /> Crear menú
+            <Plus size={18} /> {t("Crear menú")}
           </button>
         </div>
       </header>
@@ -183,7 +186,7 @@ export default function CataloguesPage() {
             onClick={retryLoading}
             className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 py-2.5 font-semibold text-white hover:bg-[#111111]"
           >
-            <RefreshCw size={17} /> Reintentar
+            <RefreshCw size={17} /> {t("Reintentar")}
           </button>
         </div>
       ) : catalogues.length === 0 ? (
@@ -191,16 +194,16 @@ export default function CataloguesPage() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFE05A] text-[#111111]">
             <BookOpen size={26} />
           </div>
-          <h2 className="mt-5 text-xl font-bold text-[#111111]">Todavía no tienes menús</h2>
+          <h2 className="mt-5 text-xl font-bold text-[#111111]">{t("Todavía no tienes menús")}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#666666]">
-            Crea tu primer menú para comenzar a agregar categorías y productos.
+           {t("Crea tu primer menú para comenzar a agregar categorías y productos.")}
           </p>
           <button
             type="button"
             onClick={() => setIsCreateOpen(true)}
             className="mt-6 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold text-[#111111] hover:bg-[#E8C93D]"
           >
-            <Plus size={18} /> Crear menú
+            <Plus size={18} /> {t("Crear menú")}
           </button>
         </div>
       ) : (
@@ -238,8 +241,10 @@ export default function CataloguesPage() {
 }
 
 function LoadingGrid() {
+  const { t } = useTranslation();
+
   return (
-    <div aria-label="Cargando menús" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div aria-label={t("Cargando menús")} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {[0, 1, 2].map((item) => (
         <div key={item} className="h-56 animate-pulse rounded-2xl border border-[#E9DDB7] bg-white p-5">
           <div className="h-6 w-24 rounded-full bg-[#E9DDB7]" />

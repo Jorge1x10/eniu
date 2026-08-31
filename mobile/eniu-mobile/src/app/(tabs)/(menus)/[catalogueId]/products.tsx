@@ -18,6 +18,8 @@ import { useBusiness } from '@/features/business/business-context';
 import { api, resolveMediaUrl } from '@/lib/api';
 import { appendImage } from '@/lib/image-file';
 import type { Category, Product, ProductPicture } from '@/types/models';
+import { useTranslation } from 'react-i18next';
+import { currentLocale } from '@/i18n/formats';
 
 const UNCATEGORIZED = 'uncategorized';
 
@@ -27,6 +29,8 @@ function defaultPicture(product: Product) {
 }
 
 function ProductRow({ product, currency, theme, onPress, onLongPress }: { product: Product; currency: Intl.NumberFormat; theme: ReturnType<typeof useEniuTheme>; onPress: () => void; onLongPress: () => void }) {
+  const { t } = useTranslation();
+
   const picture = defaultPicture(product);
   const uri = resolveMediaUrl(picture?.url);
   const extra = (product.pictures?.length ?? 0) - 1;
@@ -42,10 +46,10 @@ function ProductRow({ product, currency, theme, onPress, onLongPress }: { produc
       )}
       <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
         <Text numberOfLines={1} style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>{product.name}</Text>
-        <Text numberOfLines={1} style={{ color: uri ? theme.muted : theme.yellowPressed, fontSize: 12, fontWeight: uri ? '400' : '600' }}>{uri ? (product.description || 'Sin descripción') : 'Súbele una foto y se ve 3× más'}</Text>
+        <Text numberOfLines={1} style={{ color: uri ? theme.muted : theme.yellowPressed, fontSize: 12, fontWeight: uri ? '400' : '600' }}>{uri ? (product.description || t("Sin descripción")) : t("Súbele una foto y se ve 3× más")}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 1 }}>
           <View style={{ width: 6, height: 6, borderRadius: 99, backgroundColor: product.is_available ? theme.success : theme.muted }} />
-          <Text style={{ color: product.is_available ? theme.success : theme.muted, fontSize: 11, fontWeight: '600' }}>{product.is_available ? 'Disponible' : 'Agotado'}</Text>
+          <Text style={{ color: product.is_available ? theme.success : theme.muted, fontSize: 11, fontWeight: '600' }}>{product.is_available ? t("Disponible") : t("Agotado")}</Text>
         </View>
       </View>
       <Text selectable style={{ color: theme.text, fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'], flexShrink: 0 }}>{product.price == null ? 'S/P' : currency.format(Number(product.price))}</Text>
@@ -59,10 +63,12 @@ function ProductRow({ product, currency, theme, onPress, onLongPress }: { produc
  * que tuviera, así que las secciones del menú sólo se podían armar desde la web.
  */
 function CategorySelector({ categories, value, onChange, theme }: { categories: Category[]; value: string | null; onChange: (value: string | null) => void; theme: ReturnType<typeof useEniuTheme> }) {
-  const options: { id: string | null; name: string }[] = [{ id: null, name: 'Sin categoría' }, ...categories.map((category) => ({ id: category.id as string | null, name: category.name }))];
+  const { t } = useTranslation();
+
+  const options: { id: string | null; name: string }[] = [{ id: null, name: t("Sin categoría") }, ...categories.map((category) => ({ id: category.id as string | null, name: category.name }))];
   return (
     <View style={{ gap: 7 }}>
-      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>Categoría</Text>
+      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>{t("Categoría")}</Text>
       {categories.length ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
           {options.map((option) => {
@@ -81,13 +87,15 @@ function CategorySelector({ categories, value, onChange, theme }: { categories: 
           })}
         </View>
       ) : (
-        <Text style={{ color: theme.muted, fontSize: 12, lineHeight: 18 }}>Aún no hay categorías en este menú. Créalas desde «Categorías» para agrupar tus productos.</Text>
+        <Text style={{ color: theme.muted, fontSize: 12, lineHeight: 18 }}>{t("Aún no hay categorías en este menú. Créalas desde «Categorías» para agrupar tus productos.")}</Text>
       )}
     </View>
   );
 }
 
 export default function ProductsScreen() {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const queryClient = useQueryClient();
   const { limits, isWithin } = usePlan();
@@ -118,8 +126,8 @@ export default function ProductsScreen() {
   }
 
   async function save() {
-    if (!name.trim()) { setError('Escribe el nombre del producto.'); return; }
-    if (price && !/^\d+(?:\.\d{1,2})?$/.test(price)) { setError('Usa un precio válido con máximo dos decimales.'); return; }
+    if (!name.trim()) { setError(t("Escribe el nombre del producto.")); return; }
+    if (price && !/^\d+(?:\.\d{1,2})?$/.test(price)) { setError(t("Usa un precio válido con máximo dos decimales.")); return; }
     if (existingPictures.length + pickedPictures.length > MAX_PICTURES) { setError(`Puedes agregar máximo ${MAX_PICTURES} imágenes.`); return; }
     setSaving(true); setError('');
     const fields = { name: name.trim(), description: description.trim(), price: price || null, category_id: categoryId, is_available: available };
@@ -148,55 +156,55 @@ export default function ProductsScreen() {
       // producto fuera de la lista, como si no se hubiera creado.
       if (filter && (data.product.category_id ?? UNCATEGORIZED) !== filter) setFilter(null);
       setFormOpen(false); setEditing(null); setExistingPictures([]); setPickedPictures([]); setDefaultKey(null);
-    } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'No fue posible guardar el producto.'); }
+    } catch (requestError) { setError(requestError instanceof Error ? requestError.message : t("No fue posible guardar el producto.")); }
     finally { setSaving(false); }
   }
   function remove(product: Product) {
-    Alert.alert('Eliminar producto', `¿Quieres eliminar “${product.name}”?`, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Eliminar', style: 'destructive', onPress: async () => { try { await api.delete(`${base}/${product.id}`); queryClient.setQueryData<{ products: Product[] }>(key, (current) => ({ products: (current?.products ?? []).filter((item) => item.id !== product.id) })); } catch (requestError) { Alert.alert('No se pudo eliminar', requestError instanceof Error ? requestError.message : 'Intenta nuevamente.'); } } }]);
+    Alert.alert(t("Eliminar producto"), `¿Quieres eliminar “${product.name}”?`, [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Eliminar"), style: 'destructive', onPress: async () => { try { await api.delete(`${base}/${product.id}`); queryClient.setQueryData<{ products: Product[] }>(key, (current) => ({ products: (current?.products ?? []).filter((item) => item.id !== product.id) })); } catch (requestError) { Alert.alert(t("No se pudo eliminar"), requestError instanceof Error ? requestError.message : t("Intenta nuevamente.")); } } }]);
   }
 
   const products = query.data?.products ?? [];
   const atProductLimit = !isWithin(products.length, limits.max_products_per_catalogue);
   const categories = categoriesQuery.data?.categories ?? [];
-  const currency = new Intl.NumberFormat('es-MX', { style: 'currency', currency: selectedBusiness?.currency || 'MXN' });
+  const currency = new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: selectedBusiness?.currency || 'MXN' });
   const filtered = filter ? products.filter((product) => (product.category_id ?? UNCATEGORIZED) === filter) : products;
   const byCategory = new Map<string, Product[]>();
   for (const product of filtered) { const id = product.category_id ?? UNCATEGORIZED; byCategory.set(id, [...(byCategory.get(id) ?? []), product]); }
   const named = categories.filter((category) => byCategory.has(category.id)).map((category) => ({ id: category.id, name: category.name, items: byCategory.get(category.id)! }));
   const rest = byCategory.get(UNCATEGORIZED);
-  const groups = rest ? [...named, { id: UNCATEGORIZED, name: 'Sin categoría', items: rest }] : named;
+  const groups = rest ? [...named, { id: UNCATEGORIZED, name: t("Sin categoría"), items: rest }] : named;
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 100, gap: 16, backgroundColor: theme.background }}>
       {categories.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-        <Pressable onPress={() => setFilter(null)} style={({ pressed }) => ({ minHeight: 34, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 99, backgroundColor: filter === null ? '#111111' : theme.surface, borderWidth: filter === null ? 0 : 1, borderColor: theme.border, opacity: pressed ? 0.75 : 1 })}><Text style={{ color: filter === null ? theme.yellow : theme.text, fontSize: 12.5, fontWeight: '700' }}>Todos · {products.length}</Text></Pressable>
+        <Pressable onPress={() => setFilter(null)} style={({ pressed }) => ({ minHeight: 34, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 99, backgroundColor: filter === null ? '#111111' : theme.surface, borderWidth: filter === null ? 0 : 1, borderColor: theme.border, opacity: pressed ? 0.75 : 1 })}><Text style={{ color: filter === null ? theme.yellow : theme.text, fontSize: 12.5, fontWeight: '700' }}>{t("Todos ·")} {products.length}</Text></Pressable>
         {categories.map((category) => { const count = products.filter((product) => product.category_id === category.id).length; return <Pressable key={category.id} onPress={() => setFilter(category.id)} style={({ pressed }) => ({ minHeight: 34, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 99, backgroundColor: filter === category.id ? '#111111' : theme.surface, borderWidth: filter === category.id ? 0 : 1, borderColor: theme.border, opacity: pressed ? 0.75 : 1 })}><Text style={{ color: filter === category.id ? theme.yellow : theme.text, fontSize: 12.5, fontWeight: '600' }}>{category.name} · {count}</Text></Pressable>; })}
       </ScrollView> : null}
-      {categories.length ? <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17, marginTop: -6 }}>Las secciones sólo filtran esta lista. La categoría de cada producto se elige en el formulario.</Text> : null}
+      {categories.length ? <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17, marginTop: -6 }}>{t("Las secciones sólo filtran esta lista. La categoría de cada producto se elige en el formulario.")}</Text> : null}
 
       {atProductLimit && !formOpen ? <PlanNotice message={`Tu plan actual permite hasta ${limits.max_products_per_catalogue} productos por menú.`} /> : null}
-      <Button disabled={atProductLimit && !formOpen} onPress={() => formOpen ? setFormOpen(false) : startEdit()}>{formOpen ? 'Cerrar formulario' : 'Crear producto'}</Button>
+      <Button disabled={atProductLimit && !formOpen} onPress={() => formOpen ? setFormOpen(false) : startEdit()}>{formOpen ? t("Cerrar formulario") : t("Crear producto")}</Button>
       {formOpen ? (
         <Animated.View entering={FadeIn.duration(220)} style={{ padding: 18, gap: 14, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous' }}>
-          <Text style={{ color: theme.text, fontSize: 19, fontWeight: '900' }}>{editing ? 'Editar producto' : 'Nuevo producto'}</Text>
-          <FormField label="Nombre" value={name} onChangeText={setName} maxLength={64} placeholder="Hamburguesa clásica" />
-          <FormField label="Descripción" value={description} onChangeText={setDescription} multiline placeholder="Ingredientes y detalles" />
-          <FormField label="Precio" value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholder="129.00" />
+          <Text style={{ color: theme.text, fontSize: 19, fontWeight: '900' }}>{editing ? t("Editar producto") : t("Nuevo producto")}</Text>
+          <FormField label={t("Nombre")} value={name} onChangeText={setName} maxLength={64} placeholder={t("Hamburguesa clásica")} />
+          <FormField label={t("Descripción")} value={description} onChangeText={setDescription} multiline placeholder={t("Ingredientes y detalles")} />
+          <FormField label={t("Precio")} value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholder="129.00" />
           <CategorySelector categories={categories} value={categoryId} onChange={setCategoryId} theme={theme} />
           <ProductImagePicker existing={existingPictures} picked={pickedPictures} defaultKey={defaultKey} onChangeExisting={setExistingPictures} onChangePicked={setPickedPictures} onChangeDefault={setDefaultKey} onError={setError} disabled={saving} />
-          <View style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text style={{ color: theme.text, fontWeight: '700' }}>Disponible</Text><Switch value={available} onValueChange={setAvailable} trackColor={{ true: theme.yellowPressed }} /></View>
+          <View style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text style={{ color: theme.text, fontWeight: '700' }}>{t("Disponible")}</Text><Switch value={available} onValueChange={setAvailable} trackColor={{ true: theme.yellowPressed }} /></View>
           <Feedback message={error} />
-          <Button loading={saving} onPress={save}>Guardar producto</Button>
+          <Button loading={saving} onPress={save}>{t("Guardar producto")}</Button>
         </Animated.View>
       ) : null}
 
-      {products.length ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>Toca un producto para editarlo, mantén presionado para eliminarlo.</Text> : null}
-      {query.isLoading ? <LoadingState /> : query.isError ? <ErrorState message="No pudimos cargar los productos." onRetry={() => query.refetch()} /> : products.length ? <View style={{ gap: 18 }}>
+      {products.length ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Toca un producto para editarlo, mantén presionado para eliminarlo.")}</Text> : null}
+      {query.isLoading ? <LoadingState /> : query.isError ? <ErrorState message={t("No pudimos cargar los productos.")} error={query.error} onRetry={() => query.refetch()} /> : products.length ? <View style={{ gap: 18 }}>
         {groups.map((group) => <View key={group.id} style={{ gap: 10 }}>
           <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{group.name}</Text>
           <View style={{ gap: 10 }}>{group.items.map((product, index) => <Animated.View key={product.id} entering={FadeInDown.duration(280).delay(index * 50)} layout={LinearTransition.duration(200)}><ProductRow product={product} currency={currency} theme={theme} onPress={() => startEdit(product)} onLongPress={() => remove(product)} /></Animated.View>)}</View>
         </View>)}
-      </View> : <EmptyState title="Sin productos" description="Agrega el primer producto de este menú." action="Crear producto" onAction={() => startEdit()} />}
+      </View> : <EmptyState title={t("Sin productos")} description={t("Agrega el primer producto de este menú.")} action={t("Crear producto")} onAction={() => startEdit()} />}
     </ScrollView>
   );
 }

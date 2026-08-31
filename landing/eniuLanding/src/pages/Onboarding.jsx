@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '../router.jsx'
-import { appUrl, faq, onboardingSteps } from '../data/site.js'
+import { useLanguage } from '../languageContext.js'
+import { appUrl } from '../data/site.js'
 
 /** Rellena la línea vertical de la guía conforme avanza el desplazamiento. */
 function useRailProgress() {
@@ -33,12 +34,12 @@ function useRailProgress() {
   return trackRef
 }
 
-function Faq() {
+function Faq({ items }) {
   const [openIndex, setOpenIndex] = useState(0)
 
   return (
     <div className="faq-list">
-      {faq.map(([question, answer], index) => {
+      {items.map(([question, answer], index) => {
         const open = openIndex === index
         return (
           <div className={open ? 'faq-item open' : 'faq-item'} key={question} data-reveal style={{ '--reveal-delay': `${index * 80}ms` }}>
@@ -55,22 +56,23 @@ function Faq() {
 
 export default function Onboarding() {
   const trackRef = useRailProgress()
+  const { onboarding } = useLanguage().content
 
   return (
     <main className="onboarding">
       <section className="ob-hero">
         <div className="ob-hero-copy">
-          <p className="eyebrow"><span /> Primeros pasos</p>
-          <h1>Tu menú publicado, <em>paso a paso.</em></h1>
-          <p className="hero-lead">Así funciona Eniu de principio a fin: desde crear tu cuenta hasta compartir tu código QR y ver qué piden más tus clientes.</p>
+          <p className="eyebrow"><span /> {onboarding.eyebrow}</p>
+          <h1>{onboarding.title[0]}<em>{onboarding.title[1]}</em></h1>
+          <p className="hero-lead">{onboarding.lead}</p>
           <div className="hero-actions">
-            <a className="button primary" href={appUrl}>Empezar ahora</a>
-            <Link className="text-link" href="/#planes">Comparar planes</Link>
+            <a className="button primary" href={appUrl}>{onboarding.primaryCta}</a>
+            <Link className="text-link" href="#planes">{onboarding.secondaryCta}</Link>
           </div>
           <div className="ob-chips">
-            <span className="ob-chip"><b>6</b> pasos</span>
-            <span className="ob-chip"><b>~12</b> minutos</span>
-            <span className="ob-chip"><b>0</b> conocimientos técnicos</span>
+            {onboarding.chips.map(([value, label]) => (
+              <span className="ob-chip" key={label}><b>{value}</b> {label}</span>
+            ))}
           </div>
         </div>
         <div className="ob-hero-art" aria-hidden="true">
@@ -82,12 +84,12 @@ export default function Onboarding() {
 
       <section className="ob-track-section section-pad" id="guia">
         <div className="section-heading" data-reveal>
-          <div><p className="eyebrow"><span /> La guía completa</p><h2>De la idea a la mesa<br /><em>en seis pasos.</em></h2></div>
+          <div><p className="eyebrow"><span /> {onboarding.guideEyebrow}</p><h2>{onboarding.guideTitle[0]}<br /><em>{onboarding.guideTitle[1]}</em></h2></div>
         </div>
         <div className="ob-track" ref={trackRef}>
           <div className="ob-rail" aria-hidden="true"><span /></div>
           <ol className="ob-steps">
-            {onboardingSteps.map((step, index) => (
+            {onboarding.steps.map((step, index) => (
               <li className="ob-step" key={step.title} data-reveal>
                 <div className="ob-dot" aria-hidden="true"><span>{index + 1}</span></div>
                 <div className="ob-body">
@@ -109,16 +111,16 @@ export default function Onboarding() {
 
       <section className="ob-faq section-pad" id="preguntas">
         <div className="section-heading" data-reveal>
-          <div><p className="eyebrow"><span /> Preguntas frecuentes</p><h2>Lo que casi todos<br /><em>preguntan primero.</em></h2></div>
+          <div><p className="eyebrow"><span /> {onboarding.faqEyebrow}</p><h2>{onboarding.faqTitle[0]}<br /><em>{onboarding.faqTitle[1]}</em></h2></div>
         </div>
-        <Faq />
+        <Faq items={onboarding.faq} />
       </section>
 
       <section className="final-cta">
-        <p className="eyebrow light"><span /> Ya sabes cómo funciona</p>
-        <h2>Ahora solo falta<br /><em>tu primer menú.</em></h2>
-        <p>Crea tu cuenta y publica tu carta hoy mismo. El plan Básico es gratis.</p>
-        <a className="button yellow" href={appUrl}>Crear mi menú gratis</a>
+        <p className="eyebrow light"><span /> {onboarding.finalEyebrow}</p>
+        <h2>{onboarding.finalTitle[0]}<br /><em>{onboarding.finalTitle[1]}</em></h2>
+        <p>{onboarding.finalLead}</p>
+        <a className="button yellow" href={appUrl}>{onboarding.finalCta}</a>
         <span className="cta-orbit orbit-one" aria-hidden="true" /><span className="cta-orbit orbit-two" aria-hidden="true" />
       </section>
     </main>

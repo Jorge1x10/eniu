@@ -32,6 +32,9 @@ export type User = {
   phone_number?: string | null;
   profile_picture?: string | null;
   auth_methods?: { password?: boolean; google?: boolean };
+  // Idioma elegido por el usuario, no el del dispositivo: es lo que hace que
+  // Eniu le hable igual aquí y en el panel web.
+  language?: string;
   plan?: Plan;
 };
 

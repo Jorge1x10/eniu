@@ -13,72 +13,85 @@ from app.modules.catalogue.model import Catalogue
 from app.modules.products.model import Product
 from app.modules.template.model import CatalogueTemplate
 from app.modules.users.model import User
+from app.shared.i18n import _, normalize_language, set_language
 
 
-PROFILE_FIELDS = {"name", "username", "phone_number"}
+PROFILE_FIELDS = {"name", "username", "phone_number", "language"}
 
 
 def _clean_optional(value, field, max_length):
     if value is not None and not isinstance(value, str):
-        raise ValueError(f"{field} debe ser texto")
+        raise ValueError(_("{field} debe ser texto", field=field))
     cleaned = " ".join((value or "").strip().split()) or None
     if cleaned and len(cleaned) > max_length:
-        raise ValueError(f"{field} no puede superar {max_length} caracteres")
+        raise ValueError(
+            _("{field} no puede superar {max} caracteres", field=field, max=max_length)
+        )
     return cleaned
 
 
 def update_current_user(user_id, data):
     unknown = set(data) - PROFILE_FIELDS
     if unknown:
-        return {"message": "Se enviaron campos no permitidos", "fields": sorted(unknown)}, 400
+        return {"message": _("Se enviaron campos no permitidos"), "fields": sorted(unknown)}, 400
 
     try:
         user = db.session.get(User, UUID(str(user_id)))
     except (TypeError, ValueError):
         user = None
     if not user:
-        return {"message": "Usuario no encontrado"}, 404
+        return {"message": _("Usuario no encontrado")}, 404
 
     try:
         if "name" in data:
-            user.name = _clean_optional(data["name"], "El nombre", 50)
+            user.name = _clean_optional(data["name"], _("El nombre"), 50)
 
         if "username" in data:
-            username = _clean_optional(data["username"], "El nombre de usuario", 50)
+            username = _clean_optional(data["username"], _("El nombre de usuario"), 50)
             if username and len(username) < 4:
-                return {"message": "El nombre de usuario debe tener al menos 4 caracteres"}, 400
+                return {"message": _("El nombre de usuario debe tener al menos 4 caracteres")}, 400
             if username and not all(character.isalnum() or character in "._" for character in username):
-                return {"message": "El nombre de usuario contiene caracteres no permitidos"}, 400
+                return {"message": _("El nombre de usuario contiene caracteres no permitidos")}, 400
             duplicate = User.query.filter(
                 db.func.lower(User.username) == username.lower(),
                 User.id != user.id,
             ).first() if username else None
             if duplicate:
-                return {"message": "El nombre de usuario ya está registrado"}, 409
+                return {"message": _("El nombre de usuario ya está registrado")}, 409
             user.username = username
 
         if "phone_number" in data:
-            phone = _clean_optional(data["phone_number"], "El teléfono", 20)
+            phone = _clean_optional(data["phone_number"], _("El teléfono"), 20)
             duplicate = User.query.filter(
                 User.phone_number == phone,
                 User.id != user.id,
             ).first() if phone else None
             if duplicate:
-                return {"message": "El teléfono ya está registrado"}, 409
+                return {"message": _("El teléfono ya está registrado")}, 409
             user.phone_number = phone
 
+        if "language" in data:
+            language = normalize_language(data["language"])
+            if not language:
+                return {"message": _("El idioma no es válido")}, 400
+            user.language = language
+            # El resto de la respuesta debe salir ya en el idioma recién
+            # elegido: confirmar el cambio en el idioma anterior se lee como
+            # si no hubiera surtido efecto.
+            set_language(language)
+
         db.session.commit()
-        return {"message": "Perfil actualizado correctamente", "user": user.to_dict()}, 200
+        return {"message": _("Perfil actualizado correctamente"), "user": user.to_dict()}, 200
     except ValueError as error:
         db.session.rollback()
         return {"message": str(error)}, 400
     except IntegrityError:
         db.session.rollback()
-        return {"message": "El nombre de usuario o teléfono ya está registrado"}, 409
+        return {"message": _("El nombre de usuario o teléfono ya está registrado")}, 409
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible actualizar el perfil"}, 500
+        return {"message": _("No fue posible actualizar el perfil")}, 500
 
 CONFIRMATION_WORD = "ELIMINAR"
 
@@ -122,22 +135,22 @@ def delete_current_user(user_id, password=None, confirmation=None):
     try:
         user = db.session.get(User, UUID(str(user_id)))
     except (TypeError, ValueError):
-        return {"message": "El identificador del usuario no es válido"}, 400
+        return {"message": _("El identificador del usuario no es válido")}, 400
     if not user:
-        return {"message": "Usuario no encontrado"}, 404
+        return {"message": _("Usuario no encontrado")}, 404
 
     # Quien entró con Google o Apple no tiene contraseña; exigirla lo dejaría
     # sin poder borrar su cuenta, que es justo lo que no puede pasar.
     if user.password:
         if not isinstance(password, str) or not bcrypt.check_password_hash(user.password, password):
-            return {"message": "La contraseña no es correcta"}, 403
+            return {"message": _("La contraseña no es correcta")}, 403
     elif not isinstance(confirmation, str) or confirmation.strip().upper() != CONFIRMATION_WORD:
-        return {"message": f"Escribe {CONFIRMATION_WORD} para confirmar"}, 400
+        return {"message": _("Escribe {word} para confirmar", word=CONFIRMATION_WORD)}, 400
 
     cancelled, detail = cancel_subscription_for_user(user)
     if not cancelled:
         current_app.logger.warning("No se pudo cancelar la suscripción al borrar la cuenta: %s", detail)
-        return {"message": "No fue posible cancelar tu suscripción. Inténtalo de nuevo en unos minutos."}, 502
+        return {"message": _("No fue posible cancelar tu suscripción. Inténtalo de nuevo en unos minutos.")}, 502
 
     # Apple exige revocar la sesión de Sign in with Apple al borrar la cuenta.
     # Si falla se registra y se continúa: dejar a alguien atrapado en una cuenta
@@ -155,7 +168,7 @@ def delete_current_user(user_id, password=None, confirmation=None):
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible eliminar la cuenta"}, 500
+        return {"message": _("No fue posible eliminar la cuenta")}, 500
 
     # Los archivos se borran después de confirmar la transacción: si el
     # almacenamiento falla preferimos dejar huérfano un archivo antes que
@@ -166,4 +179,4 @@ def delete_current_user(user_id, password=None, confirmation=None):
         except OSError as error:
             current_app.logger.warning("No se pudo borrar %s: %s", filename, error)
 
-    return {"message": "Tu cuenta y todos sus datos se eliminaron correctamente"}, 200
+    return {"message": _("Tu cuenta y todos sus datos se eliminaron correctamente")}, 200

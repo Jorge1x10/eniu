@@ -4,6 +4,7 @@ import MenuBackground from "../components/MenuBackground";
 import { Availability, CategoryNavigation, EmptyMenu, MenuCover, MenuFooter } from "../components/MenuShared";
 import { FONT_REGISTRY } from "../utils/themeDefaults";
 import { buildSections, mainProductImage, menuCurrency } from "./menuData";
+import { useTranslation } from "react-i18next";
 
 const VARIANTS = {
   bistro: { header: "text-left", card: "rounded-lg border-l-4", grid: "space-y-3", eyebrow: "Selección de la casa" },
@@ -14,6 +15,7 @@ const VARIANTS = {
 };
 
 function AdditionalTemplate({ variant, business, catalogue, categories, products, theme, coverUrl, onCategorySelect, showEniuBadge = false }) {
+  const { t } = useTranslation();
   const style = VARIANTS[variant];
   const sections = useMemo(() => buildSections(categories, products), [categories, products]);
   const [active, setActive] = useState("all");
@@ -29,7 +31,7 @@ function AdditionalTemplate({ variant, business, catalogue, categories, products
     <MenuBackground theme={theme} />
     <div className="relative z-1">
       <MenuCover business={business} catalogue={catalogue} theme={theme} coverUrl={coverUrl} compact={variant === "minimal"} />
-      <header className={`px-6 py-7 ${style.header}`}><p className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-60">{style.eyebrow}</p><h1 className="mt-2 text-3xl font-black">{catalogue.name}</h1><p className="mt-2 text-xs opacity-70">{catalogue.description || business?.name}</p></header>
+      <header className={`px-6 py-7 ${style.header}`}><p className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-60">{t(style.eyebrow)}</p><h1 className="mt-2 text-3xl font-black">{catalogue.name}</h1><p className="mt-2 text-xs opacity-70">{catalogue.description || business?.name}</p></header>
       <CategoryNavigation sections={sections} active={active} onSelect={choose} rounded={variant !== "luxury"} />
       {!products.length ? <EmptyMenu /> : <main className="space-y-8 px-5 py-6">{visible.map((section) => <section key={section.id}><h2 className="mb-4 text-xl font-black">{section.name}</h2><div className={style.grid}>{section.products.map((product) => <ProductCard key={product.id} product={product} theme={theme} className={style.card} variant={variant} />)}</div></section>)}</main>}
       <MenuFooter show={showEniuBadge} />

@@ -1,4 +1,9 @@
-export const menuCurrency = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
+import { formatCurrency } from "../../../i18n/formats";
+// Función y no constante: construirla al importar la ataba al idioma de
+// arranque, y el formato debe seguir al idioma en curso.
+export const menuCurrency = {
+  format: (value) => formatCurrency(value),
+};
 
 export function resolveAssetUrl(url) {
   if (!url || url.startsWith("http") || url.startsWith("blob:")) return url;

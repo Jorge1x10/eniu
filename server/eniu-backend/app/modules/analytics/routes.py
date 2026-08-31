@@ -3,6 +3,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import limiter
 from .services import get_analytics, record_events
+from app.shared.i18n import _
 
 
 analytics_bp = Blueprint("analytics", __name__, url_prefix="/api")
@@ -12,7 +13,7 @@ analytics_bp = Blueprint("analytics", __name__, url_prefix="/api")
 @limiter.limit("60 per minute")
 def public_events(public_slug):
     if request.content_length and request.content_length > 32 * 1024:
-        return jsonify({"message": "El lote de eventos es demasiado grande"}), 413
+        return jsonify({"message": _("El lote de eventos es demasiado grande")}), 413
     result, status = record_events(public_slug, request.get_json(silent=True))
     return ("", 204) if status == 204 else (jsonify(result), status)
 
@@ -22,6 +23,6 @@ def public_events(public_slug):
 def catalogue_analytics(business_id, catalogue_id):
     unknown = set(request.args) - {"from", "to", "timezone"}
     if unknown:
-        return jsonify({"message": "La consulta contiene parámetros no permitidos"}), 400
+        return jsonify({"message": _("La consulta contiene parámetros no permitidos")}), 400
     result, status = get_analytics(get_jwt_identity(), business_id, catalogue_id, request.args)
     return jsonify(result), status

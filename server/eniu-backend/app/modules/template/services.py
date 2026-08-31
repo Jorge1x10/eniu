@@ -12,6 +12,7 @@ from app.modules.catalogue.services import catalogue_access
 from app.modules.template.model import CatalogueTemplate
 from app.modules.catalogue.model import Catalogue
 from app.modules.business.model import Business
+from app.shared.i18n import _
 
 
 TEMPLATE_KEYS = {
@@ -53,7 +54,7 @@ def default_configuration():
 
 def _normalize_hex(value):
     if not isinstance(value, str) or not HEX_PATTERN.fullmatch(value):
-        raise ValueError("Los colores deben usar el formato #RGB o #RRGGBB")
+        raise ValueError(_("Los colores deben usar el formato #RGB o #RRGGBB"))
     value = value.upper()
     if len(value) == 4:
         value = "#" + "".join(character * 2 for character in value[1:])
@@ -73,7 +74,7 @@ def _contrast(first, second):
 
 def _validate_theme(theme, current):
     if not isinstance(theme, dict):
-        raise ValueError("La configuración visual no es válida")
+        raise ValueError(_("La configuración visual no es válida"))
     unknown = set(theme) - THEME_FIELDS
     if unknown:
         raise ValueError(f"Campos de tema no permitidos: {', '.join(sorted(unknown))}")
@@ -83,7 +84,7 @@ def _validate_theme(theme, current):
             normalized[field] = _normalize_hex(theme[field])
     if "font_key" in theme:
         if theme["font_key"] not in FONT_KEYS:
-            raise ValueError("La tipografía seleccionada no está permitida")
+            raise ValueError(_("La tipografía seleccionada no está permitida"))
         normalized["font_key"] = theme["font_key"]
     for field in ("show_cover", "show_product_images"):
         if field in theme:
@@ -93,20 +94,20 @@ def _validate_theme(theme, current):
     if "background_opacity" in theme:
         value = theme["background_opacity"]
         if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ValueError("La opacidad del fondo debe ser un número")
+            raise ValueError(_("La opacidad del fondo debe ser un número"))
         if value < 0 or value > 1:
-            raise ValueError("La opacidad del fondo debe estar entre 0 y 1")
+            raise ValueError(_("La opacidad del fondo debe estar entre 0 y 1"))
         normalized["background_opacity"] = round(float(value), 2)
     if _contrast(normalized["text_color"], normalized["background_color"]) < 4.5:
-        raise ValueError("El texto no tiene suficiente contraste con el fondo")
+        raise ValueError(_("El texto no tiene suficiente contraste con el fondo"))
     if _contrast(normalized["text_color"], normalized["primary_color"]) < 4.5:
-        raise ValueError("El texto no tiene suficiente contraste con el color principal")
+        raise ValueError(_("El texto no tiene suficiente contraste con el color principal"))
     return normalized
 
 
 def _validate_splash(splash, current):
     if not isinstance(splash, dict):
-        raise ValueError("La pantalla de bienvenida no es válida")
+        raise ValueError(_("La pantalla de bienvenida no es válida"))
     unknown = set(splash) - SPLASH_FIELDS
     if unknown:
         raise ValueError(f"Campos de bienvenida no permitidos: {', '.join(sorted(unknown))}")
@@ -118,7 +119,7 @@ def _validate_splash(splash, current):
     if "duration" in splash:
         value = splash["duration"]
         if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ValueError("La duración de la bienvenida debe ser un número")
+            raise ValueError(_("La duración de la bienvenida debe ser un número"))
         if value < MIN_SPLASH_SECONDS or value > MAX_SPLASH_SECONDS:
             raise ValueError(f"La duración de la bienvenida debe estar entre {MIN_SPLASH_SECONDS:g} y {MAX_SPLASH_SECONDS:g} segundos")
         normalized["duration"] = round(float(value), 1)
@@ -198,7 +199,7 @@ def get_template(owner_id, business_id, catalogue_id):
         return {"template": config.to_dict() if config else default_configuration()}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible consultar la plantilla"}, 500
+        return {"message": _("No fue posible consultar la plantilla")}, 500
 
 
 def update_template(owner_id, business_id, catalogue_id, data, cover=None, background=None, splash=None):
@@ -210,7 +211,7 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         if error:
             return error
         if not isinstance(data, dict):
-            return {"message": "La configuración no es válida"}, 400
+            return {"message": _("La configuración no es válida")}, 400
         unknown = set(data) - {"template_key", "theme", "splash", "remove_cover", "remove_background", "remove_splash"}
         if unknown:
             return {"message": f"Campos no permitidos: {', '.join(sorted(unknown))}"}, 400
@@ -225,7 +226,7 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         current = config.to_dict() if config else default_configuration()
         template_key = data.get("template_key", current["template_key"])
         if template_key not in TEMPLATE_KEYS:
-            return {"message": "La plantilla seleccionada no está permitida"}, 400
+            return {"message": _("La plantilla seleccionada no está permitida")}, 400
         blocked = ensure_template_allowed(
             owner_id,
             template_key=data.get("template_key"),
@@ -254,7 +255,7 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         config.splash_duration = splash_config["duration"]
 
         if cover and cover.filename:
-            optimized, extension = _prepare_image(cover, "La portada")
+            optimized, extension = _prepare_image(cover, _("La portada"))
             new_filename = f"{uuid4().hex}.{extension}"
             storage.save_file(current_app.config["CATALOGUE_COVER_FOLDER"], new_filename, optimized)
             config.cover_filename = new_filename
@@ -262,7 +263,7 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
             config.cover_filename = None
 
         if background and background.filename:
-            optimized, extension = _prepare_image(background, "El fondo")
+            optimized, extension = _prepare_image(background, _("El fondo"))
             new_background_filename = f"{uuid4().hex}.{extension}"
             storage.save_file(current_app.config["CATALOGUE_BACKGROUND_FOLDER"], new_background_filename, optimized)
             config.background_filename = new_background_filename
@@ -270,7 +271,7 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
             config.background_filename = None
 
         if splash and splash.filename:
-            optimized, extension = _prepare_image(splash, "La pantalla de bienvenida")
+            optimized, extension = _prepare_image(splash, _("La pantalla de bienvenida"))
             new_splash_filename = f"{uuid4().hex}.{extension}"
             storage.save_file(current_app.config["CATALOGUE_SPLASH_FOLDER"], new_splash_filename, optimized)
             config.splash_filename = new_splash_filename
@@ -284,7 +285,7 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
             _delete_background(old_background_filename)
         if old_splash_filename != config.splash_filename:
             _delete_splash(old_splash_filename)
-        return {"message": "Plantilla actualizada correctamente", "template": config.to_dict()}, 200
+        return {"message": _("Plantilla actualizada correctamente"), "template": config.to_dict()}, 200
     except ValueError as error:
         db.session.rollback()
         _delete_cover(new_filename)
@@ -296,14 +297,14 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         _delete_cover(new_filename)
         _delete_background(new_background_filename)
         _delete_splash(new_splash_filename)
-        return {"message": "No fue posible guardar la plantilla"}, 409
+        return {"message": _("No fue posible guardar la plantilla")}, 409
     except SQLAlchemyError as error:
         db.session.rollback()
         _delete_cover(new_filename)
         _delete_background(new_background_filename)
         _delete_splash(new_splash_filename)
         current_app.logger.exception(error)
-        return {"message": "No fue posible guardar la plantilla"}, 500
+        return {"message": _("No fue posible guardar la plantilla")}, 500
 
 
 def _get_private_asset(owner_id, catalogue_id, field):

@@ -6,6 +6,7 @@ import { ImageIcon } from '@/components/ui/icons';
 import { fontFamilyFor } from '@/features/templates/menu-theme';
 import { resolveMediaUrl } from '@/lib/api';
 import type { Business, Catalogue, Category, MenuTheme, Product, TemplateKey } from '@/types/models';
+import { useTranslation } from 'react-i18next';
 
 /** Una imagen puede venir del carrete (`file://`) o de la API detrás del JWT. */
 export type PreviewImage = { uri: string; headers?: Record<string, string> } | null;
@@ -97,6 +98,8 @@ type Props = {
  * vista previa no enseñaba.
  */
 export function MenuPreview({ templateKey, theme, business, catalogue, categories, products, cover, background, currency, showEniuBadge = false }: Props) {
+  const { t } = useTranslation();
+
   const variant = VARIANTS[templateKey];
   const fontFamily = fontFamilyFor(theme.font_key, templateKey);
   const text = theme.text_color;
@@ -104,7 +107,7 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
   const [selected, setSelected] = useState('all');
   const active = selected !== 'all' && !sections.some((section) => section.id === selected) ? 'all' : selected;
   const visible = active === 'all' ? sections : sections.filter((section) => section.id === active);
-  const eyebrow = variant.eyebrow === 'business' ? business?.name || 'Tu negocio' : variant.eyebrow;
+  const eyebrow = variant.eyebrow === 'business' ? business?.name || t("Tu negocio") : variant.eyebrow;
   const subtitle = catalogue.description || (variant.subtitleFallback ? business?.name : null);
 
   return (
@@ -122,7 +125,7 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
         ) : (
           <View style={{ height: variant.compactCover ? 48 : 74, backgroundColor: theme.primary_color, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: 0.85 }}>
             <ImageIcon color={text} size={18} />
-            <Text numberOfLines={1} style={{ color: text, fontSize: 12.5, fontWeight: '700', fontFamily, maxWidth: '70%' }}>{business?.name || 'Tu negocio'}</Text>
+            <Text numberOfLines={1} style={{ color: text, fontSize: 12.5, fontWeight: '700', fontFamily, maxWidth: '70%' }}>{business?.name || t("Tu negocio")}</Text>
           </View>
         )
       ) : null}
@@ -139,7 +142,7 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
         // ScrollView horizontal la deja encoger, y dentro del marco de altura
         // fija es lo único que cede cuando el menú no cabe entero.
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ gap: 7, paddingHorizontal: 16, paddingBottom: 12 }}>
-          {[{ id: 'all', name: 'Todo' }, ...sections].map((section) => {
+          {[{ id: 'all', name: t("Todo") }, ...sections].map((section) => {
             const on = active === section.id;
             return (
               <Pressable key={section.id} onPress={() => setSelected(section.id)} style={{ minHeight: 28, justifyContent: 'center', paddingHorizontal: 12, borderRadius: variant.navRounded ? 999 : 0, backgroundColor: on ? theme.primary_color : 'transparent', borderBottomWidth: variant.navRounded ? 0 : 2, borderColor: on ? theme.accent_color : 'transparent' }}>
@@ -152,7 +155,7 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
 
       {!products.length ? (
         <View style={{ margin: 20, padding: 20, borderWidth: 1, borderStyle: 'dashed', borderColor: text, borderRadius: 10, opacity: 0.6 }}>
-          <Text style={{ color: text, fontSize: 11.5, textAlign: 'center', fontFamily }}>Los productos aparecerán aquí cuando los agregues.</Text>
+          <Text style={{ color: text, fontSize: 11.5, textAlign: 'center', fontFamily }}>{t("Los productos aparecerán aquí cuando los agregues.")}</Text>
         </View>
       ) : (
         <View style={{ paddingHorizontal: 16, gap: 20 }}>
@@ -171,12 +174,14 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
       )}
 
       {/* La marca sólo va en el plan gratuito, igual que en el menú publicado. */}
-      {showEniuBadge ? <Text style={{ color: text, opacity: 0.55, fontSize: 9, textAlign: 'center', paddingVertical: 22, fontFamily }}>Menú creado con ENIU</Text> : null}
+      {showEniuBadge ? <Text style={{ color: text, opacity: 0.55, fontSize: 9, textAlign: 'center', paddingVertical: 22, fontFamily }}>{t("Menú creado con ENIU")}</Text> : null}
     </View>
   );
 }
 
 function PreviewProduct({ product, variant, theme, fontFamily, currency }: { product: Product; variant: Variant; theme: MenuTheme; fontFamily?: string; currency: Intl.NumberFormat }) {
+  const { t } = useTranslation();
+
   const text = theme.text_color;
   const uri = mainImage(product);
   const price = product.price == null ? 'Consultar' : currency.format(Number(product.price));
@@ -190,14 +195,14 @@ function PreviewProduct({ product, variant, theme, fontFamily, currency }: { pro
       {theme.show_product_images && stacked ? (
         uri
           ? <Image source={{ uri }} style={{ width: '100%', height: variant.imageHeight, marginBottom: 8 }} contentFit="cover" transition={150} />
-          : <View style={{ width: '100%', height: variant.imageHeight, marginBottom: 8, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: text, opacity: 0.45, fontSize: 9, fontFamily }}>Sin imagen</Text></View>
+          : <View style={{ width: '100%', height: variant.imageHeight, marginBottom: 8, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: text, opacity: 0.45, fontSize: 9, fontFamily }}>{t("Sin imagen")}</Text></View>
       ) : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 9 }}>
         {theme.show_product_images && !stacked && uri ? <Image source={{ uri }} style={{ width: variant.imageHeight, height: variant.imageHeight, borderRadius: 8 }} contentFit="cover" transition={150} /> : null}
         <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
           <Text numberOfLines={2} style={{ color: text, fontSize: 12.5, fontWeight: '800', fontFamily, fontStyle: variant.italic ? 'italic' : 'normal' }}>{product.name}</Text>
           {product.description ? <Text numberOfLines={2} style={{ color: text, opacity: 0.65, fontSize: 10.5, lineHeight: 15, fontFamily }}>{product.description}</Text> : null}
-          {product.is_available ? null : <View style={{ alignSelf: 'flex-start', borderWidth: 1, borderColor: text, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1, marginTop: 2 }}><Text style={{ color: text, fontSize: 8, fontWeight: '800', fontFamily }}>Agotado</Text></View>}
+          {product.is_available ? null : <View style={{ alignSelf: 'flex-start', borderWidth: 1, borderColor: text, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1, marginTop: 2 }}><Text style={{ color: text, fontSize: 8, fontWeight: '800', fontFamily }}>{t("Agotado")}</Text></View>}
           {variant.columns === 2 ? <Text style={{ color: text, fontSize: 12, fontWeight: '900', fontFamily, marginTop: 4 }}>{price}</Text> : null}
         </View>
         {variant.columns === 1 ? <Text style={{ color: text, fontSize: 12, fontWeight: '800', fontFamily, flexShrink: 0 }}>{price}</Text> : null}

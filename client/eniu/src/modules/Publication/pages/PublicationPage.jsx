@@ -9,6 +9,7 @@ import MobilePreviewFrame from "../../Templates/components/MobilePreviewFrame";
 import { resolveTemplate } from "../../Templates/templates/templateRegistry";
 import { adaptPublicMenu } from "../utils/publicMenuAdapter";
 import { publicationErrorMessage, usePublicationService } from "../services/publicationService";
+import { useTranslation } from "react-i18next";
 
 function sourceUrl(url, source) {
   if (!url) return null;
@@ -18,6 +19,8 @@ function sourceUrl(url, source) {
 }
 
 export default function PublicationPage() {
+  const { t } = useTranslation();
+
   const { businessId, catalogueId } = useParams();
   const { businesses, selectedBusiness, selectBusiness } = useBusiness();
   const { limits } = usePlan();
@@ -52,7 +55,7 @@ export default function PublicationPage() {
     if (publicationResponse.aborted || previewResponse.aborted || !mountedRef.current) return;
     const failed = !publicationResponse.ok ? publicationResponse : !previewResponse.ok ? previewResponse : null;
     if (failed) {
-      setLoadError(publicationErrorMessage(failed, "No pudimos cargar la información de publicación."));
+      setLoadError(publicationErrorMessage(failed, t("No pudimos cargar la información de publicación.")));
       setIsLoading(false); return;
     }
     setPublication(publicationResponse.data?.publication || null);
@@ -71,7 +74,7 @@ export default function PublicationPage() {
     QRCode.toCanvas(canvasRef.current, sourceUrl(publication.public_url, "qr"), {
       errorCorrectionLevel: "M", margin: 4, width: 280,
       color: { dark: "#111111", light: "#FFFFFF" },
-    }).catch(() => setActionError("No pudimos generar el código QR."));
+    }).catch(() => setActionError(t("No pudimos generar el código QR.")));
   }, [publication?.public_url]);
 
   async function togglePublication() {
@@ -81,14 +84,14 @@ export default function PublicationPage() {
     if (!mountedRef.current) return;
     if (!response.ok) {
       updatingRef.current = false; setIsUpdating(false);
-      setActionError(publicationErrorMessage(response, "No pudimos cambiar el estado del menú.")); return;
+      setActionError(publicationErrorMessage(response, t("No pudimos cambiar el estado del menú."))); return;
     }
     const updated = response.data.publication;
     setPublication(updated);
     const previewResponse = await getPreview();
     if (mountedRef.current && previewResponse.ok) setPreview(adaptPublicMenu(previewResponse.data?.menu));
     updatingRef.current = false; setIsUpdating(false);
-    setMessage(updated.is_published ? "El menú se publicó correctamente." : "El menú dejó de estar disponible públicamente.");
+    setMessage(updated.is_published ? t("El menú se publicó correctamente.") : t("El menú dejó de estar disponible públicamente."));
   }
 
   async function copyUrl() {
@@ -105,9 +108,9 @@ export default function PublicationPage() {
         const copied = document.execCommand("copy"); input.remove();
         if (!copied) throw new Error("copy failed");
       }
-      setMessage("URL copiada al portapapeles.");
+      setMessage(t("URL copiada al portapapeles."));
     } catch {
-      setActionError("No pudimos copiar la URL. Selecciónala manualmente.");
+      setActionError(t("No pudimos copiar la URL. Selecciónala manualmente."));
     }
   }
 
@@ -124,24 +127,24 @@ export default function PublicationPage() {
       anchor.download = `qr-${safeSlug}.png`; anchor.href = dataUrl;
       document.body.appendChild(anchor); anchor.click(); anchor.remove();
     } catch {
-      setActionError("No pudimos descargar el código QR.");
+      setActionError(t("No pudimos descargar el código QR."));
     } finally { setIsDownloading(false); }
   }
 
-  if (isLoading) return <div aria-label="Cargando publicación" className="h-96 animate-pulse rounded-2xl bg-white" />;
-  if (loadError || !publication || !preview) return <div className="rounded-2xl border border-[#E9DDB7] bg-white p-8 text-center"><p role="alert" className="font-semibold">{loadError}</p><button type="button" onClick={() => loadData()} className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-semibold text-white"><RefreshCw size={17} /> Reintentar</button></div>;
+  if (isLoading) return <div aria-label={t("Cargando publicación")} className="h-96 animate-pulse rounded-2xl bg-white" />;
+  if (loadError || !publication || !preview) return <div className="rounded-2xl border border-[#E9DDB7] bg-white p-8 text-center"><p role="alert" className="font-semibold">{loadError}</p><button type="button" onClick={() => loadData()} className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-semibold text-white"><RefreshCw size={17} /> {t("Reintentar")}</button></div>;
 
   return <section className="mx-auto w-full max-w-7xl space-y-6">
-    <Link to={`/dashboard/businesses/${businessId}/catalogues/${catalogueId}`} className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-[#666666]"><ArrowLeft size={17} /> Volver al menú</Link>
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-semibold text-[#8A7420]">Publicación</p><h1 className="mt-1 text-3xl font-bold">URL y código QR</h1><p className="mt-1 text-sm text-[#666666]">Comparte este menú con tus clientes.</p></div><button type="button" onClick={togglePublication} disabled={isUpdating} className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-5 font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${publication.is_published ? "border border-red-200 text-red-700 hover:bg-red-50" : "bg-[#FFE05A] hover:bg-[#E8C93D]"}`}>{publication.is_published ? <Undo2 size={17} /> : <Send size={17} />}{isUpdating ? "Procesando..." : publication.is_published ? "Despublicar" : "Publicar menú"}</button></header>
+    <Link to={`/dashboard/businesses/${businessId}/catalogues/${catalogueId}`} className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-[#666666]"><ArrowLeft size={17} /> {t("Volver al menú")}</Link>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-semibold text-[#8A7420]">{t("Publicación")}</p><h1 className="mt-1 text-3xl font-bold">{t("URL y código QR")}</h1><p className="mt-1 text-sm text-[#666666]">{t("Comparte este menú con tus clientes.")}</p></div><button type="button" onClick={togglePublication} disabled={isUpdating} className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-5 font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${publication.is_published ? "border border-red-200 text-red-700 hover:bg-red-50" : "bg-[#FFE05A] hover:bg-[#E8C93D]"}`}>{publication.is_published ? <Undo2 size={17} /> : <Send size={17} />}{isUpdating ? "Procesando..." : publication.is_published ? "Despublicar" : t("Publicar menú")}</button></header>
     {message && <p role="status" className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">{message}</p>}
     {actionError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{actionError}</p>}
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
       <div className="space-y-5">
-        <article className="rounded-2xl border border-[#E9DDB7] bg-white p-6 shadow-sm"><div className="flex items-center gap-3"><span className={`flex h-10 w-10 items-center justify-center rounded-full ${publication.is_published ? "bg-green-100 text-green-700" : "bg-[#EFEFEF] text-[#666666]"}`}>{publication.is_published ? <Check size={19} /> : <QrCode size={19} />}</span><div><h2 className="font-bold">{publication.is_published ? "Menú publicado" : "Menú no publicado"}</h2><p className="text-sm text-[#666666]">{publication.is_published ? "El enlace está disponible para cualquier visitante." : "Puedes revisar la vista previa antes de publicarlo."}</p></div></div>{publication.public_url && <div className="mt-5"><label htmlFor="public-menu-url" className="text-sm font-semibold">URL pública</label><div className="mt-2 flex flex-col gap-2 sm:flex-row"><input id="public-menu-url" readOnly value={publication.public_url} onFocus={(event) => event.target.select()} className="min-h-11 min-w-0 flex-1 rounded-xl border border-[#D9D9D9] bg-[#FFFDF5] px-4 text-sm" /><button type="button" onClick={copyUrl} className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-semibold text-white"><Clipboard size={16} /> Copiar URL</button></div></div>}</article>
-        <article className="rounded-2xl border border-[#E9DDB7] bg-white p-6 text-center shadow-sm"><h2 className="font-bold">Código QR</h2>{publication.is_published && publication.public_url ? <><div className="mx-auto mt-4 w-fit rounded-2xl border border-[#D9D9D9] bg-white p-3"><canvas ref={canvasRef} role="img" aria-label="Código QR de la URL pública del menú" className="block h-auto max-w-full" /></div><div className="mt-5 flex flex-wrap justify-center gap-2"><button type="button" onClick={downloadQr} disabled={isDownloading} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#FFE05A] px-4 font-semibold hover:bg-[#E8C93D] disabled:cursor-not-allowed"><Download size={17} /> {isDownloading ? "Preparando..." : "Descargar QR"}</button>{publication.is_published && <a href={sourceUrl(publication.public_url, "dashboard")} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-[#D9D9D9] px-4 font-semibold"><ExternalLink size={17} /> Abrir menú</a>}</div></> : <p className="mt-4 text-sm text-[#666666]">{publication.public_url ? "Su dirección ya está apartada y no cambiará al publicar y despublicar. El código QR aparece aquí en cuanto publiques el menú." : "Publica el menú para generar su URL y código QR."}</p>}</article>
+        <article className="rounded-2xl border border-[#E9DDB7] bg-white p-6 shadow-sm"><div className="flex items-center gap-3"><span className={`flex h-10 w-10 items-center justify-center rounded-full ${publication.is_published ? "bg-green-100 text-green-700" : "bg-[#EFEFEF] text-[#666666]"}`}>{publication.is_published ? <Check size={19} /> : <QrCode size={19} />}</span><div><h2 className="font-bold">{publication.is_published ? t("Menú publicado") : t("Menú no publicado")}</h2><p className="text-sm text-[#666666]">{publication.is_published ? t("El enlace está disponible para cualquier visitante.") : t("Puedes revisar la vista previa antes de publicarlo.")}</p></div></div>{publication.public_url && <div className="mt-5"><label htmlFor="public-menu-url" className="text-sm font-semibold">{t("URL pública")}</label><div className="mt-2 flex flex-col gap-2 sm:flex-row"><input id="public-menu-url" readOnly value={publication.public_url} onFocus={(event) => event.target.select()} className="min-h-11 min-w-0 flex-1 rounded-xl border border-[#D9D9D9] bg-[#FFFDF5] px-4 text-sm" /><button type="button" onClick={copyUrl} className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-semibold text-white"><Clipboard size={16} /> {t("Copiar URL")}</button></div></div>}</article>
+        <article className="rounded-2xl border border-[#E9DDB7] bg-white p-6 text-center shadow-sm"><h2 className="font-bold">{t("Código QR")}</h2>{publication.is_published && publication.public_url ? <><div className="mx-auto mt-4 w-fit rounded-2xl border border-[#D9D9D9] bg-white p-3"><canvas ref={canvasRef} role="img" aria-label={t("Código QR de la URL pública del menú")} className="block h-auto max-w-full" /></div><div className="mt-5 flex flex-wrap justify-center gap-2"><button type="button" onClick={downloadQr} disabled={isDownloading} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#FFE05A] px-4 font-semibold hover:bg-[#E8C93D] disabled:cursor-not-allowed"><Download size={17} /> {isDownloading ? t("Preparando...") : t("Descargar QR")}</button>{publication.is_published && <a href={sourceUrl(publication.public_url, "dashboard")} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-[#D9D9D9] px-4 font-semibold"><ExternalLink size={17} /> {t("Abrir menú")}</a>}</div></> : <p className="mt-4 text-sm text-[#666666]">{publication.public_url ? t("Su dirección ya está apartada y no cambiará al publicar y despublicar. El código QR aparece aquí en cuanto publiques el menú.") : t("Publica el menú para generar su URL y código QR.")}</p>}</article>
       </div>
-      <aside className="rounded-2xl border border-[#E9DDB7] bg-[#F8E8AE]/35 p-4 lg:sticky lg:top-4"><h2 className="mb-4 font-bold">Vista previa</h2><MobilePreviewFrame>{createElement(resolveTemplate(preview.templateKey), { business: preview.business, catalogue: preview.catalogue, categories: preview.categories, products: preview.products, theme: preview.theme, coverUrl: preview.coverUrl, showEniuBadge: limits.show_eniu_badge })}</MobilePreviewFrame></aside>
+      <aside className="rounded-2xl border border-[#E9DDB7] bg-[#F8E8AE]/35 p-4 lg:sticky lg:top-4"><h2 className="mb-4 font-bold">{t("Vista previa")}</h2><MobilePreviewFrame>{createElement(resolveTemplate(preview.templateKey), { business: preview.business, catalogue: preview.catalogue, categories: preview.categories, products: preview.products, theme: preview.theme, coverUrl: preview.coverUrl, showEniuBadge: limits.show_eniu_badge })}</MobilePreviewFrame></aside>
     </div>
   </section>;
 }

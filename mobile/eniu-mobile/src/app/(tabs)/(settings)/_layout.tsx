@@ -1,5 +1,8 @@
 import { Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 export default function SettingsLayout() {
-  return <Stack screenOptions={{ headerShown: false }}><Stack.Screen name="index" options={{ title: 'Ajustes' }} /></Stack>;
+  const { t } = useTranslation();
+
+  return <Stack screenOptions={{ headerShown: false }}><Stack.Screen name="index" options={{ title: t("Ajustes") }} /></Stack>;
 }

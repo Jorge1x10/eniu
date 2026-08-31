@@ -5,6 +5,7 @@ import { Platform, useColorScheme, View } from 'react-native';
 
 import { Feedback } from '@/components/ui/feedback';
 import { useAuth } from '@/features/auth/auth-context';
+import { useTranslation } from 'react-i18next';
 
 /** Une nombre y apellido de la primera autorización; Apple no los vuelve a mandar. */
 function joinName(fullName: AppleAuthentication.AppleAuthenticationCredential['fullName']) {
@@ -13,6 +14,8 @@ function joinName(fullName: AppleAuthentication.AppleAuthenticationCredential['f
 }
 
 export function AppleAuthButton({ mode }: { mode: 'login' | 'register' }) {
+  const { t } = useTranslation();
+
   const scheme = useColorScheme();
   const { loginWithApple } = useAuth();
   const [available, setAvailable] = useState(false);
@@ -38,13 +41,13 @@ export function AppleAuthButton({ mode }: { mode: 'login' | 'register' }) {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
-      if (!credential.identityToken) throw new Error('Apple no devolvió una credencial válida.');
+      if (!credential.identityToken) throw new Error(t("Apple no devolvió una credencial válida."));
       await loginWithApple(credential.identityToken, joinName(credential.fullName), credential.authorizationCode);
       router.replace(mode === 'register' ? '/(onboarding)/business' : '/(tabs)/(home)');
     } catch (requestError) {
       // Cancelar no es un error que valga la pena mostrar.
       if (requestError instanceof Error && 'code' in requestError && (requestError as { code?: string }).code === 'ERR_REQUEST_CANCELED') return;
-      setError(requestError instanceof Error ? requestError.message : 'No fue posible continuar con Apple.');
+      setError(requestError instanceof Error ? requestError.message : t("No fue posible continuar con Apple."));
     }
   }
 

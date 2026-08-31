@@ -5,6 +5,7 @@ from flask import jsonify
 from app.database.db import db
 from app.extensions import jwt
 from app.modules.users.model import User
+from app.shared.i18n import _
 
 
 def _get_user(identity):
@@ -27,8 +28,8 @@ def configure_jwt_security():
 
     @jwt.revoked_token_loader
     def revoked_token(_header, _payload):
-        return jsonify({"message": "La sesiÃ³n ya no es vÃ¡lida"}), 401
+        return jsonify({"message": _("La sesión ya no es válida")}), 401
 
     @jwt.invalid_token_loader
     def invalid_token(_reason):
-        return jsonify({"message": "La sesiÃ³n no es vÃ¡lida"}), 401
+        return jsonify({"message": _("La sesión no es válida")}), 401

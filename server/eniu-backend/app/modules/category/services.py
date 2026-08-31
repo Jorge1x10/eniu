@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.database.db import db
 from app.modules.catalogue.services import catalogue_access
 from app.modules.category.model import Category
+from app.shared.i18n import _
 
 
 EDITABLE_FIELDS = {"name", "description"}
@@ -28,18 +29,18 @@ def _validate_fields(data, allowed_fields):
 def _name(data, required=False):
     if "name" not in data:
         if required:
-            raise ValueError("El nombre de la categoría es obligatorio")
+            raise ValueError(_("El nombre de la categoría es obligatorio"))
         return None, False
 
     value = data.get("name")
     if not isinstance(value, str):
-        raise ValueError("El nombre de la categoría no es válido")
+        raise ValueError(_("El nombre de la categoría no es válido"))
 
     value = value.strip()
     if not value:
-        raise ValueError("El nombre de la categoría es obligatorio")
+        raise ValueError(_("El nombre de la categoría es obligatorio"))
     if len(value) > 64:
-        raise ValueError("El nombre de la categoría no puede superar 64 caracteres")
+        raise ValueError(_("El nombre de la categoría no puede superar 64 caracteres"))
     return value, True
 
 
@@ -50,7 +51,7 @@ def _description(data):
     if value is None:
         return None, True
     if not isinstance(value, str):
-        raise ValueError("La descripción no es válida")
+        raise ValueError(_("La descripción no es válida"))
     return value.strip() or None, True
 
 
@@ -86,7 +87,7 @@ def list_categories(owner_id, business_id, catalogue_id):
         return {"categories": [category.to_dict() for category in categories]}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible consultar las categorías"}, 500
+        return {"message": _("No fue posible consultar las categorías")}, 500
 
 
 def create_category(owner_id, business_id, catalogue_id, data):
@@ -96,10 +97,10 @@ def create_category(owner_id, business_id, catalogue_id, data):
             return error
         _validate_fields(data, EDITABLE_FIELDS)
 
-        name, _ = _name(data, required=True)
-        description, _ = _description(data)
+        name, _ignored_error = _name(data, required=True)
+        description, _ignored_error = _description(data)
         if _duplicate_name(catalogue.id, name):
-            return {"message": "Ya existe una categoría con ese nombre"}, 409
+            return {"message": _("Ya existe una categoría con ese nombre")}, 409
 
         next_order = (
             db.session.query(func.coalesce(func.max(Category.display_order), -1))
@@ -116,18 +117,18 @@ def create_category(owner_id, business_id, catalogue_id, data):
         db.session.add(category)
         db.session.commit()
         return {
-            "message": "Categoría creada correctamente",
+            "message": _("Categoría creada correctamente"),
             "category": category.to_dict(),
         }, 201
     except ValueError as error:
         return {"message": str(error)}, 400
     except IntegrityError:
         db.session.rollback()
-        return {"message": "Ya existe una categoría con ese nombre"}, 409
+        return {"message": _("Ya existe una categoría con ese nombre")}, 409
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible crear la categoría"}, 500
+        return {"message": _("No fue posible crear la categoría")}, 500
 
 
 def get_category(owner_id, business_id, catalogue_id, category_id):
@@ -138,11 +139,11 @@ def get_category(owner_id, business_id, catalogue_id, category_id):
 
         category = _category_for_catalogue(catalogue.id, category_id)
         if not category:
-            return {"message": "Categoría no encontrada"}, 404
+            return {"message": _("Categoría no encontrada")}, 404
         return {"category": category.to_dict()}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible consultar la categoría"}, 500
+        return {"message": _("No fue posible consultar la categoría")}, 500
 
 
 def update_category(owner_id, business_id, catalogue_id, category_id, data):
@@ -154,34 +155,34 @@ def update_category(owner_id, business_id, catalogue_id, category_id, data):
 
         category = _category_for_catalogue(catalogue.id, category_id)
         if not category:
-            return {"message": "Categoría no encontrada"}, 404
+            return {"message": _("Categoría no encontrada")}, 404
 
         name, has_name = _name(data)
         description, has_description = _description(data)
         if not any((has_name, has_description)):
-            return {"message": "No se enviaron campos editables"}, 400
+            return {"message": _("No se enviaron campos editables")}, 400
 
         if has_name:
             if _duplicate_name(catalogue.id, name, exclude_id=category.id):
-                return {"message": "Ya existe una categoría con ese nombre"}, 409
+                return {"message": _("Ya existe una categoría con ese nombre")}, 409
             category.name = name
         if has_description:
             category.description = description
 
         db.session.commit()
         return {
-            "message": "Categoría actualizada correctamente",
+            "message": _("Categoría actualizada correctamente"),
             "category": category.to_dict(),
         }, 200
     except ValueError as error:
         return {"message": str(error)}, 400
     except IntegrityError:
         db.session.rollback()
-        return {"message": "Ya existe una categoría con ese nombre"}, 409
+        return {"message": _("Ya existe una categoría con ese nombre")}, 409
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible actualizar la categoría"}, 500
+        return {"message": _("No fue posible actualizar la categoría")}, 500
 
 
 def delete_category(owner_id, business_id, catalogue_id, category_id):
@@ -192,12 +193,12 @@ def delete_category(owner_id, business_id, catalogue_id, category_id):
 
         category = _category_for_catalogue(catalogue.id, category_id)
         if not category:
-            return {"message": "Categoría no encontrada"}, 404
+            return {"message": _("Categoría no encontrada")}, 404
 
         db.session.delete(category)
         db.session.commit()
-        return {"message": "Categoría eliminada correctamente"}, 200
+        return {"message": _("Categoría eliminada correctamente")}, 200
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible eliminar la categoría"}, 500
+        return {"message": _("No fue posible eliminar la categoría")}, 500

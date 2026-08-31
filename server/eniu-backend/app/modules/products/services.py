@@ -13,6 +13,7 @@ from app.modules.catalogue.services import catalogue_access
 from app.modules.category.model import Category
 from app.modules.products.model import Product
 from werkzeug.utils import secure_filename
+from app.shared.i18n import _
 
 
 CREATE_FIELDS = {"name", "description", "price", "category_id", "is_available"}
@@ -23,6 +24,29 @@ MAX_IMAGES = 5
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 ALLOWED_IMAGE_MIMETYPES = {"image/jpeg", "image/png", "image/webp"}
+
+
+class ProductValidationError(ValueError):
+    """Error de validación con un código estable además del mensaje.
+
+    Los clientes no deben decidir nada mirando el texto del mensaje: desde que
+    la API responde en dos idiomas, una comprobación como
+    `message.includes("no pertenece")` deja de funcionar en cuanto quien la
+    recibe no lee español. El código no cambia con el idioma.
+    """
+
+    def __init__(self, message, code=None):
+        super().__init__(message)
+        self.code = code
+
+
+def _validation_payload(error):
+    """Respuesta de un error de validación, con su código si lo lleva."""
+    payload = {"message": str(error)}
+    code = getattr(error, "code", None)
+    if code:
+        payload["code"] = code
+    return payload
 
 
 def _uuid(value):
@@ -41,17 +65,17 @@ def _validate_fields(data, allowed_fields):
 def _name(data, required=False):
     if "name" not in data:
         if required:
-            raise ValueError("El nombre del producto es obligatorio")
+            raise ValueError(_("El nombre del producto es obligatorio"))
         return None, False
 
     value = data.get("name")
     if not isinstance(value, str):
-        raise ValueError("El nombre del producto no es válido")
+        raise ValueError(_("El nombre del producto no es válido"))
     value = value.strip()
     if not value:
-        raise ValueError("El nombre del producto es obligatorio")
+        raise ValueError(_("El nombre del producto es obligatorio"))
     if len(value) > 64:
-        raise ValueError("El nombre del producto no puede superar 64 caracteres")
+        raise ValueError(_("El nombre del producto no puede superar 64 caracteres"))
     return value, True
 
 
@@ -62,7 +86,7 @@ def _description(data):
     if value is None:
         return None, True
     if not isinstance(value, str):
-        raise ValueError("La descripción no es válida")
+        raise ValueError(_("La descripción no es válida"))
     return value.strip() or None, True
 
 
@@ -73,21 +97,21 @@ def _price(data):
     if value is None:
         return None, True
     if isinstance(value, bool):
-        raise ValueError("El precio no es válido")
+        raise ValueError(_("El precio no es válido"))
 
     try:
         decimal_value = Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError):
-        raise ValueError("El precio no es válido") from None
+        raise ValueError(_("El precio no es válido")) from None
 
     if not decimal_value.is_finite():
-        raise ValueError("El precio no es válido")
+        raise ValueError(_("El precio no es válido"))
     if decimal_value < 0:
-        raise ValueError("El precio no puede ser negativo")
+        raise ValueError(_("El precio no puede ser negativo"))
     if decimal_value > MAX_PRICE:
-        raise ValueError("El precio supera el máximo permitido")
+        raise ValueError(_("El precio supera el máximo permitido"))
     if decimal_value.quantize(CENT) != decimal_value:
-        raise ValueError("El precio puede tener máximo dos decimales")
+        raise ValueError(_("El precio puede tener máximo dos decimales"))
 
     return decimal_value.quantize(CENT), True
 
@@ -101,14 +125,17 @@ def _category(data, catalogue_id):
 
     category_uuid = _uuid(value)
     if not category_uuid:
-        raise ValueError("category_id no es un UUID válido")
+        raise ValueError(_("category_id no es un UUID válido"))
 
     category = Category.query.filter_by(
         id=category_uuid,
         catalogue_id=catalogue_id,
     ).first()
     if not category:
-        raise ValueError("La categoría no pertenece a este catálogo")
+        raise ProductValidationError(
+            _("La categoría no pertenece a este catálogo"),
+            code="category_not_in_catalogue",
+        )
     return category, True
 
 
@@ -117,7 +144,7 @@ def _availability(data):
         return None, False
     value = data.get("is_available")
     if not isinstance(value, bool):
-        raise ValueError("is_available debe ser verdadero o falso")
+        raise ValueError(_("is_available debe ser verdadero o falso"))
     return value, True
 
 
@@ -156,7 +183,7 @@ def _detected_image_type(image):
 def _validate_images(images, existing_count=0):
     images = [image for image in (images or []) if image and image.filename]
     if existing_count + len(images) > MAX_IMAGES:
-        raise ValueError("Un producto puede tener máximo 5 imágenes")
+        raise ValueError(_("Un producto puede tener máximo 5 imágenes"))
     for image in images:
         safe_name = secure_filename(image.filename)
         extension = safe_name.rsplit(".", 1)[-1].lower() if "." in safe_name else ""
@@ -164,12 +191,12 @@ def _validate_images(images, existing_count=0):
             extension not in ALLOWED_IMAGE_EXTENSIONS
             or image.mimetype not in ALLOWED_IMAGE_MIMETYPES
         ):
-            raise ValueError("Las imágenes deben ser JPG, PNG o WebP")
+            raise ValueError(_("Las imágenes deben ser JPG, PNG o WebP"))
         expected_type = "jpeg" if extension in {"jpg", "jpeg"} else extension
         if _detected_image_type(image) != expected_type:
-            raise ValueError("El archivo no contiene una imagen válida")
+            raise ValueError(_("El archivo no contiene una imagen válida"))
         if _image_size(image) > MAX_IMAGE_BYTES:
-            raise ValueError("Cada imagen puede pesar máximo 5 MB")
+            raise ValueError(_("Cada imagen puede pesar máximo 5 MB"))
     return images
 
 
@@ -214,9 +241,9 @@ def _new_picture_data(images, default_index=None):
         try:
             normalized_index = int(default_index)
         except (ValueError, TypeError):
-            raise ValueError("La imagen principal seleccionada no es válida") from None
+            raise ValueError(_("La imagen principal seleccionada no es válida")) from None
         if normalized_index < 0 or normalized_index >= len(validated):
-            raise ValueError("La imagen principal seleccionada no es válida")
+            raise ValueError(_("La imagen principal seleccionada no es válida"))
     pictures = _save_images(validated)
     default_key = None
     if normalized_index is not None:
@@ -249,13 +276,16 @@ def list_products(owner_id, business_id, catalogue_id, category_id=None):
         if category_id is not None:
             category_uuid = _uuid(category_id)
             if not category_uuid:
-                return {"message": "category_id no es un UUID válido"}, 400
+                return {"message": _("category_id no es un UUID válido")}, 400
             category = Category.query.filter_by(
                 id=category_uuid,
                 catalogue_id=catalogue.id,
             ).first()
             if not category:
-                return {"message": "La categoría no pertenece a este catálogo"}, 400
+                return {
+                    "message": _("La categoría no pertenece a este catálogo"),
+                    "code": "category_not_in_catalogue",
+                }, 400
             query = query.filter(Product.category_id == category.id)
 
         products = query.order_by(
@@ -265,7 +295,7 @@ def list_products(owner_id, business_id, catalogue_id, category_id=None):
         return {"products": [product.to_dict() for product in products]}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible consultar los productos"}, 500
+        return {"message": _("No fue posible consultar los productos")}, 500
 
 
 def create_product(owner_id, business_id, catalogue_id, data, images=None):
@@ -282,10 +312,10 @@ def create_product(owner_id, business_id, catalogue_id, data, images=None):
         if invalid_fields:
             _validate_fields(data, CREATE_FIELDS | {"default_image_index"})
 
-        name, _ = _name(content_data, required=True)
-        description, _ = _description(content_data)
-        price, _ = _price(content_data)
-        category, _ = _category(content_data, catalogue.id)
+        name, _ignored_error = _name(content_data, required=True)
+        description, _ignored_error = _description(content_data)
+        price, _ignored_error = _price(content_data)
+        category, _ignored_error = _category(content_data, catalogue.id)
         availability, has_availability = _availability(content_data)
         saved_pictures = _new_picture_data(images, data.get("default_image_index"))
         next_order = (
@@ -307,21 +337,21 @@ def create_product(owner_id, business_id, catalogue_id, data, images=None):
         db.session.add(product)
         db.session.commit()
         return {
-            "message": "Producto creado correctamente",
+            "message": _("Producto creado correctamente"),
             "product": product.to_dict(),
         }, 201
     except ValueError as error:
         _delete_images(saved_pictures)
-        return {"message": str(error)}, 400
+        return _validation_payload(error), 400
     except IntegrityError:
         db.session.rollback()
         _delete_images(saved_pictures)
-        return {"message": "La información del producto no es válida"}, 400
+        return {"message": _("La información del producto no es válida")}, 400
     except SQLAlchemyError as error:
         db.session.rollback()
         _delete_images(saved_pictures)
         current_app.logger.exception(error)
-        return {"message": "No fue posible crear el producto"}, 500
+        return {"message": _("No fue posible crear el producto")}, 500
 
 
 def get_product(owner_id, business_id, catalogue_id, product_id):
@@ -332,11 +362,11 @@ def get_product(owner_id, business_id, catalogue_id, product_id):
 
         product = _product_for_catalogue(catalogue.id, product_id)
         if not product:
-            return {"message": "Producto no encontrado"}, 404
+            return {"message": _("Producto no encontrado")}, 404
         return {"product": product.to_dict()}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
-        return {"message": "No fue posible consultar el producto"}, 500
+        return {"message": _("No fue posible consultar el producto")}, 500
 
 
 def update_product(owner_id, business_id, catalogue_id, product_id, data, images=None):
@@ -351,7 +381,7 @@ def update_product(owner_id, business_id, catalogue_id, product_id, data, images
 
         product = _product_for_catalogue(catalogue.id, product_id)
         if not product:
-            return {"message": "Producto no encontrado"}, 404
+            return {"message": _("Producto no encontrado")}, 404
 
         name, has_name = _name(content_data)
         description, has_description = _description(content_data)
@@ -367,7 +397,7 @@ def update_product(owner_id, business_id, catalogue_id, product_id, data, images
             has_availability,
             manages_images,
         )):
-            return {"message": "No se enviaron campos editables"}, 400
+            return {"message": _("No se enviaron campos editables")}, 400
 
         if has_name:
             product.name = name
@@ -386,9 +416,9 @@ def update_product(owner_id, business_id, catalogue_id, product_id, data, images
             try:
                 keep_ids = json.loads(data.get("keep_image_ids", "[]"))
             except (TypeError, json.JSONDecodeError):
-                raise ValueError("La selección de imágenes no es válida") from None
+                raise ValueError(_("La selección de imágenes no es válida")) from None
             if not isinstance(keep_ids, list):
-                raise ValueError("La selección de imágenes no es válida")
+                raise ValueError(_("La selección de imágenes no es válida"))
             retained = [item for item in existing if item.get("id") in keep_ids]
             removed_pictures = [item for item in existing if item.get("id") not in keep_ids]
             validated = _validate_images(images, len(retained))
@@ -399,7 +429,7 @@ def update_product(owner_id, business_id, catalogue_id, product_id, data, images
                 try:
                     default_key = saved_pictures[int(default_key.split(":", 1)[1])]["id"]
                 except (ValueError, IndexError):
-                    raise ValueError("La imagen principal seleccionada no es válida") from None
+                    raise ValueError(_("La imagen principal seleccionada no es válida")) from None
             _set_default(pictures, default_key)
             product.pictures = json.dumps(pictures) if pictures else None
 
@@ -407,22 +437,22 @@ def update_product(owner_id, business_id, catalogue_id, product_id, data, images
         if manages_images:
             _delete_images(removed_pictures)
         return {
-            "message": "Producto actualizado correctamente",
+            "message": _("Producto actualizado correctamente"),
             "product": product.to_dict(),
         }, 200
     except ValueError as error:
         db.session.rollback()
         _delete_images(saved_pictures)
-        return {"message": str(error)}, 400
+        return _validation_payload(error), 400
     except IntegrityError:
         db.session.rollback()
         _delete_images(saved_pictures)
-        return {"message": "La información del producto no es válida"}, 400
+        return {"message": _("La información del producto no es válida")}, 400
     except SQLAlchemyError as error:
         db.session.rollback()
         _delete_images(saved_pictures)
         current_app.logger.exception(error)
-        return {"message": "No fue posible actualizar el producto"}, 500
+        return {"message": _("No fue posible actualizar el producto")}, 500
 
 
 def delete_product(owner_id, business_id, catalogue_id, product_id):
@@ -433,14 +463,14 @@ def delete_product(owner_id, business_id, catalogue_id, product_id):
 
         product = _product_for_catalogue(catalogue.id, product_id)
         if not product:
-            return {"message": "Producto no encontrado"}, 404
+            return {"message": _("Producto no encontrado")}, 404
 
         pictures = product.picture_metadata()
         db.session.delete(product)
         db.session.commit()
         _delete_images(pictures)
-        return {"message": "Producto eliminado correctamente"}, 200
+        return {"message": _("Producto eliminado correctamente")}, 200
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
-        return {"message": "No fue posible eliminar el producto"}, 500
+        return {"message": _("No fue posible eliminar el producto")}, 500

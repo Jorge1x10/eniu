@@ -8,6 +8,7 @@ import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { api } from '@/lib/api';
 import type { Business } from '@/types/models';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Formulario de alta de negocio.
@@ -17,6 +18,8 @@ import type { Business } from '@/types/models';
  * el disparador es una pastilla dentro de la fila horizontal.
  */
 export function CreateBusinessForm({ onCancel, onCreated }: { onCancel: () => void; onCreated?: (business: Business) => void }) {
+  const { t } = useTranslation();
+
   const theme = useEniuTheme();
   const { addBusiness } = useBusiness();
   const [name, setName] = useState('');
@@ -25,20 +28,22 @@ export function CreateBusinessForm({ onCancel, onCreated }: { onCancel: () => vo
   const [loading, setLoading] = useState(false);
 
   async function create() {
-    if (!name.trim()) { setError('El nombre del negocio es obligatorio.'); return; }
+    if (!name.trim()) { setError(t("El nombre del negocio es obligatorio.")); return; }
     setLoading(true); setError('');
     try {
       const data = await api.post<{ business: Business }>('businesses', { name: name.trim(), description: description.trim() });
       addBusiness(data.business); setName(''); setDescription(''); onCreated?.(data.business); onCancel();
-    } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'No fue posible crear el negocio.'); }
+    } catch (requestError) { setError(requestError instanceof Error ? requestError.message : t("No fue posible crear el negocio.")); }
     finally { setLoading(false); }
   }
 
-  return <View style={{ width: '100%', gap: 14, backgroundColor: theme.surface, borderRadius: 20, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, padding: 18 }}><FormField label="Nombre" value={name} onChangeText={setName} placeholder="Mi restaurante" /><FormField label="Descripción" value={description} onChangeText={setDescription} placeholder="Qué hace especial a tu negocio" multiline /><Feedback message={error} /><Button loading={loading} onPress={create}>Crear negocio</Button><Button variant="secondary" onPress={onCancel}>Cancelar</Button></View>;
+  return <View style={{ width: '100%', gap: 14, backgroundColor: theme.surface, borderRadius: 20, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, padding: 18 }}><FormField label={t("Nombre")} value={name} onChangeText={setName} placeholder={t("Mi restaurante")} /><FormField label={t("Descripción")} value={description} onChangeText={setDescription} placeholder={t("Qué hace especial a tu negocio")} multiline /><Feedback message={error} /><Button loading={loading} onPress={create}>{t("Crear negocio")}</Button><Button variant="secondary" onPress={onCancel}>{t("Cancelar")}</Button></View>;
 }
 
 export function CreateBusinessCard() {
+  const { t } = useTranslation();
+
   const [open, setOpen] = useState(false);
-  if (!open) return <Button onPress={() => setOpen(true)}>Crear mi primer negocio</Button>;
+  if (!open) return <Button onPress={() => setOpen(true)}>{t("Crear mi primer negocio")}</Button>;
   return <CreateBusinessForm onCancel={() => setOpen(false)} />;
 }

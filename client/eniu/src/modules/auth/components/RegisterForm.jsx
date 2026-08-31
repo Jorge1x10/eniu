@@ -4,6 +4,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { PRIVACY_URL, TERMS_URL } from "../../../constants/legal";
+import { useTranslation } from "react-i18next";
 
 const TOTAL_STEPS = 3;
 const FIELD_CLASS =
@@ -19,9 +20,11 @@ function FieldError({ children }) {
 }
 
 function StepHeader({ step, title, description }) {
+  const { t } = useTranslation();
+
   return (
     <div>
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8A7420]">Paso {step} de {TOTAL_STEPS}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8A7420]">{t("Paso")} {step} de {TOTAL_STEPS}</p>
       <h1 className="mt-2 text-3xl font-bold text-[#111111]">{title}</h1>
       <p className="mt-2 text-sm text-gray-600">{description}</p>
       <div className="mt-4 flex gap-1.5" aria-hidden="true">
@@ -34,6 +37,8 @@ function StepHeader({ step, title, description }) {
 }
 
 export default function RegisterForm() {
+  const { t } = useTranslation();
+
   const navigate = useNavigate();
   const { registerAccount, loginWithGoogle } = useAuth();
 
@@ -58,8 +63,8 @@ export default function RegisterForm() {
   const getErrorMessage = (response) => {
     const error = response?.message ?? response?.error;
     if (typeof error === "string") return error;
-    if (error && typeof error === "object") return error.message ?? "No se pudo completar la solicitud.";
-    return "No se pudo completar la solicitud.";
+    if (error && typeof error === "object") return error.message ?? t("No se pudo completar la solicitud.");
+    return t("No se pudo completar la solicitud.");
   };
 
   // Cada paso valida sólo lo suyo antes de dejar avanzar, para que nadie
@@ -93,7 +98,7 @@ export default function RegisterForm() {
   const handleGoogleSuccess = async (credentialResponse) => {
     setServerError("");
     if (!credentialResponse.credential) {
-      setServerError("Google no devolvió una credencial válida.");
+      setServerError(t("Google no devolvió una credencial válida."));
       return;
     }
     setIsGoogleLoading(true);
@@ -107,13 +112,13 @@ export default function RegisterForm() {
     navigate("/dashboard");
   };
 
-  const handleGoogleError = () => setServerError("No fue posible continuar con Google.");
+  const handleGoogleError = () => setServerError(t("No fue posible continuar con Google."));
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-md space-y-5">
-      {step === 1 && <StepHeader step={1} title="Crea tu cuenta" description="Comienza a crear y administrar tus menús." />}
-      {step === 2 && <StepHeader step={2} title="Tu teléfono" description="Lo usamos para identificar tu cuenta y contactarte si hace falta." />}
-      {step === 3 && <StepHeader step={3} title="Confirma tus datos" description="Revisa que todo esté bien antes de crear la cuenta." />}
+      {step === 1 && <StepHeader step={1} title={t("Crea tu cuenta")} description={t("Comienza a crear y administrar tus menús.")} />}
+      {step === 2 && <StepHeader step={2} title={t("Tu teléfono")} description={t("Lo usamos para identificar tu cuenta y contactarte si hace falta.")} />}
+      {step === 3 && <StepHeader step={3} title={t("Confirma tus datos")} description={t("Revisa que todo esté bien antes de crear la cuenta.")} />}
 
       {serverError && (
         <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{serverError}</div>
@@ -122,31 +127,31 @@ export default function RegisterForm() {
       {step === 1 && (
         <>
           <div>
-            <Label htmlFor="email">Correo electrónico</Label>
-            <input id="email" type="email" placeholder="correo@ejemplo.com" autoComplete="email" className={FIELD_CLASS}
+            <Label htmlFor="email">{t("Correo electrónico")}</Label>
+            <input id="email" type="email" placeholder={t("correo@ejemplo.com")} autoComplete="email" className={FIELD_CLASS}
               {...register("email", {
-                required: "El correo es obligatorio",
-                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Escribe un correo válido" },
+                required: t("El correo es obligatorio"),
+                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: t("Escribe un correo válido") },
               })} />
             <FieldError>{errors.email?.message}</FieldError>
           </div>
 
           <div>
-            <Label htmlFor="password">Contraseña</Label>
-            <input id="password" type="password" placeholder="Mínimo 8 caracteres" autoComplete="new-password" className={FIELD_CLASS}
+            <Label htmlFor="password">{t("Contraseña")}</Label>
+            <input id="password" type="password" placeholder={t("Mínimo 8 caracteres")} autoComplete="new-password" className={FIELD_CLASS}
               {...register("password", {
-                required: "La contraseña es obligatoria",
-                minLength: { value: 8, message: "Debe tener al menos 8 caracteres" },
+                required: t("La contraseña es obligatoria"),
+                minLength: { value: 8, message: t("Debe tener al menos 8 caracteres") },
               })} />
             <FieldError>{errors.password?.message}</FieldError>
           </div>
 
           <div>
-            <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-            <input id="confirmPassword" type="password" placeholder="Repite tu contraseña" autoComplete="new-password" className={FIELD_CLASS}
+            <Label htmlFor="confirmPassword">{t("Confirmar contraseña")}</Label>
+            <input id="confirmPassword" type="password" placeholder={t("Repite tu contraseña")} autoComplete="new-password" className={FIELD_CLASS}
               {...register("confirmPassword", {
-                required: "Confirma tu contraseña",
-                validate: (value) => value === password || "Las contraseñas no coinciden",
+                required: t("Confirma tu contraseña"),
+                validate: (value) => value === password || t("Las contraseñas no coinciden"),
               })} />
             <FieldError>{errors.confirmPassword?.message}</FieldError>
           </div>
@@ -157,35 +162,35 @@ export default function RegisterForm() {
             <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)}
               className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#E8C93D]" />
             <span className="text-sm leading-6 text-[#444444]">
-              Acepto los <a href={TERMS_URL} target="_blank" rel="noreferrer" className="font-semibold text-[#111111] underline underline-offset-2">términos y condiciones</a>
-              {" "}y el <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="font-semibold text-[#111111] underline underline-offset-2">aviso de privacidad</a>.
+             {t("Acepto los")} <a href={TERMS_URL} target="_blank" rel="noreferrer" className="font-semibold text-[#111111] underline underline-offset-2">{t("términos y condiciones")}</a>
+              {" "}{t("y el")} <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="font-semibold text-[#111111] underline underline-offset-2">{t("aviso de privacidad")}</a>.
             </span>
           </label>
 
           <button type="button" disabled={!acceptedTerms} onClick={() => goNext(["email", "password", "confirmPassword"])}
             className="w-full rounded-lg bg-[#FFE05A] px-4 py-3 font-semibold text-[#111111] transition hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-60">
-            Continuar
+           {t("Continuar")}
           </button>
 
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-[#D9D9D9]" />
-            <span className="text-sm text-gray-500">o continúa con</span>
+            <span className="text-sm text-gray-500">{t("o continúa con")}</span>
             <div className="h-px flex-1 bg-[#D9D9D9]" />
           </div>
 
           <div className="flex justify-center">
             {isGoogleLoading ? (
-              <p className="text-sm text-gray-600">Validando cuenta de Google...</p>
+              <p className="text-sm text-gray-600">{t("Validando cuenta de Google...")}</p>
             ) : acceptedTerms ? (
               <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} text="signup_with" shape="rectangular" width="400" />
             ) : (
-              <p className="text-center text-sm text-gray-600">Acepta los términos para continuar con Google.</p>
+              <p className="text-center text-sm text-gray-600">{t("Acepta los términos para continuar con Google.")}</p>
             )}
           </div>
 
           <p className="text-center text-sm text-gray-600">
-            ¿Ya tienes una cuenta?{" "}
-            <button type="button" onClick={() => navigate("/login")} className="font-semibold text-[#111111] underline">Inicia sesión</button>
+           {t("¿Ya tienes una cuenta?")}{" "}
+            <button type="button" onClick={() => navigate("/login")} className="font-semibold text-[#111111] underline">{t("Inicia sesión")}</button>
           </p>
         </>
       )}
@@ -193,18 +198,18 @@ export default function RegisterForm() {
       {step === 2 && (
         <>
           <div>
-            <Label htmlFor="phone">Teléfono</Label>
+            <Label htmlFor="phone">{t("Teléfono")}</Label>
             <input id="phone" type="tel" inputMode="numeric" placeholder="3312345678" autoComplete="tel" className={FIELD_CLASS}
               {...register("phone", {
-                required: "El teléfono es obligatorio",
-                pattern: { value: /^\d{10}$/, message: "Escribe los 10 dígitos, sin espacios" },
+                required: t("El teléfono es obligatorio"),
+                pattern: { value: /^\d{10}$/, message: t("Escribe los 10 dígitos, sin espacios") },
               })} />
             <FieldError>{errors.phone?.message}</FieldError>
           </div>
 
           <div className="flex gap-3">
-            <button type="button" onClick={goBack} className="min-h-11 flex-1 rounded-lg border border-[#111111] px-4 py-3 font-semibold text-[#111111] transition hover:bg-[#F8E8AE]">Atrás</button>
-            <button type="button" onClick={() => goNext(["phone"])} className="min-h-11 flex-1 rounded-lg bg-[#FFE05A] px-4 py-3 font-semibold text-[#111111] transition hover:bg-[#E8C93D]">Continuar</button>
+            <button type="button" onClick={goBack} className="min-h-11 flex-1 rounded-lg border border-[#111111] px-4 py-3 font-semibold text-[#111111] transition hover:bg-[#F8E8AE]">{t("Atrás")}</button>
+            <button type="button" onClick={() => goNext(["phone"])} className="min-h-11 flex-1 rounded-lg bg-[#FFE05A] px-4 py-3 font-semibold text-[#111111] transition hover:bg-[#E8C93D]">{t("Continuar")}</button>
           </div>
         </>
       )}
@@ -213,19 +218,19 @@ export default function RegisterForm() {
         <>
           <dl className="divide-y divide-[#E9DDB7] rounded-lg border border-[#E9DDB7] bg-white">
             <div className="flex items-center justify-between gap-4 p-4">
-              <dt className="text-sm text-gray-600">Correo</dt>
+              <dt className="text-sm text-gray-600">{t("Correo")}</dt>
               <dd className="text-sm font-semibold text-[#111111]">{getValues("email").trim().toLowerCase()}</dd>
             </div>
             <div className="flex items-center justify-between gap-4 p-4">
-              <dt className="text-sm text-gray-600">Teléfono</dt>
+              <dt className="text-sm text-gray-600">{t("Teléfono")}</dt>
               <dd className="text-sm font-semibold text-[#111111]">{getValues("phone").trim()}</dd>
             </div>
           </dl>
 
           <div className="flex gap-3">
-            <button type="button" onClick={goBack} className="min-h-11 flex-1 rounded-lg border border-[#111111] px-4 py-3 font-semibold text-[#111111] transition hover:bg-[#F8E8AE]">Atrás</button>
+            <button type="button" onClick={goBack} className="min-h-11 flex-1 rounded-lg border border-[#111111] px-4 py-3 font-semibold text-[#111111] transition hover:bg-[#F8E8AE]">{t("Atrás")}</button>
             <button type="submit" disabled={isSubmitting} className="min-h-11 flex-1 rounded-lg bg-[#FFE05A] px-4 py-3 font-semibold text-[#111111] transition hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-60">
-              {isSubmitting ? "Creando cuenta..." : "Crear cuenta"}
+              {isSubmitting ? t("Creando cuenta...") : t("Crear cuenta")}
             </button>
           </div>
         </>

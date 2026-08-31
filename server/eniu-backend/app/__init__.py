@@ -21,6 +21,19 @@ def create_app(test_config=None):
     if app.config.get("TESTING"):
         # Never let a cached response from one test leak into another.
         app.config["CACHE_TYPE"] = "NullCache"
+
+    # `Config` decide los argumentos de pool cuando se define la clase, mirando
+    # el DATABASE_URL del entorno. Las pruebas cambian la URI a SQLite después,
+    # y se quedaban con argumentos que el pool de SQLite no acepta: quien
+    # tuviera un DATABASE_URL de Postgres en su `.env` no podía correr las
+    # pruebas. Se resuelve contra la URI que de verdad va a usarse.
+    if not (app.config.get("SQLALCHEMY_DATABASE_URI") or "").startswith(
+        ("postgres://", "postgresql://", "postgresql+")
+    ):
+        options = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
+        for pool_only in ("pool_size", "max_overflow"):
+            options.pop(pool_only, None)
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = options
     CORS(
         app,
         resources={

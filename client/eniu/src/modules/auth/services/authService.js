@@ -40,3 +40,10 @@ export function completeGoogleProfile(profileData) {
     data: profileData,
   });
 }
+export function updateLanguage(language) {
+  return httpRequest({
+    method: "PATCH",
+    url: "/users/me",
+    data: { language },
+  });
+}

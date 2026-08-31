@@ -1,18 +1,24 @@
-// Datos y opciones de la demo editable.
+// Estructura y opciones de la demo editable.
 //
-// Todo lo de aquí es un espejo de lo que el dashboard ofrece de verdad
-// (`client/eniu/src/modules/Templates`): mismos nombres de plantilla y
+// Aquí vive sólo lo que no cambia con el idioma: claves, familias
+// tipográficas, colores y topes. Los nombres y descripciones que se leen en
+// pantalla están en `src/content/*.js`, junto al resto del copy.
+//
+// Todo esto es un espejo de lo que el dashboard ofrece de verdad
+// (`client/eniu/src/modules/Templates`): mismas claves de plantilla y
 // tipografía, mismos campos de tema y el mismo tope de productos del plan
 // gratuito que aplica el backend. Si allá cambian, hay que cambiarlos aquí:
 // la demo promete lo que el visitante encontrará al registrarse.
 
 export const FREE_PRODUCT_LIMIT = 15
 
+// `free: true` marca lo que incluye el plan gratuito; el resto lleva la
+// etiqueta de plan de pago en la interfaz.
 export const DEMO_TEMPLATES = [
-  { key: 'modern', name: 'Moderna', description: 'Tarjetas visuales y navegación redondeada.', free: true },
-  { key: 'minimal', name: 'Minimalista', description: 'Lectura rápida, filas limpias y pocas sombras.' },
-  { key: 'elegant', name: 'Elegante', description: 'Composición editorial y más espacio.' },
-  { key: 'bold', name: 'Impactante', description: 'Bloques fuertes y bordes marcados.' },
+  { key: 'modern', free: true },
+  { key: 'minimal' },
+  { key: 'elegant' },
+  { key: 'bold' },
 ]
 
 export const DEMO_FONTS = [
@@ -26,12 +32,7 @@ export const DEMO_FONTS = [
 // primera pintura del sitio con tipografías que quizá nadie use.
 export const DEMO_FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Poppins:wght@400;600;800&family=Playfair+Display:wght@500;700&family=Lora:wght@400;600&display=swap'
 
-export const COLOR_CONTROLS = [
-  ['background_color', 'Color de fondo'],
-  ['primary_color', 'Color principal'],
-  ['accent_color', 'Color de acento'],
-  ['text_color', 'Color del texto'],
-]
+export const COLOR_FIELDS = ['background_color', 'primary_color', 'accent_color', 'text_color']
 
 export const PHOTO_STYLES = ['taco', 'sopa', 'guacamole', 'plato', 'postre', 'cafe']
 
@@ -45,23 +46,39 @@ export const DEMO_THEME = {
   show_product_images: true,
 }
 
-export function initialDemo() {
+// La categoría y el estilo de foto de cada plato de ejemplo. Van por posición
+// junto a `seed.products` del contenido, que aporta nombre, descripción y
+// precio en el idioma que toque: el importe cambia con la moneda, y unos
+// tacos de 145 tienen sentido en pesos pero no en dólares.
+const SEED_PRODUCTS = [
+  { category: 0, art: 'guacamole' },
+  { category: 0, art: 'sopa' },
+  { category: 1, art: 'taco' },
+  { category: 1, art: 'plato' },
+  { category: 2, art: 'postre', available: false },
+  { category: 2, art: 'cafe' },
+]
+
+/** Menú de ejemplo con el que arranca la demo, en el idioma en curso. */
+export function initialDemo(seed) {
+  const categories = seed.categories.map((name, index) => ({
+    id: `cat-${index}`,
+    name,
+  }))
+
   return {
-    business: { name: 'Casa Nopal' },
-    catalogue: { name: 'Menú de la casa', description: 'Cocina de barrio con ingredientes de temporada.' },
-    categories: [
-      { id: 'cat-entradas', name: 'Entradas' },
-      { id: 'cat-fuertes', name: 'Platos fuertes' },
-      { id: 'cat-postres', name: 'Postres' },
-    ],
-    products: [
-      { id: 'prod-1', name: 'Guacamole con totopos', description: 'Aguacate, cilantro, serrano y limón.', price: '95', categoryId: 'cat-entradas', available: true, art: 'guacamole' },
-      { id: 'prod-2', name: 'Sopa de tortilla', description: 'Caldo de jitomate, pasilla y queso fresco.', price: '110', categoryId: 'cat-entradas', available: true, art: 'sopa' },
-      { id: 'prod-3', name: 'Tacos de birria', description: 'Cebolla, cilantro y consomé de la casa.', price: '145', categoryId: 'cat-fuertes', available: true, art: 'taco' },
-      { id: 'prod-4', name: 'Enchiladas verdes', description: 'Pollo, crema y queso rallado.', price: '135', categoryId: 'cat-fuertes', available: true, art: 'plato' },
-      { id: 'prod-5', name: 'Flan de vainilla', description: 'La receta de la abuela, con caramelo.', price: '75', categoryId: 'cat-postres', available: false, art: 'postre' },
-      { id: 'prod-6', name: 'Café de olla', description: 'Canela y piloncillo.', price: '45', categoryId: 'cat-postres', available: true, art: 'cafe' },
-    ],
+    business: { name: seed.businessName },
+    catalogue: { name: seed.menuName, description: seed.menuDescription },
+    categories,
+    products: SEED_PRODUCTS.map((product, index) => ({
+      id: `prod-${index}`,
+      name: seed.products[index].name,
+      description: seed.products[index].description,
+      price: seed.products[index].price,
+      categoryId: categories[product.category].id,
+      available: product.available !== false,
+      art: product.art,
+    })),
     templateKey: 'modern',
     theme: { ...DEMO_THEME },
   }

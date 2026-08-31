@@ -9,19 +9,35 @@ import CreateBusinessModal from "../../Business/components/CreateBusinessModal";
 import { useBusiness } from "../../Business/services/useBusiness";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { getLastCatalogue, rememberCatalogue } from "../../Catalogue/utils/lastCatalogue";
+import { useTranslation } from "react-i18next";
 
+// `key` identifica la opción y `label` sólo se dibuja. La lógica de rutas de
+// abajo se decide por la clave y nunca por el rótulo: comparar contra el texto
+// visible dejaría de funcionar en cuanto la interfaz cambia de idioma.
 const dashboardOptions = [
-  { label: "Inicio", path: "/dashboard", icon: DASH_ICONS.home },
-  { label: "Menús", path: "/dashboard/menus", icon: DASH_ICONS.menus },
-  { label: "Productos", path: "/dashboard/productos", icon: DASH_ICONS.products },
-  { label: "Categorías", path: "/dashboard/categorias", icon: DASH_ICONS.categories },
-  { label: "Plantillas", path: "/dashboard/templates", icon: DASH_ICONS.templates },
-  { label: "Códigos QR", path: "/dashboard/qr", icon: DASH_ICONS.qrcodes },
-  { label: "Analíticas", path: "/dashboard/analiticas", icon: DASH_ICONS.analytics },
-  { label: "Configuración", path: "/dashboard/configuracion", icon: DASH_ICONS.config },
+  { key: "home", label: "Inicio", path: "/dashboard", icon: DASH_ICONS.home },
+  { key: "menus", label: "Menús", path: "/dashboard/menus", icon: DASH_ICONS.menus },
+  { key: "products", label: "Productos", path: "/dashboard/productos", icon: DASH_ICONS.products },
+  { key: "categories", label: "Categorías", path: "/dashboard/categorias", icon: DASH_ICONS.categories },
+  { key: "templates", label: "Plantillas", path: "/dashboard/templates", icon: DASH_ICONS.templates },
+  { key: "qr", label: "Códigos QR", path: "/dashboard/qr", icon: DASH_ICONS.qrcodes },
+  { key: "analytics", label: "Analíticas", path: "/dashboard/analiticas", icon: DASH_ICONS.analytics },
+  { key: "settings", label: "Configuración", path: "/dashboard/configuracion", icon: DASH_ICONS.config },
 ];
 
+// Secciones que cuelgan de un menú concreto: comparten la forma de la ruta y
+// el criterio para saber si están activas.
+const CATALOGUE_SECTIONS = {
+  products: "products",
+  categories: "categories",
+  templates: "templates",
+  qr: "qr",
+  analytics: "analytics",
+};
+
 export default function DashboardNav({ isOpen = false, onClose = () => {} }) {
+  const { t } = useTranslation();
+
   const { user, isLoading } = useAuth();
   const { selectedBusiness } = useBusiness();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -38,8 +54,8 @@ export default function DashboardNav({ isOpen = false, onClose = () => {} }) {
     }
   }, [routeBusinessId, routeCatalogueId]);
 
-  if (isLoading) return <p>Cargando usuario</p>;
-  if (!user) return <p>No se encontraron datos del usuario</p>;
+  if (isLoading) return <p>{t("Cargando usuario")}</p>;
+  if (!user) return <p>{t("No se encontraron datos del usuario")}</p>;
 
   const rawName = user.name || user.username || user.email || "Usuario";
   const displayUser = rawName[0]?.toUpperCase() + rawName.slice(1);
@@ -63,7 +79,7 @@ export default function DashboardNav({ isOpen = false, onClose = () => {} }) {
         <button
           type="button"
           onClick={onClose}
-          aria-label="Cerrar menú"
+          aria-label={t("Cerrar menú")}
           className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg text-[#FFFDF5] hover:bg-[#2A2A2A] lg:hidden"
         >
           <X size={20} />
@@ -84,7 +100,7 @@ export default function DashboardNav({ isOpen = false, onClose = () => {} }) {
         )}
         <div className="min-w-0">
           <p className="truncate font-semibold text-[#FFFDF5]">{displayUser}</p>
-          <p className="text-xs text-[#FFE05A]">{user.plan?.name || "Plan gratuito"}</p>
+          <p className="text-xs text-[#FFE05A]">{user.plan?.name || t("Plan gratuito")}</p>
         </div>
       </div>
 
@@ -95,63 +111,36 @@ export default function DashboardNav({ isOpen = false, onClose = () => {} }) {
       </div>
 
       <nav className="flex flex-col gap-2">
-        {dashboardOptions.map(({ label, path, icon: Icon }) => {
+        {dashboardOptions.map(({ key, label, path, icon: Icon }) => {
           const activeBusinessId = routeBusinessId || selectedBusiness?.id;
           const activeCatalogueId = routeCatalogueId || getLastCatalogue(activeBusinessId);
           const catalogueBase = activeBusinessId && activeCatalogueId
             ? `/dashboard/businesses/${activeBusinessId}/catalogues/${activeCatalogueId}`
             : null;
+          const businessFallback = selectedBusiness
+            ? `/dashboard/businesses/${selectedBusiness.id}/catalogues`
+            : "/dashboard/menus";
+          const section = CATALOGUE_SECTIONS[key];
+
           let destination = path;
-          if (path === "/dashboard/configuracion") {
+          if (key === "settings") {
             destination = "/dashboard/settings";
-          }
-          if (label === "Menús" && selectedBusiness) {
+          } else if (key === "menus" && selectedBusiness) {
             destination = `/dashboard/businesses/${selectedBusiness.id}/catalogues`;
-          }
-          if (label === "Productos") {
-            destination = catalogueBase
-              ? `${catalogueBase}/products`
-              : selectedBusiness ? `/dashboard/businesses/${selectedBusiness.id}/catalogues` : "/dashboard/menus";
-          }
-          if (label === "Categorías") {
-            destination = catalogueBase
-              ? `${catalogueBase}/categories`
-              : selectedBusiness ? `/dashboard/businesses/${selectedBusiness.id}/catalogues` : "/dashboard/menus";
-          }
-          if (label === "Plantillas") {
-            destination = catalogueBase
-              ? `${catalogueBase}/templates`
-              : selectedBusiness ? `/dashboard/businesses/${selectedBusiness.id}/catalogues` : "/dashboard/menus";
-          }
-          if (label === "Códigos QR") {
-            destination = catalogueBase
-              ? `${catalogueBase}/qr`
-              : selectedBusiness ? `/dashboard/businesses/${selectedBusiness.id}/catalogues` : "/dashboard/menus";
-          }
-          if (label === "Analíticas") {
-            destination = catalogueBase
-              ? `${catalogueBase}/analytics`
-              : selectedBusiness ? `/dashboard/businesses/${selectedBusiness.id}/catalogues` : "/dashboard/menus";
+          } else if (section) {
+            destination = catalogueBase ? `${catalogueBase}/${section}` : businessFallback;
           }
 
           return (
             <NavLink
               key={path}
               to={destination}
-              end={path === "/dashboard" || ["Menús", "Productos", "Categorías", "Plantillas", "Códigos QR", "Analíticas"].includes(label)}
+              end={key !== "settings"}
               onClick={onClose}
               className={({ isActive }) => {
-                const isOptionActive = label === "Productos"
-                  ? location.pathname.endsWith("/products")
-                  : label === "Categorías"
-                    ? location.pathname.endsWith("/categories")
-                    : label === "Plantillas"
-                      ? location.pathname.endsWith("/templates")
-                      : label === "Códigos QR"
-                        ? location.pathname.endsWith("/qr")
-                        : label === "Analíticas"
-                          ? location.pathname.endsWith("/analytics")
-                        : isActive;
+                const isOptionActive = section
+                  ? location.pathname.endsWith(`/${section}`)
+                  : isActive;
 
                 return `flex items-center gap-3 rounded-r-4xl px-2 py-2 transition-colors ${
                   isOptionActive
@@ -161,7 +150,7 @@ export default function DashboardNav({ isOpen = false, onClose = () => {} }) {
               }}
             >
               <Icon size={20} />
-              <span>{label}</span>
+              <span>{t(label)}</span>
             </NavLink>
           );
         })}

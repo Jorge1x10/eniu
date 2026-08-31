@@ -1,3 +1,4 @@
+import { currentLocale } from "../../../i18n/formats";
 function safeDate(value) {
   const date = new Date(`${value}T12:00:00`);
   return Number.isNaN(date.getTime()) ? null : date;
@@ -10,7 +11,7 @@ export function buildDashboardViewModel({ catalogues = [], selectedCatalogue = n
   const monthlyViews = analytics ? visits.filter((item) => item.date.startsWith(monthPrefix)).reduce((total, item) => total + Number(item.views || 0), 0) : null;
   const chart = visits.slice(-chartDays).map((item) => ({
     ...item,
-    label: safeDate(item.date)?.toLocaleDateString("es-MX", { weekday: "short" }).replace(".", "") || item.date,
+    label: safeDate(item.date)?.toLocaleDateString(currentLocale(), { weekday: "short" }).replace(".", "") || item.date,
   }));
   const qr = analytics?.sources?.find((item) => item.key === "qr");
   return {

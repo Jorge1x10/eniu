@@ -1,4 +1,5 @@
-const HEX_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+import i18n from "../../../i18n";const HEX_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 export function normalizeHex(value) {
   if (!HEX_PATTERN.test(value)) return null;
@@ -26,18 +27,18 @@ export function contrastRatio(first, second) {
 export function validateTheme(theme) {
   const errors = {};
   ["background_color", "primary_color", "accent_color", "text_color"].forEach((field) => {
-    if (!normalizeHex(theme[field])) errors[field] = "Usa un color hexadecimal válido.";
+    if (!normalizeHex(theme[field])) errors[field] = i18n.t("Usa un color hexadecimal válido.");
   });
   if (!errors.text_color && !errors.background_color && contrastRatio(theme.text_color, theme.background_color) < 4.5) {
-    errors.contrast = "El texto no tiene suficiente contraste con el fondo.";
+    errors.contrast = i18n.t("El texto no tiene suficiente contraste con el fondo.");
   } else if (!errors.text_color && !errors.primary_color && contrastRatio(theme.text_color, theme.primary_color) < 4.5) {
-    errors.contrast = "El texto no tiene suficiente contraste con el color principal.";
+    errors.contrast = i18n.t("El texto no tiene suficiente contraste con el color principal.");
   }
   if (typeof theme.background_opacity !== "number"
     || !Number.isFinite(theme.background_opacity)
     || theme.background_opacity < 0
     || theme.background_opacity > 1) {
-    errors.background_opacity = "La opacidad debe estar entre 0% y 100%.";
+    errors.background_opacity = i18n.t("La opacidad debe estar entre 0% y 100%.");
   }
   return errors;
 }

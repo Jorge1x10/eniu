@@ -7,6 +7,7 @@ from .services import (
     get_businesses_by_owner,
     update_business,
 )
+from app.shared.i18n import _
 
 business_bp = Blueprint('bussines', __name__, url_prefix="/api/businesses")
 
@@ -63,12 +64,12 @@ def edit_business(business_id):
     unknown_fields = set(data) - allowed_fields
     if unknown_fields:
         return jsonify({
-            "message": "Se enviaron campos no permitidos",
+            "message": _("Se enviaron campos no permitidos"),
             "fields": sorted(unknown_fields),
         }), 400
 
     if not data and not photo:
-        return jsonify({"message": "No se enviaron datos"}), 400
+        return jsonify({"message": _("No se enviaron datos")}), 400
 
     result, status_code = update_business(
         owner_id=user_id,
@@ -85,6 +86,6 @@ def get_business_photo(business_id):
     business = get_business_by_id(business_id)
 
     if not business or not business.photo_filename:
-        return jsonify({"message": "Foto no encontrada"}), 404
+        return jsonify({"message": _("Foto no encontrada")}), 404
 
     return storage.serve_file(current_app.config["BUSINESS_UPLOAD_FOLDER"], business.photo_filename)

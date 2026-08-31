@@ -18,6 +18,7 @@ import { getTemplateErrorMessage, useTemplateService } from "../services/templat
 import { resolveTemplate } from "../templates/templateRegistry";
 import { DEFAULT_THEME, FONT_REGISTRY, SPLASH_RANGE, normalizeConfiguration } from "../utils/themeDefaults";
 import { normalizeHex, validateTheme } from "../utils/themeValidation";
+import { useTranslation } from "react-i18next";
 
 const COLOR_CONTROLS = [
   ["background_color", "Color de fondo"],
@@ -27,6 +28,8 @@ const COLOR_CONTROLS = [
 ];
 
 export default function TemplatesPage() {
+  const { t } = useTranslation();
+
   const { businessId, catalogueId } = useParams();
   const navigate = useNavigate();
   const { businesses, selectedBusiness, selectBusiness } = useBusiness();
@@ -92,7 +95,7 @@ export default function TemplatesPage() {
     if (responses.some((response) => response.aborted) || !mountedRef.current) return;
     const failed = responses.find((response) => !response.ok);
     if (failed) {
-      setLoadError(getTemplateErrorMessage(failed, "No pudimos cargar la configuración de la plantilla."));
+      setLoadError(getTemplateErrorMessage(failed, t("No pudimos cargar la configuración de la plantilla.")));
       setIsLoading(false);
       return;
     }
@@ -170,7 +173,7 @@ export default function TemplatesPage() {
   }
 
   async function chooseSplash(event) {
-    const file = await pickImage(event, "La bienvenida");
+    const file = await pickImage(event, t("La bienvenida"));
     if (!file) return;
     if (splashPreview) URL.revokeObjectURL(splashPreview);
     setSplashFile(file); setSplashPreview(URL.createObjectURL(file)); setRemoveSplash(false);
@@ -183,7 +186,7 @@ export default function TemplatesPage() {
   }
 
   async function chooseCover(event) {
-    const file = await pickImage(event, "La portada");
+    const file = await pickImage(event, t("La portada"));
     if (!file) return;
     if (coverPreview) URL.revokeObjectURL(coverPreview);
     setCoverFile(file); setCoverPreview(URL.createObjectURL(file)); setRemoveCover(false);
@@ -196,7 +199,7 @@ export default function TemplatesPage() {
   }
 
   async function chooseBackground(event) {
-    const file = await pickImage(event, "El fondo");
+    const file = await pickImage(event, t("El fondo"));
     if (!file) return;
     if (backgroundPreview) URL.revokeObjectURL(backgroundPreview);
     setBackgroundFile(file); setBackgroundPreview(URL.createObjectURL(file)); setRemoveBackground(false);
@@ -240,7 +243,7 @@ export default function TemplatesPage() {
     if (!mountedRef.current) return;
     setIsSaving(false);
     if (!response.ok) {
-      setSaveError(getTemplateErrorMessage(response, "No pudimos guardar los cambios. Intenta nuevamente."));
+      setSaveError(getTemplateErrorMessage(response, t("No pudimos guardar los cambios. Intenta nuevamente.")));
       return;
     }
     const configuration = normalizeConfiguration(response.data?.template);
@@ -248,7 +251,7 @@ export default function TemplatesPage() {
     setSaved(configuration); setDraft(configuration); setCoverFile(null); setCoverPreview(null);
     setBackgroundFile(null); setBackgroundPreview(null); setRemoveBackground(false);
     setSplashFile(null); setSplashPreview(null); setRemoveSplash(false); setSplashVersion(Date.now());
-    setRemoveCover(false); setCoverVersion(Date.now()); setBackgroundVersion(Date.now()); setSuccess("La plantilla se guardó correctamente.");
+    setRemoveCover(false); setCoverVersion(Date.now()); setBackgroundVersion(Date.now()); setSuccess(t("La plantilla se guardó correctamente."));
   }
 
   const previewThemeBase = useMemo(() => {
@@ -277,30 +280,36 @@ export default function TemplatesPage() {
   const previewTheme = { ...previewThemeBase, background_image_url: backgroundUrl };
 
   return <section className="mx-auto w-full max-w-[1500px] space-y-5">
-    <div className="flex flex-wrap items-center justify-between gap-3"><Link to={`/dashboard/businesses/${businessId}/catalogues/${catalogueId}`} className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-[#666666] hover:text-[#111111]"><ArrowLeft size={17} /> Volver al menú</Link><div className="flex flex-wrap items-center gap-2">{isDirty && <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">Cambios sin guardar</span>}<button type="button" onClick={discardChanges} disabled={!isDirty || isSaving} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 font-semibold hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"><RotateCcw size={16} /> Descartar</button><button type="button" onClick={saveChanges} disabled={!isDirty || isSaving || Object.keys(validationErrors).length > 0} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#FFE05A] px-5 font-semibold hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"><Save size={17} /> {isSaving ? "Guardando..." : "Guardar personalización"}</button></div></div>
-    <header><p className="text-sm font-semibold text-[#8A7420]">{catalogue.name}</p><h1 className="mt-1 text-3xl font-bold">Plantillas</h1><p className="mt-1 text-sm text-[#666666]">Personaliza la identidad visual sin alterar el contenido del menú.</p></header>
+    <div className="flex flex-wrap items-center justify-between gap-3"><Link to={`/dashboard/businesses/${businessId}/catalogues/${catalogueId}`} className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-[#666666] hover:text-[#111111]"><ArrowLeft size={17} /> {t("Volver al menú")}</Link><div className="flex flex-wrap items-center gap-2">{isDirty && <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">{t("Cambios sin guardar")}</span>}<button type="button" onClick={discardChanges} disabled={!isDirty || isSaving} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 font-semibold hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"><RotateCcw size={16} /> {t("Descartar")}</button><button type="button" onClick={saveChanges} disabled={!isDirty || isSaving || Object.keys(validationErrors).length > 0} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#FFE05A] px-5 font-semibold hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"><Save size={17} /> {isSaving ? "Guardando..." : t("Guardar personalización")}</button></div></div>
+    <header><p className="text-sm font-semibold text-[#8A7420]">{catalogue.name}</p><h1 className="mt-1 text-3xl font-bold">{t("Plantillas")}</h1><p className="mt-1 text-sm text-[#666666]">{t("Personaliza la identidad visual sin alterar el contenido del menú.")}</p></header>
     {success && <p role="status" className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">{success}</p>}
     {saveError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{saveError}</p>}
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(390px,0.9fr)]">
       <div className="space-y-6 rounded-2xl border border-[#E9DDB7] bg-[#FFFDF5] p-5 shadow-sm sm:p-6">
         <TemplateSelector value={draft.template_key} isAllowed={allowsTemplate} onChange={(template_key) => { setDraft((current) => ({ ...current, template_key })); setSuccess(""); }} />
-        <section><h2 className="text-sm font-bold">Colores</h2><div className="mt-3 grid gap-4 sm:grid-cols-2">{COLOR_CONTROLS.map(([field, label]) => <ColorControl key={field} id={`theme-${field}`} label={label} value={draft.theme[field]} originalValue={saved.theme[field]} error={validationErrors[field]} onChange={(value) => updateTheme(field, value)} />)}</div>{validationErrors.contrast && <p role="alert" className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{validationErrors.contrast} Ajusta los colores antes de guardar.</p>}</section>
-        <section><div className="flex flex-wrap items-center justify-between gap-2"><label htmlFor="theme-font" className="text-sm font-bold">Tipografía</label>{fontsLocked && <PlanBadge />}</div><select id="theme-font" value={draft.theme.font_key} disabled={fontsLocked} onChange={(event) => updateTheme("font_key", event.target.value)} className={`mt-2 min-h-11 w-full rounded-xl border border-[#D9D9D9] px-4 outline-none focus:border-[#E8C93D] ${fontsLocked ? "cursor-not-allowed bg-[#F7F3E4] opacity-60" : "cursor-pointer bg-white"}`}>{Object.entries(FONT_REGISTRY).map(([key, font]) => <option key={key} value={key} disabled={!allowsFont(key)}>{font.label}</option>)}</select></section>
-        <section><h2 className="text-sm font-bold">Fotos</h2><p className="mt-1 text-xs text-[#777777]">Se aplica a la portada, el fondo y la bienvenida. Menos calidad hace que el menú abra más rápido en el celular de tus clientes.</p><ImageQualitySelector value={quality} onChange={setQuality} /></section>
-        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">Portada y productos</h2>{coverLocked && <PlanBadge />}</div><div className="mt-3 space-y-3"><Toggle label="Mostrar portada" checked={draft.theme.show_cover} disabled={coverLocked} onChange={(value) => updateTheme("show_cover", value)} /><Toggle label="Mostrar imágenes de productos" checked={draft.theme.show_product_images} disabled={productImagesLocked} onChange={(value) => updateTheme("show_product_images", value)} /></div><ImagePicker title="Portada" url={coverUrl} emptyText="Sin portada" disabled={coverLocked} onChange={chooseCover} onRemove={removeCurrentCover} /></section>
-        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">Fondo del menú</h2>{backgroundLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">La imagen queda detrás del contenido y no reemplaza la portada.</p><ImagePicker title="Fondo" url={backgroundUrl} emptyText="Sin imagen de fondo" disabled={backgroundLocked} onChange={chooseBackground} onRemove={removeCurrentBackground} /><label htmlFor="background-opacity" className="mt-4 block text-sm font-semibold">Opacidad del fondo: {Math.round(draft.theme.background_opacity * 100)}%</label><input id="background-opacity" type="range" min="0" max="1" step="0.05" disabled={backgroundLocked} value={draft.theme.background_opacity} onChange={(event) => updateTheme("background_opacity", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${backgroundLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
-        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">Pantalla de bienvenida</h2>{splashLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">Aparece unos segundos al abrir el menú y se desvanece sola. Un toque la cierra antes.</p><div className="mt-3"><Toggle label="Mostrar bienvenida" checked={draft.splash.enabled} disabled={splashLocked} onChange={(value) => updateSplash("enabled", value)} /></div><ImagePicker title="Bienvenida" url={splashUrl} emptyText="Sin imagen: se muestra el nombre del negocio" disabled={splashLocked} onChange={chooseSplash} onRemove={removeCurrentSplash} /><label htmlFor="splash-duration" className="mt-4 block text-sm font-semibold">Duración: {draft.splash.duration} s</label><input id="splash-duration" type="range" min={SPLASH_RANGE.min} max={SPLASH_RANGE.max} step={SPLASH_RANGE.step} disabled={splashLocked} value={draft.splash.duration} onChange={(event) => updateSplash("duration", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${splashLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
+        <section><h2 className="text-sm font-bold">{t("Colores")}</h2><div className="mt-3 grid gap-4 sm:grid-cols-2">{COLOR_CONTROLS.map(([field, label]) => <ColorControl key={field} id={`theme-${field}`} label={t(label)} value={draft.theme[field]} originalValue={saved.theme[field]} error={validationErrors[field]} onChange={(value) => updateTheme(field, value)} />)}</div>{validationErrors.contrast && <p role="alert" className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{validationErrors.contrast} {t("Ajusta los colores antes de guardar.")}</p>}</section>
+        <section><div className="flex flex-wrap items-center justify-between gap-2"><label htmlFor="theme-font" className="text-sm font-bold">{t("Tipografía")}</label>{fontsLocked && <PlanBadge />}</div><select id="theme-font" value={draft.theme.font_key} disabled={fontsLocked} onChange={(event) => updateTheme("font_key", event.target.value)} className={`mt-2 min-h-11 w-full rounded-xl border border-[#D9D9D9] px-4 outline-none focus:border-[#E8C93D] ${fontsLocked ? "cursor-not-allowed bg-[#F7F3E4] opacity-60" : "cursor-pointer bg-white"}`}>{Object.entries(FONT_REGISTRY).map(([key, font]) => <option key={key} value={key} disabled={!allowsFont(key)}>{font.label}</option>)}</select></section>
+        <section><h2 className="text-sm font-bold">{t("Fotos")}</h2><p className="mt-1 text-xs text-[#777777]">{t("Se aplica a la portada, el fondo y la bienvenida. Menos calidad hace que el menú abra más rápido en el celular de tus clientes.")}</p><ImageQualitySelector value={quality} onChange={setQuality} /></section>
+        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">{t("Portada y productos")}</h2>{coverLocked && <PlanBadge />}</div><div className="mt-3 space-y-3"><Toggle label={t("Mostrar portada")} checked={draft.theme.show_cover} disabled={coverLocked} onChange={(value) => updateTheme("show_cover", value)} /><Toggle label={t("Mostrar imágenes de productos")} checked={draft.theme.show_product_images} disabled={productImagesLocked} onChange={(value) => updateTheme("show_product_images", value)} /></div><ImagePicker title={t("Portada")} url={coverUrl} emptyText={t("Sin portada")} disabled={coverLocked} onChange={chooseCover} onRemove={removeCurrentCover} /></section>
+        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">{t("Fondo del menú")}</h2>{backgroundLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">{t("La imagen queda detrás del contenido y no reemplaza la portada.")}</p><ImagePicker title={t("Fondo")} url={backgroundUrl} emptyText={t("Sin imagen de fondo")} disabled={backgroundLocked} onChange={chooseBackground} onRemove={removeCurrentBackground} /><label htmlFor="background-opacity" className="mt-4 block text-sm font-semibold">{t("Opacidad del fondo:")} {Math.round(draft.theme.background_opacity * 100)}%</label><input id="background-opacity" type="range" min="0" max="1" step="0.05" disabled={backgroundLocked} value={draft.theme.background_opacity} onChange={(event) => updateTheme("background_opacity", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${backgroundLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
+        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">{t("Pantalla de bienvenida")}</h2>{splashLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">{t("Aparece unos segundos al abrir el menú y se desvanece sola. Un toque la cierra antes.")}</p><div className="mt-3"><Toggle label={t("Mostrar bienvenida")} checked={draft.splash.enabled} disabled={splashLocked} onChange={(value) => updateSplash("enabled", value)} /></div><ImagePicker title={t("Bienvenida")} url={splashUrl} emptyText={t("Sin imagen: se muestra el nombre del negocio")} disabled={splashLocked} onChange={chooseSplash} onRemove={removeCurrentSplash} /><label htmlFor="splash-duration" className="mt-4 block text-sm font-semibold">{t("Duración:")} {draft.splash.duration} s</label><input id="splash-duration" type="range" min={SPLASH_RANGE.min} max={SPLASH_RANGE.max} step={SPLASH_RANGE.step} disabled={splashLocked} value={draft.splash.duration} onChange={(event) => updateSplash("duration", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${splashLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
       </div>
-      <aside className="rounded-2xl border border-[#E9DDB7] bg-[#F8E8AE]/35 p-4 sm:p-6 xl:sticky xl:top-4"><h2 className="mb-4 flex items-center gap-2 font-bold"><Eye size={18} /> Vista previa móvil</h2><MobilePreviewFrame>{createElement(resolveTemplate(draft.template_key), { business, catalogue, categories, products, theme: previewTheme, coverUrl, showEniuBadge: limits.show_eniu_badge })}</MobilePreviewFrame></aside>
+      <aside className="rounded-2xl border border-[#E9DDB7] bg-[#F8E8AE]/35 p-4 sm:p-6 xl:sticky xl:top-4"><h2 className="mb-4 flex items-center gap-2 font-bold"><Eye size={18} /> {t("Vista previa móvil")}</h2><MobilePreviewFrame>{createElement(resolveTemplate(draft.template_key), { business, catalogue, categories, products, theme: previewTheme, coverUrl, showEniuBadge: limits.show_eniu_badge })}</MobilePreviewFrame></aside>
     </div>
     {pendingPath && <UnsavedChangesDialog onCancel={() => setPendingPath(null)} onConfirm={() => navigate(pendingPath)} />}
   </section>;
 }
 
 function Toggle({ label, checked, onChange, disabled = false }) { return <label className={`flex min-h-11 items-center justify-between gap-4 rounded-xl border border-[#E9DDB7] px-4 ${disabled ? "cursor-not-allowed bg-[#F7F3E4] opacity-60" : "cursor-pointer bg-white"}`}><span className="text-sm font-semibold">{label}</span><input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="h-5 w-5 accent-[#E8C93D]" /></label>; }
-function ImagePicker({ title, url, emptyText, onChange, onRemove, disabled = false }) { return <div className={`mt-4 overflow-hidden rounded-xl border border-dashed border-[#CDBD87] ${disabled ? "bg-[#F7F3E4]" : "bg-white"}`}>{url ? <img src={url} alt={`Vista previa de ${title.toLowerCase()}`} className="h-40 w-full object-cover" /> : <div className="flex h-28 items-center justify-center text-sm text-[#777777]">{emptyText}</div>}<div className="flex flex-wrap items-center gap-3 p-4">{disabled ? <p className="text-sm text-[#777777]">Tu plan actual no incluye esta imagen.</p> : <><label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 text-sm font-semibold text-white hover:bg-[#111111]"><ImagePlus size={17} /> {url ? `Cambiar ${title.toLowerCase()}` : `Elegir ${title.toLowerCase()}`}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onChange} className="sr-only" /></label>{url && <button type="button" onClick={onRemove} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-semibold text-red-700 hover:bg-red-50"><Trash2 size={16} /> Quitar</button>}<span className="text-xs text-[#777777]">JPG, PNG o WebP. Máximo 5 MB.</span></>}</div></div>; }
-function LoadingState() { return <div aria-label="Cargando editor de plantillas" className="grid animate-pulse gap-6 xl:grid-cols-2"><div className="h-[680px] rounded-2xl bg-white" /><div className="mx-auto h-[720px] w-full max-w-[390px] rounded-[2.5rem] bg-[#D9D9D9]" /></div>; }
-function ErrorState({ message, onRetry }) { return <div className="mx-auto max-w-2xl rounded-2xl border border-[#E9DDB7] bg-white p-8 text-center"><h1 className="text-xl font-bold">No pudimos abrir el editor</h1><p role="alert" className="mt-2 text-[#666666]">{message}</p><button type="button" onClick={onRetry} className="mt-5 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-semibold text-white"><RefreshCw size={17} /> Reintentar</button></div>; }
+function ImagePicker({ title, url, emptyText, onChange, onRemove, disabled = false }) {
+  const { t } = useTranslation();
+ return <div className={`mt-4 overflow-hidden rounded-xl border border-dashed border-[#CDBD87] ${disabled ? "bg-[#F7F3E4]" : "bg-white"}`}>{url ? <img src={url} alt={`Vista previa de ${title.toLowerCase()}`} className="h-40 w-full object-cover" /> : <div className="flex h-28 items-center justify-center text-sm text-[#777777]">{emptyText}</div>}<div className="flex flex-wrap items-center gap-3 p-4">{disabled ? <p className="text-sm text-[#777777]">{t("Tu plan actual no incluye esta imagen.")}</p> : <><label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 text-sm font-semibold text-white hover:bg-[#111111]"><ImagePlus size={17} /> {url ? `Cambiar ${title.toLowerCase()}` : `Elegir ${title.toLowerCase()}`}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onChange} className="sr-only" /></label>{url && <button type="button" onClick={onRemove} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-semibold text-red-700 hover:bg-red-50"><Trash2 size={16} /> {t("Quitar")}</button>}<span className="text-xs text-[#777777]">{t("JPG, PNG o WebP. Máximo 5 MB.")}</span></>}</div></div>; }
+function LoadingState() {
+  const { t } = useTranslation();
+ return <div aria-label={t("Cargando editor de plantillas")} className="grid animate-pulse gap-6 xl:grid-cols-2"><div className="h-[680px] rounded-2xl bg-white" /><div className="mx-auto h-[720px] w-full max-w-[390px] rounded-[2.5rem] bg-[#D9D9D9]" /></div>; }
+function ErrorState({ message, onRetry }) {
+  const { t } = useTranslation();
+ return <div className="mx-auto max-w-2xl rounded-2xl border border-[#E9DDB7] bg-white p-8 text-center"><h1 className="text-xl font-bold">{t("No pudimos abrir el editor")}</h1><p role="alert" className="mt-2 text-[#666666]">{message}</p><button type="button" onClick={onRetry} className="mt-5 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-semibold text-white"><RefreshCw size={17} /> {t("Reintentar")}</button></div>; }
 
 function usePrivateAsset(path) {
   const [objectUrl, setObjectUrl] = useState(null);

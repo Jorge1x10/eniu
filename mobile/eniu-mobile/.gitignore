@@ -42,3 +42,10 @@ example
 # generated native folders
 /ios
 /android
+
+# Credenciales de firma. Llevan la contraseña del certificado de distribución
+# en claro: si acaban en el historial hay que rotar el certificado.
+credentials.json
+*.p12
+*.mobileprovision
+*.keystore

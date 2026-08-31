@@ -3,17 +3,35 @@ from email.message import EmailMessage
 
 from flask import current_app
 
+from app.shared.i18n import _
 
-def build_password_reset_email(recipient, reset_url, minutes):
+
+def build_password_reset_email(recipient, reset_url, minutes, language=None):
+    """Redacta el correo de recuperación en el idioma de la cuenta.
+
+    El idioma se recibe explícitamente en lugar de deducirlo de la petición:
+    quien pide recuperar su contraseña no tiene sesión, así que la cabecera del
+    navegador diría poco y la preferencia guardada dice justo lo que hace falta.
+    """
     message = EmailMessage()
-    message["Subject"] = "Restablece tu contraseña de ENIU"
+    message["Subject"] = _("Restablece tu contraseña de ENIU", language=language)
     message["From"] = current_app.config["MAIL_FROM"]
     message["To"] = recipient
     message.set_content(
-        "Recibimos una solicitud para cambiar tu contraseña.\n\n"
-        f"Abre este enlace para continuar: {reset_url}\n\n"
-        f"El enlace estará disponible durante {minutes} minutos.\n\n"
-        "Si tú no realizaste esta solicitud, puedes ignorar este mensaje."
+        _("Recibimos una solicitud para cambiar tu contraseña.", language=language)
+        + "\n\n"
+        + _("Abre este enlace para continuar: {url}", language=language, url=reset_url)
+        + "\n\n"
+        + _(
+            "El enlace estará disponible durante {minutes} minutos.",
+            language=language,
+            minutes=minutes,
+        )
+        + "\n\n"
+        + _(
+            "Si tú no realizaste esta solicitud, puedes ignorar este mensaje.",
+            language=language,
+        )
     )
     return message
 
