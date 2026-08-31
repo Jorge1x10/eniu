@@ -366,6 +366,32 @@ class PublicationApiTestCase(unittest.TestCase):
             f"/api/public/menus/{slug}/background",
         )
 
+    def test_the_section_lookup_uses_the_index_instead_of_scanning(self):
+        """El índice existe para que la base no recorra `products` entera.
+
+        Crearlo no garantiza que se use: si el orden de las columnas no
+        coincide con el de la consulta, el planificador lo ignora y el índice
+        sólo ocupa espacio. Esto lo comprueba sobre la forma exacta de la
+        consulta que sirve una sección del menú.
+
+        Es SQLite, no Postgres, así que es indicativo y no una prueba de
+        producción; pero un índice que ni siquiera SQLite elige tampoco lo
+        elegiría Postgres.
+        """
+        with self.app.app_context():
+            plan = db.session.execute(db.text(
+                "EXPLAIN QUERY PLAN "
+                "SELECT * FROM products "
+                "WHERE catalogue_id = 'x' AND category_id = 'y' "
+                "ORDER BY display_order, created_at"
+            )).fetchall()
+
+        detail = " ".join(str(row[-1]) for row in plan)
+        self.assertIn("ix_products_catalogue_section_order", detail)
+        # "SCAN products" a secas significa recorrer la tabla entera, que es
+        # justo lo que el índice viene a evitar.
+        self.assertNotIn("SCAN products", detail)
+
     def test_public_product_image_cost_does_not_grow_with_the_catalogue(self):
         """Servir una foto no debe depender del tamano del menu.
 
