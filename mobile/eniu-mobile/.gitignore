@@ -49,3 +49,6 @@ credentials.json
 *.p12
 *.mobileprovision
 *.keystore
+
+# Capturas generadas al correr .maestro/appstore-screenshots.yaml en local
+screenshots/

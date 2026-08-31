@@ -1,0 +1,41 @@
+# Capturas de pantalla para el App Store.
+#
+# Se loguea con la cuenta demo (EXPO_SCREENSHOT_EMAIL / EXPO_SCREENSHOT_PASSWORD,
+# inyectadas como MAESTRO_EMAIL / MAESTRO_PASSWORD) y recorre las cuatro
+# pestañas en español, cambia el idioma desde Ajustes y las vuelve a
+# capturar en inglés. Al final deja la cuenta otra vez en español para que
+# la siguiente corrida arranque del mismo estado.
+#
+# Requiere que el simulador ya tenga configurado el idioma es-MX (lo hace el
+# workflow de GitHub Actions antes de lanzar la app), porque la pantalla de
+# login todavía no tiene una preferencia de idioma guardada en la cuenta.
+appId: com.eniu.app
+---
+- launchApp
+- tapOn: "correo@ejemplo.com"
+- inputText: ${MAESTRO_EMAIL}
+- tapOn: "Tu contraseña"
+- inputText: ${MAESTRO_PASSWORD}
+- hideKeyboard
+- tapOn: "Iniciar sesión"
+- assertVisible: "Inicio"
+
+- takeScreenshot: screenshots/es-01-inicio
+- tapOn: "Menús"
+- takeScreenshot: screenshots/es-02-menus
+- tapOn: "Analíticas"
+- takeScreenshot: screenshots/es-03-analiticas
+- tapOn: "Ajustes"
+- takeScreenshot: screenshots/es-04-ajustes
+
+- tapOn: "English"
+- tapOn: "Home"
+- takeScreenshot: screenshots/en-01-home
+- tapOn: "Menus"
+- takeScreenshot: screenshots/en-02-menus
+- tapOn: "Analytics"
+- takeScreenshot: screenshots/en-03-analytics
+- tapOn: "Settings"
+- takeScreenshot: screenshots/en-04-settings
+
+- tapOn: "Español"
