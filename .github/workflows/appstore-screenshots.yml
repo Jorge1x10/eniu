@@ -46,6 +46,10 @@ jobs:
           CI: "true"
         run: |
           set -euo pipefail
+
+          echo "----- eas whoami (verifica que EXPO_TOKEN autentica) -----"
+          eas whoami
+
           if [ -n "${{ inputs.build_id }}" ]; then
             BUILD_ID="${{ inputs.build_id }}"
           else
@@ -53,8 +57,19 @@ jobs:
             BUILD_ID=$(jq -r '.[0].id' new-build.json)
           fi
 
-          eas build:view "$BUILD_ID" --json > build-view.json
-          cat build-view.json
+          set +e
+          eas build:view "$BUILD_ID" --json > build-view.json 2> build-view.stderr.log
+          STATUS=$?
+          set -e
+          echo "----- eas build:view stdout -----"
+          cat build-view.json || true
+          echo "----- eas build:view stderr -----"
+          cat build-view.stderr.log || true
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::error::'eas build:view $BUILD_ID' salió con código $STATUS (ver stdout/stderr arriba)."
+            exit "$STATUS"
+          fi
+
           URL=$(jq -r '.artifacts.buildUrl // .artifacts.applicationArchiveUrl' build-view.json)
           if [ -z "$URL" ] || [ "$URL" = "null" ]; then
             echo "::error::No se pudo obtener la URL de descarga del build $BUILD_ID (ver salida de 'eas build:view' arriba)."
