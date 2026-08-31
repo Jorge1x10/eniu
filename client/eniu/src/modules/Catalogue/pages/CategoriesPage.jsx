@@ -106,7 +106,7 @@ export default function CategoriesPage() {
               <p className="mt-3 flex-1 text-sm leading-6 text-[#666666]">{category.description || t("Sin descripción")}</p>
               <div className="mt-4 flex gap-2 border-t border-[#EFE8D1] pt-4">
                 <button type="button" onClick={() => setEditing(category)} className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#2A2A2A] px-3 py-2 text-sm font-semibold text-white hover:bg-[#111111]"><Pencil size={15} /> {t("Editar")}</button>
-                <button type="button" onClick={() => setDeleting(category)} aria-label={`Eliminar ${category.name}`} className="cursor-pointer rounded-xl border border-red-200 p-2.5 text-red-700 hover:bg-red-50"><Trash2 size={16} /></button>
+                <button type="button" onClick={() => setDeleting(category)} aria-label={t("Eliminar {{name}}", { name: category.name })} className="cursor-pointer rounded-xl border border-red-200 p-2.5 text-red-700 hover:bg-red-50"><Trash2 size={16} /></button>
               </div>
             </article>
           ))}

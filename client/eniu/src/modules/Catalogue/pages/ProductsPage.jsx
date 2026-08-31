@@ -117,7 +117,7 @@ export default function ProductsPage() {
       </div>
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-sm font-semibold text-[#8A7420]">{catalogue?.name || t("Menú")}</p><h1 className="mt-1 text-3xl font-bold">{t("Productos")}</h1><p className="mt-1 text-sm text-[#666666]">{t("Administra todos los productos del menú.")}</p></div>
-        <div className="flex flex-wrap items-center gap-2">{atProductLimit && <PlanBadge label={t("Productos ilimitados en Esencial")} />}<button type="button" onClick={() => setIsCreating(true)} disabled={isLoading || Boolean(loadError) || atProductLimit} title={atProductLimit ? `Tu plan actual permite hasta ${limits.max_products_per_catalogue} productos por menú.` : undefined} className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"><Plus size={18} /> {t("Crear producto")}</button></div>
+        <div className="flex flex-wrap items-center gap-2">{atProductLimit && <PlanBadge label={t("Productos ilimitados en Esencial")} />}<button type="button" onClick={() => setIsCreating(true)} disabled={isLoading || Boolean(loadError) || atProductLimit} title={atProductLimit ? t("Tu plan actual permite hasta {{limit}} productos por menú.", { limit: limits.max_products_per_catalogue }) : undefined} className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"><Plus size={18} /> {t("Crear producto")}</button></div>
       </header>
       {success && <p role="status" className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">{success}</p>}
 
@@ -163,13 +163,13 @@ function ProductCard({ product, categoryName, onEdit, onDelete }) {
   }
   return (
     <article className="flex min-h-64 flex-col overflow-hidden rounded-2xl border border-[#E9DDB7] bg-white shadow-sm">
-      <div className="flex h-28 items-center justify-center bg-[#F8E8AE]/60 text-[#8A7420]">{imageUrl ? <img src={imageUrl} alt={`Imagen de ${product.name}`} className="h-full w-full object-cover" /> : <Image size={28} aria-hidden="true" />}</div>
+      <div className="flex h-28 items-center justify-center bg-[#F8E8AE]/60 text-[#8A7420]">{imageUrl ? <img src={imageUrl} alt={t("Imagen de {{name}}", { name: product.name })} className="h-full w-full object-cover" /> : <Image size={28} aria-hidden="true" />}</div>
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start justify-between gap-3"><h2 className="min-w-0 truncate text-lg font-bold">{product.name}</h2><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${product.is_available ? "bg-green-50 text-green-700" : "bg-[#EFEFEF] text-[#666666]"}`}>{product.is_available ? "Disponible" : t("No disponible")}</span></div>
         <p className="mt-2 line-clamp-2 text-sm text-[#666666]">{product.description || t("Sin descripción")}</p>
         <div className="mt-4 flex items-center justify-between gap-3"><span className="rounded-full bg-[#F8E8AE] px-2.5 py-1 text-xs font-semibold text-[#5E501A]">{categoryName || t("Sin categoría")}</span><strong>{numericPrice === null ? t("Sin precio") : currency.format(numericPrice)}</strong></div>
         {product.updated_at && <p className="mt-3 text-xs text-[#777777]">{t("Actualizado")} {formatDate(new Date(product.updated_at), { dateStyle: "medium" })}</p>}
-        <div className="mt-4 flex gap-2 border-t border-[#EFE8D1] pt-4"><button type="button" onClick={() => onEdit(product)} className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#2A2A2A] px-3 py-2 text-sm font-semibold text-white hover:bg-[#111111]"><Pencil size={15} /> {t("Editar")}</button><button type="button" onClick={() => onDelete(product)} aria-label={`Eliminar ${product.name}`} className="cursor-pointer rounded-xl border border-red-200 p-2.5 text-red-700 hover:bg-red-50"><Trash2 size={16} /></button></div>
+        <div className="mt-4 flex gap-2 border-t border-[#EFE8D1] pt-4"><button type="button" onClick={() => onEdit(product)} className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#2A2A2A] px-3 py-2 text-sm font-semibold text-white hover:bg-[#111111]"><Pencil size={15} /> {t("Editar")}</button><button type="button" onClick={() => onDelete(product)} aria-label={t("Eliminar {{name}}", { name: product.name })} className="cursor-pointer rounded-xl border border-red-200 p-2.5 text-red-700 hover:bg-red-50"><Trash2 size={16} /></button></div>
       </div>
     </article>
   );

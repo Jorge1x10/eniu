@@ -123,7 +123,7 @@ export default function HomeScreen() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
             <MetricCard label={t("Vistas últimos 30 días")} value={monthlyViews.toLocaleString(currentLocale())} detail={showDemoBadge ? t("Dato de ejemplo") : (selectedCatalogue ? selectedCatalogue.name : t("Sin menú seleccionado"))} emphasis={showDemoBadge} index={0} />
             <MetricCard label={t("Escaneos QR")} value={qrViews.toLocaleString(currentLocale())} detail={showDemoBadge ? t("Dato de ejemplo") : t("Origen atribuido al código QR")} emphasis={showDemoBadge} index={1} />
-            <MetricCard label={t("Menús activos")} value={publishedCount} detail={`${draftCount} en borrador`} index={2} />
+            <MetricCard label={t("Menús activos")} value={publishedCount} detail={t("{{count}} en borrador", { count: draftCount })} index={2} />
             <MetricCard label={t("Menús totales")} value={catalogues.data?.catalogues.length ?? 0} detail="En este negocio" index={3} />
           </View>
 
@@ -132,7 +132,7 @@ export default function HomeScreen() {
             <View style={{ gap: 9 }}>
               <QuickAction
                 title={t("Agregar producto")}
-                subtitle={selectedCatalogue ? `Súbelo a ${selectedCatalogue.name}` : t("Crea un menú primero")}
+                subtitle={selectedCatalogue ? t("Súbelo a {{app}}", { app: selectedCatalogue.name }) : t("Crea un menú primero")}
                 icon={<PlusIcon color={theme.onYellow} size={18} />}
                 onPress={() => selectedCatalogue ? router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/products', params: { catalogueId: selectedCatalogue.id } }) : router.push('/(tabs)/(menus)')}
               />

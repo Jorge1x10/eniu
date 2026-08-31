@@ -61,8 +61,8 @@ export default function HomePage() {
   const viewModel = useMemo(() => buildDashboardViewModel({ ...(rawData || {}), chartDays }), [chartDays, rawData]);
   const visibleName = user?.name || user?.username || "bienvenido";
   const metricDetails = {
-    monthlyViews: rawData?.analytics ? `Menú seleccionado: ${viewModel.selectedCatalogue?.name}` : t("Sin información disponible"),
-    activeMenus: `${viewModel.metrics.draftMenus} en borrador`,
+    monthlyViews: rawData?.analytics ? t("Menú seleccionado: {{name}}", { name: viewModel.selectedCatalogue?.name }) : t("Sin información disponible"),
+    activeMenus: t("{{count}} en borrador", { count: viewModel.metrics.draftMenus }),
     products: t("Sin resumen agregado disponible"),
     qrScans: rawData?.analytics ? t("Atribución aproximada en el periodo") : t("Sin información disponible"),
   };

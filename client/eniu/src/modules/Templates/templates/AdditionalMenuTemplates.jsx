@@ -40,9 +40,10 @@ function AdditionalTemplate({ variant, business, catalogue, categories, products
 }
 
 function ProductCard({ product, theme, className, variant }) {
+  const { t } = useTranslation();
   const image = mainProductImage(product);
   return <article data-analytics-product-key={product.tracking_key || undefined} className={`overflow-hidden p-3 ${className} ${product.is_available ? "" : "opacity-60"}`} style={{ borderColor: "var(--menu-accent)", backgroundColor: `${theme.background_color}E8` }}>
-    {theme.show_product_images && image && <img src={image} alt={`Imagen de ${product.name}`} className={`mb-3 w-full object-cover ${variant === "luxury" ? "h-36" : "h-24"}`} />}
+    {theme.show_product_images && image && <img src={image} alt={t("Imagen de {{name}}", { name: product.name })} className={`mb-3 w-full object-cover ${variant === "luxury" ? "h-36" : "h-24"}`} />}
     <div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold">{product.name}</h3>{product.description && <p className="mt-1 text-xs leading-5 opacity-65">{product.description}</p>}<Availability available={product.is_available} /></div><strong className="shrink-0 text-sm">{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</strong></div>
   </article>;
 }

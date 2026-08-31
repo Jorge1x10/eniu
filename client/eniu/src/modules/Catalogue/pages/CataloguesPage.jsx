@@ -157,7 +157,7 @@ export default function CataloguesPage() {
             type="button"
             onClick={() => setIsCreateOpen(true)}
             disabled={isLoading || Boolean(loadError) || atMenuLimit}
-            title={atMenuLimit ? `Tu plan actual permite ${limits.max_catalogues_per_business} menú por negocio.` : undefined}
+            title={atMenuLimit ? t("Tu plan actual permite {{limit}} menú por negocio.", { limit: limits.max_catalogues_per_business }) : undefined}
             className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#FFE05A] px-5 py-2.5 font-semibold text-[#111111] hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={18} /> {t("Crear menú")}

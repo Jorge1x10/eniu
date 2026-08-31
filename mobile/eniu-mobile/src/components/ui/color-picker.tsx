@@ -27,10 +27,11 @@ const PALETTE = [BRAND, NEUTRALS, ...HUES.map((hue) => LIGHTNESS.map((lightness)
 
 function Swatch({ color, selected, onPress }: { color: string; selected: boolean; onPress: () => void }) {
   const theme = useEniuTheme();
+  const { t } = useTranslation();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Color ${color}`}
+      accessibilityLabel={t("Color {{name}}", { name: color })}
       accessibilityState={{ selected }}
       onPress={onPress}
       style={({ pressed }) => ({ flex: 1, aspectRatio: 1, borderRadius: 11, borderCurve: 'continuous', backgroundColor: color, borderWidth: selected ? 2.5 : 1, borderColor: selected ? theme.text : 'rgba(0,0,0,0.14)', alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}
@@ -75,7 +76,7 @@ export function ColorField({ label, hint, value, original, error, onChange }: { 
       </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Elegir ${label.toLowerCase()}`}
+        accessibilityLabel={t("Elegir {{name}}", { name: label.toLowerCase() })}
         onPress={openPicker}
         style={({ pressed }) => ({ minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 9, borderRadius: 14, borderCurve: 'continuous', borderWidth: 1, borderColor: error ? theme.danger : theme.border, backgroundColor: theme.field, opacity: pressed ? 0.75 : 1 })}
       >

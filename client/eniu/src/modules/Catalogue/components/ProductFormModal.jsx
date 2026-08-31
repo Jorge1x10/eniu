@@ -262,7 +262,7 @@ function PicturePreview({ src, name, isDefault, onDefault, onRemove }) {
 
   return (
     <div className={`relative overflow-hidden rounded-xl border-2 bg-[#F8E8AE] ${isDefault ? "border-[#E8C93D]" : "border-transparent"}`}>
-      <img src={src} alt={`Vista previa de ${name || "producto"}`} className="aspect-square w-full object-cover" />
+      <img src={src} alt={t("Vista previa de {{name}}", { name: name || "producto" })} className="aspect-square w-full object-cover" />
       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/65 p-1.5">
         <button type="button" onClick={onDefault} aria-label={isDefault ? t("Imagen principal") : t("Usar como imagen principal")} className={`cursor-pointer rounded-lg p-1.5 ${isDefault ? "bg-[#FFE05A] text-[#111111]" : "text-white hover:bg-white/20"}`}><Star size={15} fill={isDefault ? "currentColor" : "none"} /></button>
         <button type="button" onClick={onRemove} aria-label={t("Quitar imagen")} className="cursor-pointer rounded-lg p-1.5 text-white hover:bg-red-600"><Trash2 size={15} /></button>

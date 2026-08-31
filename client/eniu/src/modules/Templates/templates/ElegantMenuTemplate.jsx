@@ -4,6 +4,7 @@ import { Availability, CategoryNavigation, EmptyMenu, MenuCover, MenuFooter } fr
 import MenuBackground from "../components/MenuBackground";
 import { FONT_REGISTRY } from "../utils/themeDefaults";
 import { buildSections, mainProductImage, menuCurrency } from "./menuData";
+import i18n from "../../../i18n";
 
 export default function ElegantMenuTemplate({ business, catalogue, categories, products, theme, coverUrl, onCategorySelect, showEniuBadge = false }) {
   const sections = buildSections(categories, products);
@@ -21,5 +22,5 @@ export default function ElegantMenuTemplate({ business, catalogue, categories, p
 
 function ElegantProductCard({ product, theme }) {
   const image = mainProductImage(product);
-  return <article data-analytics-product-key={product.tracking_key || undefined} className={`border p-3 ${product.is_available ? "" : "opacity-60"}`} style={{ borderColor: "var(--menu-accent)" }}>{theme.show_product_images && image && <img src={image} alt={`Imagen de ${product.name}`} className="mb-4 h-40 w-full object-cover" />}<div className="flex items-start gap-3"><div className="min-w-0 flex-1"><h3 className="text-lg italic">{product.name}</h3>{product.description && <p className="mt-2 text-xs leading-5 opacity-65">{product.description}</p>}<div className="mt-2"><Availability available={product.is_available} /></div></div><strong className="shrink-0 border-b pb-1 text-sm" style={{ borderColor: "var(--menu-accent)" }}>{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</strong></div></article>;
+  return <article data-analytics-product-key={product.tracking_key || undefined} className={`border p-3 ${product.is_available ? "" : "opacity-60"}`} style={{ borderColor: "var(--menu-accent)" }}>{theme.show_product_images && image && <img src={image} alt={i18n.t("Imagen de {{name}}", { name: product.name })} className="mb-4 h-40 w-full object-cover" />}<div className="flex items-start gap-3"><div className="min-w-0 flex-1"><h3 className="text-lg italic">{product.name}</h3>{product.description && <p className="mt-2 text-xs leading-5 opacity-65">{product.description}</p>}<div className="mt-2"><Availability available={product.is_available} /></div></div><strong className="shrink-0 border-b pb-1 text-sm" style={{ borderColor: "var(--menu-accent)" }}>{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</strong></div></article>;
 }

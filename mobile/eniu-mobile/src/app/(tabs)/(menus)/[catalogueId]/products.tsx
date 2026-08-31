@@ -128,7 +128,7 @@ export default function ProductsScreen() {
   async function save() {
     if (!name.trim()) { setError(t("Escribe el nombre del producto.")); return; }
     if (price && !/^\d+(?:\.\d{1,2})?$/.test(price)) { setError(t("Usa un precio válido con máximo dos decimales.")); return; }
-    if (existingPictures.length + pickedPictures.length > MAX_PICTURES) { setError(`Puedes agregar máximo ${MAX_PICTURES} imágenes.`); return; }
+    if (existingPictures.length + pickedPictures.length > MAX_PICTURES) { setError(t("Puedes agregar máximo {{limit}} imágenes.", { limit: MAX_PICTURES })); return; }
     setSaving(true); setError('');
     const fields = { name: name.trim(), description: description.trim(), price: price || null, category_id: categoryId, is_available: available };
     // Sólo se envía multipart cuando hay fotos nuevas o se quitó/reordenó alguna;
@@ -160,7 +160,7 @@ export default function ProductsScreen() {
     finally { setSaving(false); }
   }
   function remove(product: Product) {
-    Alert.alert(t("Eliminar producto"), `¿Quieres eliminar “${product.name}”?`, [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Eliminar"), style: 'destructive', onPress: async () => { try { await api.delete(`${base}/${product.id}`); queryClient.setQueryData<{ products: Product[] }>(key, (current) => ({ products: (current?.products ?? []).filter((item) => item.id !== product.id) })); } catch (requestError) { Alert.alert(t("No se pudo eliminar"), requestError instanceof Error ? requestError.message : t("Intenta nuevamente.")); } } }]);
+    Alert.alert(t("Eliminar producto"), t("¿Quieres eliminar “{{name}}”?", { name: product.name }), [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Eliminar"), style: 'destructive', onPress: async () => { try { await api.delete(`${base}/${product.id}`); queryClient.setQueryData<{ products: Product[] }>(key, (current) => ({ products: (current?.products ?? []).filter((item) => item.id !== product.id) })); } catch (requestError) { Alert.alert(t("No se pudo eliminar"), requestError instanceof Error ? requestError.message : t("Intenta nuevamente.")); } } }]);
   }
 
   const products = query.data?.products ?? [];
@@ -182,7 +182,7 @@ export default function ProductsScreen() {
       </ScrollView> : null}
       {categories.length ? <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17, marginTop: -6 }}>{t("Las secciones sólo filtran esta lista. La categoría de cada producto se elige en el formulario.")}</Text> : null}
 
-      {atProductLimit && !formOpen ? <PlanNotice message={`Tu plan actual permite hasta ${limits.max_products_per_catalogue} productos por menú.`} /> : null}
+      {atProductLimit && !formOpen ? <PlanNotice message={t("Tu plan actual permite hasta {{limit}} productos por menú.", { limit: limits.max_products_per_catalogue })} /> : null}
       <Button disabled={atProductLimit && !formOpen} onPress={() => formOpen ? setFormOpen(false) : startEdit()}>{formOpen ? t("Cerrar formulario") : t("Crear producto")}</Button>
       {formOpen ? (
         <Animated.View entering={FadeIn.duration(220)} style={{ padding: 18, gap: 14, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous' }}>

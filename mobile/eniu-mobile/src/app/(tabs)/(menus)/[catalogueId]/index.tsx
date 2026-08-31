@@ -64,7 +64,7 @@ export default function CatalogueDetailScreen() {
   function confirmDelete() {
     if (!selectedBusiness || !catalogue || deleting) return;
     Alert.alert(
-      `Eliminar «${catalogue.name}»`,
+      t("Eliminar «{{name}}»", { name: catalogue.name }),
       t("También se eliminan sus productos y categorías. Esta acción no se puede deshacer."),
       [
         { text: t("Cancelar"), style: 'cancel' },
@@ -148,7 +148,7 @@ export default function CatalogueDetailScreen() {
         <View style={{ gap: 8, marginTop: 4 }}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Eliminar el menú ${catalogue.name}`}
+            accessibilityLabel={t("Eliminar el menú {{name}}", { name: catalogue.name })}
             accessibilityHint="Mantén pulsado para eliminar este menú"
             onLongPress={confirmDelete}
             delayLongPress={600}

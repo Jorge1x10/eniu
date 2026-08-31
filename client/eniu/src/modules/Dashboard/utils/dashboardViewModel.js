@@ -1,4 +1,5 @@
 import { currentLocale } from "../../../i18n/formats";
+import i18n from "../../../i18n";
 function safeDate(value) {
   const date = new Date(`${value}T12:00:00`);
   return Number.isNaN(date.getTime()) ? null : date;
@@ -24,7 +25,7 @@ export function buildDashboardViewModel({ catalogues = [], selectedCatalogue = n
     },
     chart,
     chartTotal: chart.reduce((total, item) => total + Number(item.views || 0), 0),
-    period: chart.length ? `${chart[0].date} — ${chart.at(-1).date}` : `Últimos ${chartDays} días`,
+    period: chart.length ? `${chart[0].date} — ${chart.at(-1).date}` : i18n.t("Últimos {{days}} días", { days: chartDays }),
     menus: sortedMenus.slice(0, 3).map((menu) => ({
       ...menu,
       productCount: null,

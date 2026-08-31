@@ -45,7 +45,7 @@ export function MilestoneSheet({ visible, milestone, catalogueName, isPublished,
           <View style={{ marginTop: 22, borderRadius: 18, backgroundColor: 'rgba(255,253,245,0.72)', padding: 16, gap: 12 }}>
             <Check done={isPublished} label={t("Menú publicado")} />
             <Check done={hasScans} label={t("Primer escaneo de QR")} />
-            {next ? <Check done={false} label={`Siguiente meta: ${next.toLocaleString(currentLocale())} vistas`} /> : null}
+            {next ? <Check done={false} label={t("Siguiente meta: {{count}} vistas", { count: next.toLocaleString(currentLocale()) })} /> : null}
           </View>
 
           <Pressable
