@@ -1,0 +1,89 @@
+name: App Store Screenshots
+
+# Corre a mano: compila un build de simulador de iOS con EAS, lo instala en
+# un simulador de iPhone 16 Pro Max (la resolución de 6.9" que pide Apple) y
+# usa Maestro para loguearse con la cuenta demo y capturar cada pantalla en
+# español e inglés.
+#
+# Secrets que necesita este repo (Settings -> Secrets and variables -> Actions):
+#   EXPO_TOKEN               token de acceso de Expo (eas.dev -> Access tokens)
+#   EXPO_SCREENSHOT_EMAIL    correo de la cuenta demo con negocio y menú cargados
+#   EXPO_SCREENSHOT_PASSWORD contraseña de esa cuenta demo
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "ID de un build de EAS (perfil ios-simulator) a reutilizar. Vacío = dispara uno nuevo."
+        required: false
+        type: string
+
+jobs:
+  screenshots:
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: mobile/eniu-mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar EAS CLI y Maestro
+        run: |
+          npm install -g eas-cli
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Obtener build de simulador
+        id: build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.build_id }}" ]; then
+            BUILD_ID="${{ inputs.build_id }}"
+          else
+            BUILD_ID=$(eas build --platform ios --profile ios-simulator --non-interactive --wait --json | jq -r '.[0].id')
+          fi
+          URL=$(eas build:view "$BUILD_ID" --json | jq -r '.artifacts.buildUrl // .artifacts.applicationArchiveUrl')
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          echo "download_url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Descargar y descomprimir el .app
+        run: |
+          set -euo pipefail
+          curl -L "${{ steps.build.outputs.download_url }}" -o build.tar.gz
+          mkdir -p build
+          tar -xzf build.tar.gz -C build
+          echo "APP_PATH=$(find build -maxdepth 2 -name '*.app' | head -1)" >> "$GITHUB_ENV"
+
+      - name: Crear simulador en español (es-MX)
+        run: |
+          set -euo pipefail
+          DEVICE_ID=$(xcrun simctl create "Eniu Screenshots" "iPhone 16 Pro Max")
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl spawn "$DEVICE_ID" defaults write "Apple Global Domain" AppleLanguages -array "es-MX"
+          xcrun simctl spawn "$DEVICE_ID" defaults write "Apple Global Domain" AppleLocale -string "es_MX"
+          xcrun simctl shutdown "$DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+
+      - name: Instalar la app en el simulador
+        run: xcrun simctl install "$DEVICE_ID" "$APP_PATH"
+
+      - name: Capturar pantallas con Maestro
+        env:
+          MAESTRO_EMAIL: ${{ secrets.EXPO_SCREENSHOT_EMAIL }}
+          MAESTRO_PASSWORD: ${{ secrets.EXPO_SCREENSHOT_PASSWORD }}
+        run: maestro --device "$DEVICE_ID" test .maestro/appstore-screenshots.yaml
+
+      - name: Subir capturas
+        uses: actions/upload-artifact@v4
+        with:
+          name: appstore-screenshots
+          path: mobile/eniu-mobile/screenshots/*.png
+          if-no-files-found: error
