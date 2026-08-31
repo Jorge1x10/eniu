@@ -40,14 +40,26 @@ jobs:
         id: build
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # eas-cli mete texto fuera de JSON en stdout si no detecta un entorno
+          # de CI (avisos de versión, prompts saltados, etc.), lo que rompe
+          # cualquier pipe directo a jq.
+          CI: "true"
         run: |
           set -euo pipefail
           if [ -n "${{ inputs.build_id }}" ]; then
             BUILD_ID="${{ inputs.build_id }}"
           else
-            BUILD_ID=$(eas build --platform ios --profile ios-simulator --non-interactive --wait --json | jq -r '.[0].id')
+            eas build --platform ios --profile ios-simulator --non-interactive --wait --json > new-build.json
+            BUILD_ID=$(jq -r '.[0].id' new-build.json)
           fi
-          URL=$(eas build:view "$BUILD_ID" --json | jq -r '.artifacts.buildUrl // .artifacts.applicationArchiveUrl')
+
+          eas build:view "$BUILD_ID" --json > build-view.json
+          cat build-view.json
+          URL=$(jq -r '.artifacts.buildUrl // .artifacts.applicationArchiveUrl' build-view.json)
+          if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+            echo "::error::No se pudo obtener la URL de descarga del build $BUILD_ID (ver salida de 'eas build:view' arriba)."
+            exit 1
+          fi
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
           echo "download_url=$URL" >> "$GITHUB_OUTPUT"
 
