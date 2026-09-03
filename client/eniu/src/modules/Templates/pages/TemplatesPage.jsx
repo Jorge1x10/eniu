@@ -10,7 +10,9 @@ import ImageQualitySelector from "../../Catalogue/components/ImageQualitySelecto
 import { useCategoryService } from "../../Catalogue/services/categoryService";
 import { useCatalogueService } from "../../Catalogue/services/catalogueService";
 import { useProductService } from "../../Catalogue/services/productService";
+import BackgroundPresetPicker from "../components/BackgroundPresetPicker";
 import ColorControl from "../components/ColorControl";
+import CoverFocalPicker from "../components/CoverFocalPicker";
 import MobilePreviewFrame from "../components/MobilePreviewFrame";
 import PalettePicker from "../components/PalettePicker";
 import TemplateSelector from "../components/TemplateSelector";
@@ -48,6 +50,7 @@ export default function TemplatesPage() {
   const [products, setProducts] = useState([]);
   const [palettes, setPalettes] = useState([{ key: "classic", name: "Clásico Eniu", tokens: CLASSIC_PALETTE_TOKENS }]);
   const [colorTokens, setColorTokens] = useState([]);
+  const [backgrounds, setBackgrounds] = useState([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [saved, setSaved] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -114,6 +117,7 @@ export default function TemplatesPage() {
     if (catalogResponse.ok) {
       setPalettes(catalogResponse.data?.palettes || []);
       setColorTokens(catalogResponse.data?.color_tokens || []);
+      setBackgrounds(catalogResponse.data?.backgrounds || []);
     }
     const configuration = normalizeConfiguration(responses[0].data?.template);
     setSaved(configuration);
@@ -212,6 +216,10 @@ export default function TemplatesPage() {
       },
     }));
     setSaveError(""); setSuccess("");
+  }
+
+  function updateCoverFocalPoint(x, y) {
+    setDraft((current) => ({ ...current, theme: { ...current.theme, cover_focal_x: x, cover_focal_y: y } }));
   }
 
   function updateSplash(field, value) {
@@ -359,7 +367,8 @@ export default function TemplatesPage() {
   const coverUrl = coverPreview || authenticatedCoverUrl;
   const backgroundUrl = backgroundPreview || authenticatedBackgroundUrl;
   const splashUrl = splashPreview || authenticatedSplashUrl;
-  const previewTheme = { ...previewThemeBase, background_image_url: backgroundUrl };
+  const backgroundPreset = backgrounds.find((background) => background.key === draft.theme.background_preset_key) || null;
+  const previewTheme = { ...previewThemeBase, background_image_url: backgroundUrl, background_preset: backgroundPreset };
 
   return <section className="mx-auto w-full max-w-[1500px] space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-3"><Link to={`/dashboard/businesses/${businessId}/catalogues/${catalogueId}`} className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-[#666666] hover:text-[#111111]"><ArrowLeft size={17} /> {t("Volver al menú")}</Link><div className="flex flex-wrap items-center gap-2">{isDirty && <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">{t("Cambios sin guardar")}</span>}<button type="button" onClick={discardChanges} disabled={!isDirty || isSaving} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 font-semibold hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"><RotateCcw size={16} /> {t("Descartar")}</button><button type="button" onClick={saveChanges} disabled={!isDirty || isSaving || Object.keys(validationErrors).length > 0} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#FFE05A] px-5 font-semibold hover:bg-[#E8C93D] disabled:cursor-not-allowed disabled:opacity-50"><Save size={17} /> {isSaving ? "Guardando..." : t("Guardar personalización")}</button></div></div>
@@ -396,8 +405,8 @@ export default function TemplatesPage() {
         </section>
         <section><div className="flex flex-wrap items-center justify-between gap-2"><label htmlFor="theme-font" className="text-sm font-bold">{t("Tipografía")}</label>{fontsLocked && <PlanBadge />}</div><select id="theme-font" value={draft.theme.font_key} disabled={fontsLocked} onChange={(event) => updateTheme("font_key", event.target.value)} className={`mt-2 min-h-11 w-full rounded-xl border border-[#D9D9D9] px-4 outline-none focus:border-[#E8C93D] ${fontsLocked ? "cursor-not-allowed bg-[#F7F3E4] opacity-60" : "cursor-pointer bg-white"}`}>{Object.entries(FONT_REGISTRY).map(([key, font]) => <option key={key} value={key} disabled={!allowsFont(key)}>{font.label}</option>)}</select></section>
         <section><h2 className="text-sm font-bold">{t("Fotos")}</h2><p className="mt-1 text-xs text-[#777777]">{t("Se aplica a la portada, el fondo y la bienvenida. Menos calidad hace que el menú abra más rápido en el celular de tus clientes.")}</p><ImageQualitySelector value={quality} onChange={setQuality} /></section>
-        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">{t("Portada y productos")}</h2>{coverLocked && <PlanBadge />}</div><div className="mt-3 space-y-3"><Toggle label={t("Mostrar portada")} checked={draft.theme.show_cover} disabled={coverLocked} onChange={(value) => updateTheme("show_cover", value)} /><Toggle label={t("Mostrar imágenes de productos")} checked={draft.theme.show_product_images} disabled={productImagesLocked} onChange={(value) => updateTheme("show_product_images", value)} /></div><ImagePicker title={t("Portada")} url={coverUrl} emptyText={t("Sin portada")} disabled={coverLocked} onChange={chooseCover} onRemove={removeCurrentCover} /></section>
-        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">{t("Fondo del menú")}</h2>{backgroundLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">{t("La imagen queda detrás del contenido y no reemplaza la portada.")}</p><ImagePicker title={t("Fondo")} url={backgroundUrl} emptyText={t("Sin imagen de fondo")} disabled={backgroundLocked} onChange={chooseBackground} onRemove={removeCurrentBackground} /><label htmlFor="background-opacity" className="mt-4 block text-sm font-semibold">{t("Opacidad del fondo:")} {Math.round(draft.theme.background_opacity * 100)}%</label><input id="background-opacity" type="range" min="0" max="1" step="0.05" disabled={backgroundLocked} value={draft.theme.background_opacity} onChange={(event) => updateTheme("background_opacity", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${backgroundLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
+        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">{t("Portada y productos")}</h2>{coverLocked && <PlanBadge />}</div><div className="mt-3 space-y-3"><Toggle label={t("Mostrar portada")} checked={draft.theme.show_cover} disabled={coverLocked} onChange={(value) => updateTheme("show_cover", value)} /><Toggle label={t("Mostrar imágenes de productos")} checked={draft.theme.show_product_images} disabled={productImagesLocked} onChange={(value) => updateTheme("show_product_images", value)} /></div><ImagePicker title={t("Portada")} url={coverUrl} emptyText={t("Sin portada")} disabled={coverLocked} onChange={chooseCover} onRemove={removeCurrentCover} />{!coverLocked && <CoverFocalPicker imageUrl={coverUrl} focalX={draft.theme.cover_focal_x} focalY={draft.theme.cover_focal_y} onChange={updateCoverFocalPoint} />}</section>
+        <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">{t("Fondo del menú")}</h2>{backgroundLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">{t("La imagen queda detrás del contenido y no reemplaza la portada.")}</p><p className="mt-3 text-xs font-semibold text-[#2A2A2A]">{t("Fondo prediseñado")}</p><BackgroundPresetPicker backgrounds={backgrounds} value={draft.theme.background_preset_key} disabled={backgroundLocked} onChange={(key) => updateTheme("background_preset_key", key)} /><p className="mt-4 text-xs font-semibold text-[#2A2A2A]">{t("O sube tu propia imagen")}</p><ImagePicker title={t("Fondo")} url={backgroundUrl} emptyText={t("Sin imagen de fondo")} disabled={backgroundLocked} onChange={chooseBackground} onRemove={removeCurrentBackground} /><label htmlFor="background-opacity" className="mt-4 block text-sm font-semibold">{t("Opacidad del fondo:")} {Math.round(draft.theme.background_opacity * 100)}%</label><input id="background-opacity" type="range" min="0" max="1" step="0.05" disabled={backgroundLocked} value={draft.theme.background_opacity} onChange={(event) => updateTheme("background_opacity", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${backgroundLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
         <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">{t("Pantalla de bienvenida")}</h2>{splashLocked && <PlanBadge />}</div><p className="mt-1 text-xs text-[#777777]">{t("Aparece unos segundos al abrir el menú y se desvanece sola. Un toque la cierra antes.")}</p><div className="mt-3"><Toggle label={t("Mostrar bienvenida")} checked={draft.splash.enabled} disabled={splashLocked} onChange={(value) => updateSplash("enabled", value)} /></div><ImagePicker title={t("Bienvenida")} url={splashUrl} emptyText={t("Sin imagen: se muestra el nombre del negocio")} disabled={splashLocked} onChange={chooseSplash} onRemove={removeCurrentSplash} /><label htmlFor="splash-duration" className="mt-4 block text-sm font-semibold">{t("Duración:")} {draft.splash.duration} s</label><input id="splash-duration" type="range" min={SPLASH_RANGE.min} max={SPLASH_RANGE.max} step={SPLASH_RANGE.step} disabled={splashLocked} value={draft.splash.duration} onChange={(event) => updateSplash("duration", Number(event.target.value))} className={`mt-2 h-11 w-full accent-[#E8C93D] ${splashLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} /></section>
       </div>
       <aside className="rounded-2xl border border-[#E9DDB7] bg-[#F8E8AE]/35 p-4 sm:p-6 xl:sticky xl:top-4"><h2 className="mb-4 flex items-center gap-2 font-bold"><Eye size={18} /> {t("Vista previa móvil")}</h2><MobilePreviewFrame>{createElement(resolveTemplate(draft.template_key), { business, catalogue, categories, products, theme: previewTheme, coverUrl, showEniuBadge: limits.show_eniu_badge })}</MobilePreviewFrame></aside>

@@ -19,5 +19,10 @@ export default function TemplateSelector({ value, onChange, isAllowed = () => tr
 function TemplateThumbnail({ type }) {
   if (type === "minimal") return <span className="grid h-8 w-14 gap-1 rounded bg-[#F5F2E9] p-1"><i className="block h-1 bg-[#2A2A2A]" /><i className="block h-px bg-[#999999]" /><i className="block h-px bg-[#999999]" /></span>;
   if (type === "elegant") return <span className="flex h-8 w-14 items-center justify-center border border-[#8A7420] bg-[#FFFDF5] font-serif text-xs italic">Aa</span>;
+  if (type === "chalkboard") return <span className="flex h-8 w-14 items-center justify-center rounded border-2 border-dashed border-[#FFE05A] bg-[#2A2A2A] font-serif text-xs italic text-[#FFFDF5]">Aa</span>;
+  if (type === "magazine") return <span className="grid h-8 w-14 grid-cols-2 gap-1 rounded bg-[#F5F2E9] p-1"><i className="row-span-2 rounded bg-[#FFE05A]" /><i className="rounded bg-white" /><i className="rounded bg-white" /></span>;
+  if (type === "sidebar") return <span className="flex h-8 w-14 gap-1 rounded bg-[#F5F2E9] p-1"><i className="h-full w-3 rounded bg-[#FFE05A]" /><i className="h-full flex-1 rounded bg-white" /></span>;
+  if (type === "receipt") return <span className="grid h-8 w-14 gap-1 rounded bg-white p-1"><i className="block h-px border-b border-dotted border-[#999999]" /><i className="block h-px border-b border-dotted border-[#999999]" /><i className="block h-px border-b border-dotted border-[#999999]" /></span>;
+  if (type === "story") return <span className="flex h-8 w-14 items-center gap-1 rounded bg-[#F5F2E9] p-1"><i className="h-full w-5 rounded-full bg-[#FFE05A]" /><i className="h-1 flex-1 rounded bg-[#999999]" /></span>;
   return <span className="grid h-8 w-14 grid-cols-2 gap-1 rounded bg-[#FFE05A] p-1"><i className="rounded bg-white" /><i className="rounded bg-white" /></span>;
 }

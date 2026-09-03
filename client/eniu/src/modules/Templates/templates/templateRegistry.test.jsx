@@ -7,11 +7,11 @@ import { normalizeConfiguration } from "../utils/themeDefaults";
 import { TEMPLATE_OPTIONS } from "./templateRegistry";
 
 describe("catálogo de plantillas", () => {
-  it("ofrece las tres plantillas originales y las cinco nuevas", () => {
+  it("ofrece las tres plantillas originales, las cinco de la primera ronda y las cinco más recientes", () => {
     render(<TemplateSelector value="modern" onChange={() => {}} />);
 
-    expect(TEMPLATE_OPTIONS).toHaveLength(8);
-    ["Bistró", "Impactante", "Natural", "Retro", "Lujo"].forEach((name) => {
+    expect(TEMPLATE_OPTIONS).toHaveLength(13);
+    ["Bistró", "Impactante", "Natural", "Retro", "Lujo", "Pizarra", "Revista", "Columnas", "Recibo", "Historia"].forEach((name) => {
       expect(screen.getByRole("button", { name: new RegExp(name, "i") })).toBeInTheDocument();
     });
   });

@@ -7,6 +7,7 @@ import {
   Cog,
   Tags,
   Palette,
+  Megaphone,
 } from "lucide-react";
 
 export const DASH_ICONS = {
@@ -15,6 +16,7 @@ export const DASH_ICONS = {
   products: ShoppingBasket,
   categories: Tags,
   templates: Palette,
+  promotions: Megaphone,
   qrcodes: LucideScanQrCode,
   analytics: ChartSpline,
   config: Cog,

@@ -21,6 +21,9 @@ export const DEFAULT_THEME = Object.freeze({
   color_preset_key: "classic",
   theme_overrides: {},
   tokens: CLASSIC_PALETTE_TOKENS,
+  cover_focal_x: 0.5,
+  cover_focal_y: 0.5,
+  background_preset_key: null,
 });
 
 export const DEFAULT_SPLASH = Object.freeze({
@@ -70,8 +73,16 @@ export function deriveTokens(background, primary, accent, text) {
   };
 }
 
+// Mismas 13 claves que `catalog.LAYOUTS` en el backend — se repite aquí (y en
+// `templateRegistry.js`) en vez de compartirse porque juntar los dos módulos
+// crearía un import circular (`MenuTemplateRenderer` ya importa de este archivo).
+const TEMPLATE_KEYS = [
+  "modern", "minimal", "elegant", "bistro", "bold", "natural", "retro", "luxury",
+  "chalkboard", "magazine", "sidebar", "receipt", "story",
+];
+
 export function normalizeConfiguration(configuration) {
-  const templateKey = ["modern", "minimal", "elegant", "bistro", "bold", "natural", "retro", "luxury"].includes(configuration?.template_key)
+  const templateKey = TEMPLATE_KEYS.includes(configuration?.template_key)
     ? configuration.template_key
     : DEFAULT_TEMPLATE;
   return {

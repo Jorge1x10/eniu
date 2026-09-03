@@ -7,8 +7,13 @@ export function MenuCover({ business, catalogue, theme, coverUrl, compact = fals
   const { t } = useTranslation();
 
   if (!theme.show_cover) return null;
+  // Punto focal (0-1, 0.5/0.5 = centrado): qué parte de la imagen queda
+  // visible dentro del recuadro fijo, elegido en el editor arrastrando sobre
+  // la propia foto — nunca recorta el archivo original.
+  const focalX = Number.isFinite(theme.cover_focal_x) ? theme.cover_focal_x : 0.5;
+  const focalY = Number.isFinite(theme.cover_focal_y) ? theme.cover_focal_y : 0.5;
   return coverUrl ? (
-    <div className={`relative overflow-hidden ${compact ? "h-20" : "h-44"}`}><img src={resolveAssetUrl(coverUrl)} alt={t("Portada de {{name}}", { name: catalogue.name })} className="h-full w-full object-cover" /><div className="absolute inset-0 bg-black/25" /></div>
+    <div className={`relative overflow-hidden ${compact ? "h-20" : "h-44"}`}><img src={resolveAssetUrl(coverUrl)} alt={t("Portada de {{name}}", { name: catalogue.name })} className="h-full w-full object-cover" style={{ objectPosition: `${focalX * 100}% ${focalY * 100}%` }} /><div className="absolute inset-0 bg-black/25" /></div>
   ) : (
     // El color de texto es aparte del general (`placeholderColor`, el mismo
     // token que usa el chip activo): ambos son texto sobre `primary_color`,
@@ -27,6 +32,16 @@ export function CategoryNavigation({ sections, active, onSelect, rounded = true,
     const isActive = active === section.id;
     return <button key={section.id} type="button" onClick={() => onSelect(section.id)} aria-pressed={isActive} className={`min-h-11 shrink-0 cursor-pointer px-4 text-xs font-bold ${rounded ? "rounded-full" : "border-b-2"}`} style={{ backgroundColor: isActive ? activeBackground : "transparent", borderColor: "var(--menu-accent)", ...(isActive && activeColor ? { color: activeColor } : {}) }}>{section.name}</button>;
   })}</nav>;
+}
+
+/**
+ * Etiqueta de promoción del día (ver `promotion/services.py`, que decide qué
+ * productos la traen hoy). Sólo el texto que ya resolvió el backend — este
+ * componente no sabe de días ni de fechas, sólo pinta si hay algo que pintar.
+ */
+export function PromoBadge({ label }) {
+  if (!label) return null;
+  return <span className="inline-block shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: "var(--menu-accent)", color: "#111111" }}>{label}</span>;
 }
 
 export function Availability({ available }) {

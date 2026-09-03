@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   BarChart3,
   FolderOpen,
+  Megaphone,
   PackageOpen,
   Palette,
   QrCode,
@@ -340,6 +341,15 @@ export default function CatalogueDetailPage() {
           <div className="flex items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFE05A] text-[#111111]"><Palette size={21} /></div>
             <div><h2 className="font-bold text-[#111111]">{t("Plantillas")}</h2><p className="mt-1 text-sm text-[#666666]">{t("Elige el diseño y personaliza la identidad del menú.")}</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">{t("Personalizar plantilla")}</span></div>
+          </div>
+        </Link>
+        <Link
+          to={`/dashboard/businesses/${businessId}/catalogues/${catalogueId}/promotions`}
+          className="group cursor-pointer rounded-2xl border border-[#E9DDB7] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#E8C93D]"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFE05A] text-[#111111]"><Megaphone size={21} /></div>
+            <div><h2 className="font-bold text-[#111111]">{t("Promociones")}</h2><p className="mt-1 text-sm text-[#666666]">{t("Resalta productos en días específicos.")}</p><span className="mt-3 inline-block text-sm font-semibold text-[#8A7420] group-hover:underline">{t("Administrar promociones")}</span></div>
           </div>
         </Link>
         <Link

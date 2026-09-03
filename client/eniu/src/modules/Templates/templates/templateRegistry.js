@@ -11,6 +11,11 @@ export const TEMPLATE_OPTIONS = Object.freeze([
   { key: "natural", name: "Natural", description: "Formas orgánicas, aire fresco y tarjetas suaves." },
   { key: "retro", name: "Retro", description: "Composición nostálgica con marcos punteados." },
   { key: "luxury", name: "Lujo", description: "Presentación sobria con jerarquía editorial premium." },
+  { key: "chalkboard", name: "Pizarra", description: "Título manuscrito, marco punteado y aire de café de barrio." },
+  { key: "magazine", name: "Revista", description: "Un producto destacado arriba en grande, luego cuadrícula editorial." },
+  { key: "sidebar", name: "Columnas", description: "Categorías fijas a un lado, como una carta de restaurante formal." },
+  { key: "receipt", name: "Recibo", description: "Lista compacta sin imágenes, precio con línea punteada — ideal para cartas largas." },
+  { key: "story", name: "Historia", description: "Cada plato con una nota del chef, para cartas con pocos productos y mucha personalidad." },
 ]);
 
 const VALID_KEYS = new Set(TEMPLATE_OPTIONS.map((option) => option.key));

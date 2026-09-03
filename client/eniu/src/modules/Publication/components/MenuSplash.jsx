@@ -28,8 +28,12 @@ export default function MenuSplash({ splash, theme, businessName }) {
     <div
       role="presentation"
       onClick={() => setFading(true)}
-      style={{ backgroundColor: theme?.background_color || "#FFFDF5", opacity: fading ? 0 : 1 }}
-      className="fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-[400ms] motion-reduce:transition-none"
+      style={{
+        backgroundColor: theme?.background_color || "#FFFDF5",
+        opacity: fading ? 0 : 1,
+        transform: fading ? "translateY(-100%)" : "translateY(0)",
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center transition-[opacity,transform] duration-[400ms] ease-in motion-reduce:transition-none"
     >
       {splash?.image_url ? (
         <img src={resolveAssetUrl(splash.image_url)} alt="" className="max-h-[45vh] max-w-[70vw] object-contain" />
