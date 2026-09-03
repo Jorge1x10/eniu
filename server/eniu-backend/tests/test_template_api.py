@@ -108,7 +108,14 @@ class TemplateApiTestCase(unittest.TestCase):
             "chalkboard", "magazine", "sidebar", "receipt", "story",
         })
         self.assertEqual({palette["key"] for palette in body["palettes"]}, {"classic", "midnight", "vineyard"})
-        self.assertEqual({font["key"] for font in body["fonts"]}, {"inter", "poppins", "montserrat", "playfair", "lora"})
+        self.assertEqual({font["key"] for font in body["fonts"]}, {
+            "inter", "poppins", "montserrat", "playfair", "lora",
+            "roboto", "open_sans", "nunito", "raleway", "work_sans", "rubik", "karla", "manrope", "sora", "space_grotesk", "barlow", "archivo",
+            "merriweather", "libre_baskerville", "crimson_text", "pt_serif", "cormorant", "fraunces", "dm_serif_display", "bitter",
+            "bebas_neue", "oswald", "anton", "abril_fatface", "righteous",
+            "pacifico", "dancing_script", "caveat",
+            "jetbrains_mono", "space_mono",
+        })
         self.assertIn("nav_chip_text", {token["key"] for token in body["color_tokens"]})
         self.assertEqual(
             {bg["key"] for bg in body["backgrounds"]},

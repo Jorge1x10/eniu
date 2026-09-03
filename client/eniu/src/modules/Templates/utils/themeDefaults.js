@@ -42,6 +42,41 @@ export const FONT_REGISTRY = Object.freeze({
   montserrat: { label: "Montserrat", family: 'Montserrat, Arial, sans-serif' },
   playfair: { label: "Playfair Display", family: '"Playfair Display", Georgia, serif' },
   lora: { label: "Lora", family: 'Lora, Georgia, serif' },
+  // Sans-serif adicionales.
+  roboto: { label: "Roboto", family: 'Roboto, Arial, sans-serif' },
+  open_sans: { label: "Open Sans", family: '"Open Sans", Arial, sans-serif' },
+  nunito: { label: "Nunito", family: 'Nunito, Arial, sans-serif' },
+  raleway: { label: "Raleway", family: 'Raleway, Arial, sans-serif' },
+  work_sans: { label: "Work Sans", family: '"Work Sans", Arial, sans-serif' },
+  rubik: { label: "Rubik", family: 'Rubik, Arial, sans-serif' },
+  karla: { label: "Karla", family: 'Karla, Arial, sans-serif' },
+  manrope: { label: "Manrope", family: 'Manrope, Arial, sans-serif' },
+  sora: { label: "Sora", family: 'Sora, Arial, sans-serif' },
+  space_grotesk: { label: "Space Grotesk", family: '"Space Grotesk", Arial, sans-serif' },
+  barlow: { label: "Barlow", family: 'Barlow, Arial, sans-serif' },
+  archivo: { label: "Archivo", family: 'Archivo, Arial, sans-serif' },
+  // Serif — tono editorial/elegante.
+  merriweather: { label: "Merriweather", family: 'Merriweather, Georgia, serif' },
+  libre_baskerville: { label: "Libre Baskerville", family: '"Libre Baskerville", Georgia, serif' },
+  crimson_text: { label: "Crimson Text", family: '"Crimson Text", Georgia, serif' },
+  pt_serif: { label: "PT Serif", family: '"PT Serif", Georgia, serif' },
+  cormorant: { label: "Cormorant", family: 'Cormorant, Georgia, serif' },
+  fraunces: { label: "Fraunces", family: 'Fraunces, Georgia, serif' },
+  dm_serif_display: { label: "DM Serif Display", family: '"DM Serif Display", Georgia, serif' },
+  bitter: { label: "Bitter", family: 'Bitter, Georgia, serif' },
+  // Display — titulares con personalidad.
+  bebas_neue: { label: "Bebas Neue", family: '"Bebas Neue", Impact, sans-serif' },
+  oswald: { label: "Oswald", family: 'Oswald, Impact, sans-serif' },
+  anton: { label: "Anton", family: 'Anton, Impact, sans-serif' },
+  abril_fatface: { label: "Abril Fatface", family: '"Abril Fatface", Georgia, serif' },
+  righteous: { label: "Righteous", family: 'Righteous, Impact, sans-serif' },
+  // Manuscrita — el toque hecho-a-mano que le viene bien a Pizarra.
+  pacifico: { label: "Pacifico", family: 'Pacifico, cursive' },
+  dancing_script: { label: "Dancing Script", family: '"Dancing Script", cursive' },
+  caveat: { label: "Caveat", family: 'Caveat, cursive' },
+  // Monoespaciada — el aire de ticket que pide Recibo.
+  jetbrains_mono: { label: "JetBrains Mono", family: '"JetBrains Mono", "Courier New", monospace' },
+  space_mono: { label: "Space Mono", family: '"Space Mono", "Courier New", monospace' },
 });
 
 function hexToRgb(hex) {

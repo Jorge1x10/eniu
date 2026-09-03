@@ -50,6 +50,42 @@ FONTS = {
     "montserrat": {"name": "Montserrat"},
     "playfair": {"name": "Playfair Display"},
     "lora": {"name": "Lora"},
+    # Sans-serif adicionales — misma familia visual que las 3 de arriba, para
+    # quien quiera variar sin salirse de "letra limpia".
+    "roboto": {"name": "Roboto"},
+    "open_sans": {"name": "Open Sans"},
+    "nunito": {"name": "Nunito"},
+    "raleway": {"name": "Raleway"},
+    "work_sans": {"name": "Work Sans"},
+    "rubik": {"name": "Rubik"},
+    "karla": {"name": "Karla"},
+    "manrope": {"name": "Manrope"},
+    "sora": {"name": "Sora"},
+    "space_grotesk": {"name": "Space Grotesk"},
+    "barlow": {"name": "Barlow"},
+    "archivo": {"name": "Archivo"},
+    # Serif — tono editorial/elegante, en la misma línea que Playfair/Lora.
+    "merriweather": {"name": "Merriweather"},
+    "libre_baskerville": {"name": "Libre Baskerville"},
+    "crimson_text": {"name": "Crimson Text"},
+    "pt_serif": {"name": "PT Serif"},
+    "cormorant": {"name": "Cormorant"},
+    "fraunces": {"name": "Fraunces"},
+    "dm_serif_display": {"name": "DM Serif Display"},
+    "bitter": {"name": "Bitter"},
+    # Display — titulares con mucha personalidad, para portadas y encabezados.
+    "bebas_neue": {"name": "Bebas Neue"},
+    "oswald": {"name": "Oswald"},
+    "anton": {"name": "Anton"},
+    "abril_fatface": {"name": "Abril Fatface"},
+    "righteous": {"name": "Righteous"},
+    # Manuscrita — el toque "hecho a mano" que le falta a la plantilla Pizarra.
+    "pacifico": {"name": "Pacifico"},
+    "dancing_script": {"name": "Dancing Script"},
+    "caveat": {"name": "Caveat"},
+    # Monoespaciada — el aire de recibo/ticket que pide la plantilla Recibo.
+    "jetbrains_mono": {"name": "JetBrains Mono"},
+    "space_mono": {"name": "Space Mono"},
 }
 
 # Los 8 layouts reproducen la composición visual que ya tenían las 8 plantillas
