@@ -1,5 +1,5 @@
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Eye, ImagePlus, RefreshCw, RotateCcw, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Eye, ImagePlus, RefreshCw, RotateCcw, Save, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { ACCEPTED_MIMETYPES, prepareImage } from "../../../services/imageFile";
@@ -12,11 +12,13 @@ import { useCatalogueService } from "../../Catalogue/services/catalogueService";
 import { useProductService } from "../../Catalogue/services/productService";
 import ColorControl from "../components/ColorControl";
 import MobilePreviewFrame from "../components/MobilePreviewFrame";
+import PalettePicker from "../components/PalettePicker";
 import TemplateSelector from "../components/TemplateSelector";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
+import { useTemplateCatalogService } from "../services/templateCatalogService";
 import { getTemplateErrorMessage, useTemplateService } from "../services/templateService";
 import { resolveTemplate } from "../templates/templateRegistry";
-import { DEFAULT_THEME, FONT_REGISTRY, SPLASH_RANGE, normalizeConfiguration } from "../utils/themeDefaults";
+import { CLASSIC_PALETTE_TOKENS, DEFAULT_THEME, FONT_REGISTRY, SPLASH_RANGE, deriveTokens, normalizeConfiguration } from "../utils/themeDefaults";
 import { normalizeHex, validateTheme } from "../utils/themeValidation";
 import { useTranslation } from "react-i18next";
 
@@ -26,6 +28,8 @@ const COLOR_CONTROLS = [
   ["accent_color", "Color de acento"],
   ["text_color", "Color del texto"],
 ];
+const CORE_COLOR_FIELDS = new Set(COLOR_CONTROLS.map(([field]) => field));
+const CORE_TOKEN_KEYS = new Set(["background", "primary", "accent", "text"]);
 
 export default function TemplatesPage() {
   const { t } = useTranslation();
@@ -38,9 +42,13 @@ export default function TemplatesPage() {
   const { getOne: getCatalogue } = useCatalogueService(businessId, catalogueId);
   const { list: getCategories } = useCategoryService(businessId, catalogueId);
   const { list: getProducts } = useProductService(businessId, catalogueId);
+  const { get: getTemplateCatalog } = useTemplateCatalogService();
   const [catalogue, setCatalogue] = useState(null);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
+  const [palettes, setPalettes] = useState([{ key: "classic", name: "Clásico Eniu", tokens: CLASSIC_PALETTE_TOKENS }]);
+  const [colorTokens, setColorTokens] = useState([]);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [saved, setSaved] = useState(null);
   const [draft, setDraft] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,12 +100,20 @@ export default function TemplatesPage() {
     const responses = await Promise.all([
       getTemplate({ signal }), getCatalogue({ signal }), getCategories({ signal }), getProducts({ signal }),
     ]);
+    // El catálogo de paletas se pide aparte: si falla, se sigue con la sola
+    // paleta "Clásico Eniu" de respaldo en vez de bloquear todo el editor por
+    // algo que sólo afecta a una sección de la pantalla.
+    const catalogResponse = await getTemplateCatalog({ signal });
     if (responses.some((response) => response.aborted) || !mountedRef.current) return;
     const failed = responses.find((response) => !response.ok);
     if (failed) {
       setLoadError(getTemplateErrorMessage(failed, t("No pudimos cargar la configuración de la plantilla.")));
       setIsLoading(false);
       return;
+    }
+    if (catalogResponse.ok) {
+      setPalettes(catalogResponse.data?.palettes || []);
+      setColorTokens(catalogResponse.data?.color_tokens || []);
     }
     const configuration = normalizeConfiguration(responses[0].data?.template);
     setSaved(configuration);
@@ -106,7 +122,7 @@ export default function TemplatesPage() {
     setCategories(responses[2].data?.categories || []);
     setProducts(responses[3].data?.products || []);
     setIsLoading(false);
-  }, [getCatalogue, getCategories, getProducts, getTemplate]);
+  }, [getCatalogue, getCategories, getProducts, getTemplate, getTemplateCatalog]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -139,7 +155,62 @@ export default function TemplatesPage() {
   useEffect(() => () => { if (splashPreview) URL.revokeObjectURL(splashPreview); }, [splashPreview]);
 
   function updateTheme(field, value) {
-    setDraft((current) => ({ ...current, theme: { ...current.theme, [field]: value } }));
+    setDraft((current) => {
+      const theme = { ...current.theme, [field]: value };
+      // Tocar un color a mano es "quiero personalizarlo": ya no sigue a la
+      // paleta elegida, y los tokens que no tienen campo propio (precio,
+      // superficie de tarjeta, etc.) se recalculan a partir de los 4 colores
+      // nuevos para que la vista previa no se quede con valores de la paleta
+      // anterior mientras se sigue editando.
+      if (CORE_COLOR_FIELDS.has(field)) {
+        theme.color_preset_key = null;
+        theme.tokens = {
+          ...deriveTokens(theme.background_color, theme.primary_color, theme.accent_color, theme.text_color),
+          background: theme.background_color, primary: theme.primary_color, accent: theme.accent_color, text: theme.text_color,
+          ...current.theme.theme_overrides,
+        };
+      }
+      return { ...current, theme };
+    });
+    setSaveError(""); setSuccess("");
+  }
+
+  function chooseColorPreset(presetKey) {
+    setDraft((current) => {
+      if (presetKey === null) {
+        // "Personalizado": parte de los colores que ya se veían, no los
+        // resetea — cambiar de opinión sobre la paleta no debe borrar nada.
+        return { ...current, theme: { ...current.theme, color_preset_key: null } };
+      }
+      const preset = palettes.find((palette) => palette.key === presetKey);
+      if (!preset) return current;
+      return {
+        ...current,
+        theme: {
+          ...current.theme,
+          background_color: preset.tokens.background,
+          primary_color: preset.tokens.primary,
+          accent_color: preset.tokens.accent,
+          text_color: preset.tokens.text,
+          color_preset_key: presetKey,
+          theme_overrides: {},
+          tokens: preset.tokens,
+        },
+      };
+    });
+    setSaveError(""); setSuccess("");
+  }
+
+  function updateThemeOverride(tokenKey, value) {
+    setDraft((current) => ({
+      ...current,
+      theme: {
+        ...current.theme,
+        color_preset_key: null,
+        theme_overrides: { ...current.theme.theme_overrides, [tokenKey]: value },
+        tokens: { ...current.theme.tokens, [tokenKey]: value },
+      },
+    }));
     setSaveError(""); setSuccess("");
   }
 
@@ -222,14 +293,25 @@ export default function TemplatesPage() {
   async function saveChanges() {
     if (savingRef.current || Object.keys(validationErrors).length) return;
     savingRef.current = true; setIsSaving(true); setSaveError(""); setSuccess("");
-    const themePayload = Object.fromEntries(Object.entries(draft.theme).filter(([key]) => !["cover_image_url", "background_image_url"].includes(key)));
+    // `color_preset_key`/`theme_overrides`/`tokens` no son campos de `theme`
+    // para el backend (ver `THEME_FIELDS` en `template/services.py`): los dos
+    // primeros van sueltos en el nivel superior del payload, y `tokens` es
+    // sólo el valor ya resuelto para la vista previa, nunca algo que se guarde.
+    const themePayload = Object.fromEntries(Object.entries(draft.theme).filter(
+      ([key]) => !["cover_image_url", "background_image_url", "color_preset_key", "theme_overrides", "tokens"].includes(key)
+    ));
     const splashPayload = { enabled: draft.splash.enabled, duration: draft.splash.duration };
-    let payload = { template_key: draft.template_key, theme: themePayload, splash: splashPayload };
+    const colorPayload = draft.theme.color_preset_key
+      ? { color_preset_key: draft.theme.color_preset_key }
+      : { theme_overrides: draft.theme.theme_overrides || {} };
+    let payload = { template_key: draft.template_key, theme: themePayload, splash: splashPayload, ...colorPayload };
     if (coverFile || removeCover || backgroundFile || removeBackground || splashFile || removeSplash) {
       const formData = new FormData();
       formData.append("template_key", draft.template_key);
       formData.append("theme", JSON.stringify(themePayload));
       formData.append("splash", JSON.stringify(splashPayload));
+      if (colorPayload.color_preset_key !== undefined) formData.append("color_preset_key", colorPayload.color_preset_key ?? "");
+      if (colorPayload.theme_overrides !== undefined) formData.append("theme_overrides", JSON.stringify(colorPayload.theme_overrides));
       formData.append("remove_cover", String(removeCover));
       formData.append("remove_background", String(removeBackground));
       formData.append("remove_splash", String(removeSplash));
@@ -287,7 +369,31 @@ export default function TemplatesPage() {
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(390px,0.9fr)]">
       <div className="space-y-6 rounded-2xl border border-[#E9DDB7] bg-[#FFFDF5] p-5 shadow-sm sm:p-6">
         <TemplateSelector value={draft.template_key} isAllowed={allowsTemplate} onChange={(template_key) => { setDraft((current) => ({ ...current, template_key })); setSuccess(""); }} />
-        <section><h2 className="text-sm font-bold">{t("Colores")}</h2><div className="mt-3 grid gap-4 sm:grid-cols-2">{COLOR_CONTROLS.map(([field, label]) => <ColorControl key={field} id={`theme-${field}`} label={t(label)} value={draft.theme[field]} originalValue={saved.theme[field]} error={validationErrors[field]} onChange={(value) => updateTheme(field, value)} />)}</div>{validationErrors.contrast && <p role="alert" className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{validationErrors.contrast} {t("Ajusta los colores antes de guardar.")}</p>}</section>
+        <section>
+          <h2 className="text-sm font-bold">{t("Colores")}</h2>
+          <PalettePicker palettes={palettes} value={draft.theme.color_preset_key} onChange={chooseColorPreset} />
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">{COLOR_CONTROLS.map(([field, label]) => <ColorControl key={field} id={`theme-${field}`} label={t(label)} value={draft.theme[field]} originalValue={saved.theme[field]} error={validationErrors[field]} onChange={(value) => updateTheme(field, value)} />)}</div>
+          {validationErrors.contrast && <p role="alert" className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{validationErrors.contrast} {t("Ajusta los colores antes de guardar.")}</p>}
+          <button type="button" onClick={() => setAdvancedOpen((open) => !open)} aria-expanded={advancedOpen} className="mt-4 flex min-h-11 w-full cursor-pointer items-center justify-between rounded-xl border border-[#E9DDB7] bg-white px-4 text-sm font-semibold hover:border-[#D7C36A]">
+            {t("Colores avanzados")}
+            <ChevronDown size={16} className={`transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+          </button>
+          {advancedOpen && (
+            <div className="mt-3 grid gap-4 rounded-xl border border-[#E9DDB7] bg-[#FBF7EA] p-4 sm:grid-cols-2">
+              <p className="text-xs text-[#777777] sm:col-span-2">{t("Colores de elementos específicos: precio, título de categoría y el filtro de categoría seleccionado.")}</p>
+              {colorTokens.filter((token) => !CORE_TOKEN_KEYS.has(token.key)).map((token) => (
+                <ColorControl
+                  key={token.key}
+                  id={`token-${token.key}`}
+                  label={t(token.label)}
+                  value={draft.theme.tokens?.[token.key] ?? CLASSIC_PALETTE_TOKENS[token.key]}
+                  originalValue={saved.theme.tokens?.[token.key] ?? CLASSIC_PALETTE_TOKENS[token.key]}
+                  onChange={(value) => updateThemeOverride(token.key, value)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
         <section><div className="flex flex-wrap items-center justify-between gap-2"><label htmlFor="theme-font" className="text-sm font-bold">{t("Tipografía")}</label>{fontsLocked && <PlanBadge />}</div><select id="theme-font" value={draft.theme.font_key} disabled={fontsLocked} onChange={(event) => updateTheme("font_key", event.target.value)} className={`mt-2 min-h-11 w-full rounded-xl border border-[#D9D9D9] px-4 outline-none focus:border-[#E8C93D] ${fontsLocked ? "cursor-not-allowed bg-[#F7F3E4] opacity-60" : "cursor-pointer bg-white"}`}>{Object.entries(FONT_REGISTRY).map(([key, font]) => <option key={key} value={key} disabled={!allowsFont(key)}>{font.label}</option>)}</select></section>
         <section><h2 className="text-sm font-bold">{t("Fotos")}</h2><p className="mt-1 text-xs text-[#777777]">{t("Se aplica a la portada, el fondo y la bienvenida. Menos calidad hace que el menú abra más rápido en el celular de tus clientes.")}</p><ImageQualitySelector value={quality} onChange={setQuality} /></section>
         <section><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-bold">{t("Portada y productos")}</h2>{coverLocked && <PlanBadge />}</div><div className="mt-3 space-y-3"><Toggle label={t("Mostrar portada")} checked={draft.theme.show_cover} disabled={coverLocked} onChange={(value) => updateTheme("show_cover", value)} /><Toggle label={t("Mostrar imágenes de productos")} checked={draft.theme.show_product_images} disabled={productImagesLocked} onChange={(value) => updateTheme("show_product_images", value)} /></div><ImagePicker title={t("Portada")} url={coverUrl} emptyText={t("Sin portada")} disabled={coverLocked} onChange={chooseCover} onRemove={removeCurrentCover} /></section>

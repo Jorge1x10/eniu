@@ -171,7 +171,11 @@ PALETTES = {
         "name": "Clásico Eniu",
         "tokens": {
             "background": "#FFFDF5", "primary": "#FFE05A", "accent": "#E8C93D", "text": "#111111",
-            "surface": "#FFFFFF", "muted": "#6B6B6B", "price": "#111111", "category_title": "#111111",
+            # `surface` = `background`: antes de que "superficie de tarjeta"
+            # existiera como concepto, cada plantilla ya rellenaba sus tarjetas
+            # con `background_color` — mantenerlos iguales aquí es lo que hace
+            # que activar esta paleta en un menú existente no mueva un píxel.
+            "surface": "#FFFDF5", "muted": "#6B6B6B", "price": "#111111", "category_title": "#111111",
             "nav_chip_bg": "#FFE05A", "nav_chip_text": "#111111",
         },
     },

@@ -14,12 +14,15 @@ export function MenuCover({ business, catalogue, theme, coverUrl, compact = fals
   );
 }
 
-export function CategoryNavigation({ sections, active, onSelect, rounded = true }) {
+export function CategoryNavigation({ sections, active, onSelect, rounded = true, activeBackground = "var(--menu-primary)", activeColor }) {
   const { t } = useTranslation();
 
   if (!sections.length) return null;
   const choices = [{ id: "all", name: t("Todo") }, ...sections];
-  return <nav aria-label={t("Categorías del menú")} className="flex gap-2 overflow-x-auto px-4 py-3">{choices.map((section) => <button key={section.id} type="button" onClick={() => onSelect(section.id)} aria-pressed={active === section.id} className={`min-h-11 shrink-0 cursor-pointer px-4 text-xs font-bold ${rounded ? "rounded-full" : "border-b-2"}`} style={{ backgroundColor: active === section.id ? "var(--menu-primary)" : "transparent", borderColor: "var(--menu-accent)" }}>{section.name}</button>)}</nav>;
+  return <nav aria-label={t("Categorías del menú")} className="flex gap-2 overflow-x-auto px-4 py-3">{choices.map((section) => {
+    const isActive = active === section.id;
+    return <button key={section.id} type="button" onClick={() => onSelect(section.id)} aria-pressed={isActive} className={`min-h-11 shrink-0 cursor-pointer px-4 text-xs font-bold ${rounded ? "rounded-full" : "border-b-2"}`} style={{ backgroundColor: isActive ? activeBackground : "transparent", borderColor: "var(--menu-accent)", ...(isActive && activeColor ? { color: activeColor } : {}) }}>{section.name}</button>;
+  })}</nav>;
 }
 
 export function Availability({ available }) {

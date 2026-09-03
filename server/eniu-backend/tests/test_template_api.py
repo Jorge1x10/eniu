@@ -132,7 +132,7 @@ class TemplateApiTestCase(unittest.TestCase):
         self.assertEqual(theme["tokens"]["price"], "#7A1F2B")
         self.assertEqual(theme["tokens"]["nav_chip_text"], "#FFFFFF")
         # Los que no se tocaron siguen viniendo de la paleta por defecto.
-        self.assertEqual(theme["tokens"]["surface"], "#FFFFFF")
+        self.assertEqual(theme["tokens"]["surface"], "#FFFDF5")
 
     def test_rejects_unknown_palette_and_override_tokens(self):
         for payload in (

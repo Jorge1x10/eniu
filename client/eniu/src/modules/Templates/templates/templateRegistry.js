@@ -1,18 +1,6 @@
-import ElegantMenuTemplate from "./ElegantMenuTemplate";
-import MinimalMenuTemplate from "./MinimalMenuTemplate";
-import ModernMenuTemplate from "./ModernMenuTemplate";
-import { BistroMenuTemplate, BoldMenuTemplate, LuxuryMenuTemplate, NaturalMenuTemplate, RetroMenuTemplate } from "./AdditionalMenuTemplates";
+import { createElement } from "react";
 
-export const TEMPLATE_REGISTRY = Object.freeze({
-  modern: ModernMenuTemplate,
-  minimal: MinimalMenuTemplate,
-  elegant: ElegantMenuTemplate,
-  bistro: BistroMenuTemplate,
-  bold: BoldMenuTemplate,
-  natural: NaturalMenuTemplate,
-  retro: RetroMenuTemplate,
-  luxury: LuxuryMenuTemplate,
-});
+import MenuTemplateRenderer from "./MenuTemplateRenderer";
 
 export const TEMPLATE_OPTIONS = Object.freeze([
   { key: "modern", name: "Moderna", description: "Tarjetas visuales, portada amplia y navegación redondeada." },
@@ -25,6 +13,23 @@ export const TEMPLATE_OPTIONS = Object.freeze([
   { key: "luxury", name: "Lujo", description: "Presentación sobria con jerarquía editorial premium." },
 ]);
 
+const VALID_KEYS = new Set(TEMPLATE_OPTIONS.map((option) => option.key));
+
+// Un componente por clave, creado una sola vez y reusado: `resolveTemplate`
+// se llama de nuevo en cada render de la página que lo usa
+// (`createElement(resolveTemplate(key), props)`), y si esa llamada devolviera
+// un componente nuevo cada vez, React lo trataría como un tipo distinto y
+// remontaría el árbol entero — perdiendo, por ejemplo, la categoría activa
+// del filtro. Este mapa hace que la misma clave siga devolviendo siempre la
+// misma identidad de componente.
+const boundTemplates = new Map();
+
 export function resolveTemplate(key) {
-  return TEMPLATE_REGISTRY[key] || TEMPLATE_REGISTRY.modern;
+  const layoutKey = VALID_KEYS.has(key) ? key : "modern";
+  if (!boundTemplates.has(layoutKey)) {
+    boundTemplates.set(layoutKey, function BoundMenuTemplate(props) {
+      return createElement(MenuTemplateRenderer, { layoutKey, ...props });
+    });
+  }
+  return boundTemplates.get(layoutKey);
 }
