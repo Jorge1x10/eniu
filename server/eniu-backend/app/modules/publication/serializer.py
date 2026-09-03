@@ -3,6 +3,8 @@ from flask import current_app
 from app import storage
 from app.modules.billing import plans
 from app.modules.billing.guards import plan_key_for_owner_id
+from app.modules.promotion.services import active_product_ids_today
+from app.modules.template import catalog
 from app.modules.template.services import default_configuration
 from app.modules.analytics.security import tracking_key
 
@@ -47,7 +49,7 @@ def main_picture(product):
     return next((picture for picture in pictures if picture.get("is_default")), pictures[0] if pictures else None)
 
 
-def _product_data(catalogue, product, api_path):
+def _product_data(catalogue, product, api_path, promo_labels):
     return {
         "tracking_key": tracking_key(catalogue.id, "product", product.id),
         "name": product.name,
@@ -55,6 +57,10 @@ def _product_data(catalogue, product, api_path):
         "price": format(product.price, ".2f") if product.price is not None else None,
         "image_url": _product_image_url(product, api_path),
         "is_available": product.is_available,
+        # Ninguna promoción cambia el precio (ver la nota en
+        # `promotion/services.py`) — sólo agrega esta etiqueta para que la
+        # plantilla la resalte hoy.
+        "promo_label": promo_labels.get(product.id),
     }
 
 
@@ -72,6 +78,7 @@ def serialize_public_menu(catalogue):
         catalogue.products,
         key=lambda product: (product.display_order, product.created_at),
     )
+    promo_labels = active_product_ids_today(catalogue.id)
     category_payload = []
     for section_index, category in enumerate(categories):
         category_products = [product for product in products if product.category_id == category.id]
@@ -85,6 +92,7 @@ def serialize_public_menu(catalogue):
                     product,
                     f"/api/public/menus/{slug}/product-images/{section_index}/{product_index}"
                     if slug and catalogue.is_published else None,
+                    promo_labels,
                 )
                 for product_index, product in enumerate(category_products)
             ],
@@ -96,6 +104,7 @@ def serialize_public_menu(catalogue):
             product,
             f"/api/public/menus/{slug}/product-images/{len(categories)}/{product_index}"
             if slug and catalogue.is_published else None,
+            promo_labels,
         )
         for product_index, product in enumerate(uncategorized)
     ]
@@ -117,6 +126,14 @@ def serialize_public_menu(catalogue):
     )
     theme["background_image_url"] = decoration(
         "background_filename", "CATALOGUE_BACKGROUND_FOLDER", f"/api/public/menus/{slug}/background"
+    )
+    # Resuelto aquí mismo (no sólo la clave) para que la página pública no
+    # tenga que pedir el catálogo aparte sólo para saber qué patrón dibujar
+    # — es la ruta más caliente del backend, un solo request debe bastar.
+    background_preset = catalog.BACKGROUNDS.get(theme.get("background_preset_key"))
+    theme["background_preset"] = (
+        {"key": theme["background_preset_key"], "css": background_preset["css"], "size": background_preset["size"]}
+        if background_preset else None
     )
     splash = dict(configuration.get("splash") or {"enabled": False, "duration": 2.5})
     splash["image_url"] = decoration(

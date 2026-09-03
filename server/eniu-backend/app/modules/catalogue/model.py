@@ -62,6 +62,13 @@ class Catalogue(BaseModel):
         passive_deletes=True,
     )
 
+    promotions = db.relationship(
+        "Promotion",
+        back_populates="catalogue",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
     __table_args__ = (
         db.UniqueConstraint("public_slug", name="uq_catalogue_public_slug"),
         db.Index(

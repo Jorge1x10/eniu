@@ -19,6 +19,7 @@ from app.shared.i18n import _
 THEME_FIELDS = {
     "background_color", "primary_color", "accent_color", "text_color",
     "font_key", "show_cover", "show_product_images", "background_opacity",
+    "cover_focal_x", "cover_focal_y", "background_preset_key",
 }
 # La pantalla de bienvenida del menú público. La duración se acota para que
 # nadie deje a sus comensales cinco segundos mirando un logo.
@@ -37,6 +38,9 @@ DEFAULT_THEME = {
     "cover_image_url": None,
     "background_image_url": None,
     "background_opacity": 0.2,
+    "cover_focal_x": 0.5,
+    "cover_focal_y": 0.5,
+    "background_preset_key": None,
 }
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 ALLOWED_IMAGE_MIMETYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -112,6 +116,19 @@ def _validate_theme(theme, current):
         if value < 0 or value > 1:
             raise ValueError(_("La opacidad del fondo debe estar entre 0 y 1"))
         normalized["background_opacity"] = round(float(value), 2)
+    for field in ("cover_focal_x", "cover_focal_y"):
+        if field in theme:
+            value = theme[field]
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(_("El punto focal de la portada debe ser un número"))
+            if value < 0 or value > 1:
+                raise ValueError(_("El punto focal de la portada debe estar entre 0 y 1"))
+            normalized[field] = round(float(value), 3)
+    if "background_preset_key" in theme:
+        value = theme["background_preset_key"]
+        if value is not None and value not in catalog.BACKGROUNDS:
+            raise ValueError(_("El fondo seleccionado no está permitido"))
+        normalized["background_preset_key"] = value
     if _contrast(normalized["text_color"], normalized["background_color"]) < 4.5:
         raise ValueError(_("El texto no tiene suficiente contraste con el fondo"))
     return normalized

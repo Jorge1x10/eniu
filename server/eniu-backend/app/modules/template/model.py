@@ -35,6 +35,13 @@ class CatalogueTemplate(BaseModel):
     # tienen columna propia — dispersos, se completan con la paleta/derivación
     # al leer. Ver `catalog.resolve_theme`.
     theme_overrides = db.Column(db.JSON, nullable=False, default=dict, server_default="{}")
+    # Punto focal de la portada (0-1, 0.5/0.5 = centrado): qué parte de la
+    # imagen queda visible dentro del recuadro fijo, sin recortar el archivo.
+    cover_focal_x = db.Column(db.Float, nullable=False, default=0.5, server_default="0.5")
+    cover_focal_y = db.Column(db.Float, nullable=False, default=0.5, server_default="0.5")
+    # NULL = sin fondo prediseñado (puede seguir usando una imagen propia via
+    # `background_filename`, como hoy).
+    background_preset_key = db.Column(db.String(24), nullable=True)
 
     catalogue = db.relationship("Catalogue", back_populates="template_config")
 
@@ -77,6 +84,11 @@ class CatalogueTemplate(BaseModel):
                 "color_preset_key": self.color_preset_key,
                 "theme_overrides": dict(self.theme_overrides or {}),
                 "tokens": tokens,
+                "cover_focal_x": self.cover_focal_x,
+                "cover_focal_y": self.cover_focal_y,
+                "background_preset_key": (
+                    self.background_preset_key if self.background_preset_key in catalog.BACKGROUNDS else None
+                ),
             },
             "splash": {
                 "enabled": self.splash_enabled,

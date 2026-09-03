@@ -214,6 +214,39 @@ _EN = {
     "No fue posible consultar la categoría": "We couldn't load the category",
     "No fue posible consultar las categorías": "We couldn't load your categories",
 
+    # --- Promociones ---------------------------------------------------------
+    "Promoción creada correctamente": "Promotion created successfully",
+    "Promoción actualizada correctamente": "Promotion updated successfully",
+    "Promoción eliminada correctamente": "Promotion deleted successfully",
+    "Promoción no encontrada": "Promotion not found",
+    "El nombre de la promoción es obligatorio": "The promotion name is required",
+    "El nombre de la promoción no es válido": "That promotion name is not valid",
+    "El nombre no puede superar {limit} caracteres": "The name can't be longer than {limit} characters",
+    "La etiqueta no es válida": "That badge label is not valid",
+    "La etiqueta no puede superar {limit} caracteres": "The badge label can't be longer than {limit} characters",
+    "is_active debe ser verdadero o falso": "is_active must be true or false",
+    "Los días de la semana no son válidos": "Those weekdays are not valid",
+    "Los días de la semana deben ser números del 0 (lunes) al 6 (domingo)": (
+        "Weekdays must be numbers from 0 (Monday) to 6 (Sunday)"
+    ),
+    "La fecha de inicio": "The start date",
+    "La fecha de fin": "The end date",
+    "La fecha de inicio no puede ser posterior a la de fin": (
+        "The start date can't be after the end date"
+    ),
+    "Los productos seleccionados no son válidos": "The selected products are not valid",
+    "Alguno de los productos seleccionados no existe en este menú": (
+        "One of the selected products doesn't exist in this menu"
+    ),
+    "Las categorías seleccionadas no son válidas": "The selected categories are not valid",
+    "Alguna de las categorías seleccionadas no existe en este menú": (
+        "One of the selected categories doesn't exist in this menu"
+    ),
+    "No fue posible crear la promoción": "We couldn't create the promotion",
+    "No fue posible actualizar la promoción": "We couldn't update the promotion",
+    "No fue posible eliminar la promoción": "We couldn't delete the promotion",
+    "No fue posible consultar las promociones": "We couldn't load your promotions",
+
     # --- Productos ---------------------------------------------------------
     "Producto creado correctamente": "Product created successfully",
     "Producto actualizado correctamente": "Product updated successfully",
@@ -286,6 +319,13 @@ _EN = {
     "La opacidad del fondo debe estar entre 0 y 1": (
         "The background opacity must be between 0 and 1"
     ),
+    "El punto focal de la portada debe ser un número": (
+        "The cover's focal point must be a number"
+    ),
+    "El punto focal de la portada debe estar entre 0 y 1": (
+        "The cover's focal point must be between 0 and 1"
+    ),
+    "El fondo seleccionado no está permitido": "That background isn't available",
     "La pantalla de bienvenida no es válida": "That splash screen is not valid",
     "La duración de la bienvenida debe ser un número": (
         "The splash screen duration must be a number"

@@ -105,10 +105,15 @@ class TemplateApiTestCase(unittest.TestCase):
         body = response.get_json()
         self.assertEqual({layout["key"] for layout in body["layouts"]}, {
             "modern", "minimal", "elegant", "bistro", "bold", "natural", "retro", "luxury",
+            "chalkboard", "magazine", "sidebar", "receipt", "story",
         })
         self.assertEqual({palette["key"] for palette in body["palettes"]}, {"classic", "midnight", "vineyard"})
         self.assertEqual({font["key"] for font in body["fonts"]}, {"inter", "poppins", "montserrat", "playfair", "lora"})
         self.assertIn("nav_chip_text", {token["key"] for token in body["color_tokens"]})
+        self.assertEqual(
+            {bg["key"] for bg in body["backgrounds"]},
+            {"paper", "dots", "grid", "stripes", "crosshatch"},
+        )
 
     def test_save_with_a_curated_palette_mirrors_its_core_colors(self):
         response = self.client.patch(
@@ -166,6 +171,48 @@ class TemplateApiTestCase(unittest.TestCase):
         template = response.get_json()["template"]
         self.assertEqual(template["template_key"], "bistro")
         self.assertEqual(template["layout_key"], "bistro")
+
+    def test_cover_focal_point_defaults_to_centered_and_can_be_moved(self):
+        response = self.client.get(self.url(), headers=self.headers())
+        theme = response.get_json()["template"]["theme"]
+        self.assertEqual(theme["cover_focal_x"], 0.5)
+        self.assertEqual(theme["cover_focal_y"], 0.5)
+
+        moved = self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"theme": {"cover_focal_x": 0.2, "cover_focal_y": 0.9}},
+        )
+        self.assertEqual(moved.status_code, 200)
+        moved_theme = moved.get_json()["template"]["theme"]
+        self.assertEqual(moved_theme["cover_focal_x"], 0.2)
+        self.assertEqual(moved_theme["cover_focal_y"], 0.9)
+
+        for payload in (
+            {"theme": {"cover_focal_x": 1.5}},
+            {"theme": {"cover_focal_y": -0.1}},
+            {"theme": {"cover_focal_x": "middle"}},
+        ):
+            with self.subTest(payload=payload):
+                response = self.client.patch(self.url(), headers=self.headers(), json=payload)
+                self.assertEqual(response.status_code, 400)
+
+    def test_background_preset_can_be_chosen_and_rejects_unknown_keys(self):
+        response = self.client.patch(
+            self.url(), headers=self.headers(), json={"theme": {"background_preset_key": "dots"}}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["template"]["theme"]["background_preset_key"], "dots")
+
+        cleared = self.client.patch(
+            self.url(), headers=self.headers(), json={"theme": {"background_preset_key": None}}
+        )
+        self.assertEqual(cleared.status_code, 200)
+        self.assertIsNone(cleared.get_json()["template"]["theme"]["background_preset_key"])
+
+        invalid = self.client.patch(
+            self.url(), headers=self.headers(), json={"theme": {"background_preset_key": "glitter"}}
+        )
+        self.assertEqual(invalid.status_code, 400)
 
     def test_changing_the_four_core_colors_re_derives_the_extra_tokens(self):
         response = self.client.patch(

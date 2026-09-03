@@ -161,6 +161,75 @@ LAYOUTS = {
             "price": {"position": "bordered"},
         },
     },
+    # Los siguientes 5 se diseñaron a partir de referencias reales de menús
+    # digitales (pizarra/chalkboard, editorial de revista, navegación
+    # lateral, formato recibo, tarjetas narrativas) — cada uno cambia la
+    # composición, no sólo el estilo, de los 8 anteriores.
+    "chalkboard": {
+        "name": "Pizarra",
+        "description": "Título manuscrito, marco punteado y aire de café de barrio.",
+        "blocks": {
+            "header": {"align": "center", "eyebrow": "business", "title_weight": "black", "title_style": "handwritten"},
+            "cover": {"compact": True},
+            "nav": {"style": "pill"},
+            "card": {"shape": "sketched", "border": "dashed-thick", "shadow": "none"},
+            "grid": {"columns": 1},
+            "image": {"position": "none", "size": "none"},
+            "price": {"position": "handwritten"},
+        },
+    },
+    "magazine": {
+        "name": "Revista",
+        "description": "Un producto destacado arriba en grande, luego cuadrícula editorial.",
+        "blocks": {
+            "header": {"align": "left", "eyebrow": "fixed:Edición del chef", "title_weight": "black", "title_style": "condensed"},
+            "cover": {"compact": False},
+            "nav": {"style": "pill"},
+            "card": {"shape": "rounded", "border": "none", "shadow": "soft"},
+            "grid": {"columns": 2, "featured_first": True},
+            "image": {"position": "top", "size": "hero"},
+            "price": {"position": "below"},
+        },
+    },
+    "sidebar": {
+        "name": "Columnas",
+        "description": "Categorías fijas a un lado, como una carta de restaurante formal.",
+        "blocks": {
+            "header": {"align": "left", "eyebrow": "business", "title_weight": "semibold", "title_style": "normal"},
+            "cover": {"compact": True},
+            "nav": {"style": "sidebar"},
+            "card": {"shape": "row", "border": "bottom", "shadow": "none"},
+            "grid": {"columns": 1},
+            "image": {"position": "side", "size": "small"},
+            "price": {"position": "inline"},
+        },
+    },
+    "receipt": {
+        "name": "Recibo",
+        "description": "Lista compacta sin imágenes, precio con línea punteada — ideal para cartas largas.",
+        "blocks": {
+            "header": {"align": "left", "eyebrow": "fixed:Ticket del día", "title_weight": "semibold", "title_style": "monospace"},
+            "cover": {"compact": True},
+            "nav": {"style": "none"},
+            "card": {"shape": "row", "border": "dotted-leader", "shadow": "none"},
+            "grid": {"columns": 1},
+            "image": {"position": "none", "size": "none"},
+            "price": {"position": "leader"},
+        },
+    },
+    "story": {
+        "name": "Historia",
+        "description": "Cada plato con una nota del chef, para cartas con pocos productos y mucha personalidad.",
+        "blocks": {
+            "header": {"align": "center", "eyebrow": "fixed:Nuestra historia", "title_weight": "normal", "title_style": "italic"},
+            "cover": {"compact": False},
+            "nav": {"style": "underline"},
+            "card": {"shape": "unbordered", "border": "none", "shadow": "none"},
+            "grid": {"columns": 1},
+            "image": {"position": "side", "size": "medium"},
+            "price": {"position": "bordered"},
+        },
+    },
 }
 
 # 3 paletas para arrancar (ampliable después). "classic" reproduce el default
@@ -194,6 +263,51 @@ PALETTES = {
             "surface": "#FFFFFF", "muted": "#8C6F63", "price": "#7A1F2B", "category_title": "#241012",
             "nav_chip_bg": "#7A1F2B", "nav_chip_text": "#FAF3EA",
         },
+    },
+}
+
+
+# Fondos prediseñados: no son imágenes (no hay que subir ni servir ningún
+# archivo) — son patrones CSS descritos como datos, pintados con
+# `currentColor` para que se adapten solos a cualquier paleta sin que este
+# catálogo tenga que saber de colores. La misma opacidad que ya controla el
+# fondo con imagen propia (`background_opacity`) sirve para atenuarlos.
+BACKGROUNDS = {
+    "paper": {
+        "name": "Papel",
+        "description": "Rayado diagonal fino, casi imperceptible.",
+        "css": "repeating-linear-gradient(45deg, currentColor 0, currentColor 1px, transparent 1px, transparent 12px)",
+        "size": "12px 12px",
+    },
+    "dots": {
+        "name": "Puntos",
+        "description": "Puntitos regulares, estilo papel picado.",
+        "css": "radial-gradient(currentColor 1.5px, transparent 1.5px)",
+        "size": "16px 16px",
+    },
+    "grid": {
+        "name": "Cuadrícula",
+        "description": "Líneas finas tipo hoja cuadriculada.",
+        "css": (
+            "linear-gradient(currentColor 1px, transparent 1px), "
+            "linear-gradient(90deg, currentColor 1px, transparent 1px)"
+        ),
+        "size": "24px 24px",
+    },
+    "stripes": {
+        "name": "Rayas",
+        "description": "Franjas diagonales con más presencia.",
+        "css": "repeating-linear-gradient(-45deg, currentColor 0, currentColor 2px, transparent 2px, transparent 16px)",
+        "size": "16px 16px",
+    },
+    "crosshatch": {
+        "name": "Trama cruzada",
+        "description": "Dos rayados diagonales que se cruzan, como tela.",
+        "css": (
+            "repeating-linear-gradient(45deg, currentColor 0, currentColor 1px, transparent 1px, transparent 10px), "
+            "repeating-linear-gradient(-45deg, currentColor 0, currentColor 1px, transparent 1px, transparent 10px)"
+        ),
+        "size": "10px 10px",
     },
 }
 
@@ -265,4 +379,8 @@ def public_catalog():
         ],
         "fonts": [{"key": key, "name": font["name"]} for key, font in FONTS.items()],
         "color_tokens": COLOR_TOKENS,
+        "backgrounds": [
+            {"key": key, "name": bg["name"], "description": bg["description"], "css": bg["css"], "size": bg["size"]}
+            for key, bg in BACKGROUNDS.items()
+        ],
     }
