@@ -265,6 +265,10 @@ _EN = {
     "La tipografía seleccionada no está permitida": (
         "That font isn't available on your plan"
     ),
+    "La paleta seleccionada no está permitida": (
+        "That color palette isn't available"
+    ),
+    "Los colores avanzados no son válidos": "Those advanced colors are not valid",
     "La configuración no es válida": "That configuration is not valid",
     "La configuración visual no es válida": "That visual configuration is not valid",
     "Los colores deben usar el formato #RGB o #RRGGBB": (

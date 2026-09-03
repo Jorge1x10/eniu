@@ -248,8 +248,11 @@ def _deactivate_paid_template_features(catalogue_ids):
         CatalogueTemplate.catalogue_id.in_(catalogue_ids)
     ).all()
     for config in configs:
-        if not plans.allows_template(plans.FREE, config.template_key):
-            config.template_key = plans.DEFAULT_TEMPLATE_KEY
+        # `template_key`, no `layout_key`: es el campo siempre poblado de
+        # forma confiable (ver nota equivalente en `billing/guards.py`).
+        if not plans.allows_layout(plans.FREE, config.template_key):
+            config.template_key = plans.DEFAULT_LAYOUT_KEY
+            config.layout_key = plans.DEFAULT_LAYOUT_KEY
         if not plans.allows_font(plans.FREE, config.font_key):
             config.font_key = plans.DEFAULT_FONT_KEY
         if not free["allow_cover"]:

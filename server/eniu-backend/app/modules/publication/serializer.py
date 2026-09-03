@@ -107,6 +107,11 @@ def serialize_public_menu(catalogue):
         return _asset_url(folder_key, getattr(catalogue.template_config, attribute), path)
 
     theme = dict(configuration["theme"])
+    # Campos de sólo edición (re-mostrar lo guardado en el editor avanzado):
+    # no aportan nada a quien sólo va a leer el menú, así que no viajan en el
+    # payload público — es la ruta más caliente del backend.
+    theme.pop("color_preset_key", None)
+    theme.pop("theme_overrides", None)
     theme["cover_image_url"] = decoration(
         "cover_filename", "CATALOGUE_COVER_FOLDER", f"/api/public/menus/{slug}/cover"
     )
@@ -119,7 +124,9 @@ def serialize_public_menu(catalogue):
     )
 
     plan_key = plan_key_for_owner_id(catalogue.business.owner_id)
-    template_key, theme = plans.sanitize_public_theme(
+    # Se sanea contra `template_key`, no `layout_key`: ver la nota equivalente
+    # en `billing/guards.py` — es el campo siempre poblado de forma confiable.
+    layout_key, theme = plans.sanitize_public_theme(
         plan_key, configuration["template_key"], theme
     )
     splash = plans.sanitize_public_splash(plan_key, splash)
@@ -133,7 +140,10 @@ def serialize_public_menu(catalogue):
             "description": catalogue.description,
         },
         "template": {
-            "key": template_key,
+            "key": layout_key,
+            # Alias hacia adelante: mismo valor, nombre nuevo para clientes
+            # que ya conozcan el concepto de layout en vez de "plantilla".
+            "layout_key": layout_key,
             "theme": theme,
         },
         "splash": splash,
