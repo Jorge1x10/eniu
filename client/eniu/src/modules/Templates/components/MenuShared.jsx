@@ -3,14 +3,18 @@ import { Image as ImageIcon } from "lucide-react";
 import { resolveAssetUrl } from "../templates/menuData";
 import { useTranslation } from "react-i18next";
 
-export function MenuCover({ business, catalogue, theme, coverUrl, compact = false }) {
+export function MenuCover({ business, catalogue, theme, coverUrl, compact = false, placeholderColor }) {
   const { t } = useTranslation();
 
   if (!theme.show_cover) return null;
   return coverUrl ? (
     <div className={`relative overflow-hidden ${compact ? "h-20" : "h-44"}`}><img src={resolveAssetUrl(coverUrl)} alt={t("Portada de {{name}}", { name: catalogue.name })} className="h-full w-full object-cover" /><div className="absolute inset-0 bg-black/25" /></div>
   ) : (
-    <div className={`flex items-center justify-center opacity-70 ${compact ? "h-16" : "h-28"}`} style={{ backgroundColor: theme.primary_color }}><ImageIcon size={28} /><span className="ml-2 text-sm font-semibold">{business?.name || t("Tu negocio")}</span></div>
+    // El color de texto es aparte del general (`placeholderColor`, el mismo
+    // token que usa el chip activo): ambos son texto sobre `primary_color`,
+    // y una paleta puede elegir un color de fondo que no contraste con el
+    // texto general pero sí con uno pensado para ir sobre el color principal.
+    <div className={`flex items-center justify-center opacity-70 ${compact ? "h-16" : "h-28"}`} style={{ backgroundColor: theme.primary_color, color: placeholderColor }}><ImageIcon size={28} /><span className="ml-2 text-sm font-semibold">{business?.name || t("Tu negocio")}</span></div>
   );
 }
 

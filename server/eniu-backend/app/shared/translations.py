@@ -277,8 +277,8 @@ _EN = {
     "El texto no tiene suficiente contraste con el fondo": (
         "The text doesn't have enough contrast against the background"
     ),
-    "El texto no tiene suficiente contraste con el color principal": (
-        "The text doesn't have enough contrast against the primary color"
+    "El texto del filtro activo no tiene suficiente contraste con su fondo": (
+        "The active filter's text doesn't have enough contrast against its background"
     ),
     "La opacidad del fondo debe ser un número": (
         "The background opacity must be a number"

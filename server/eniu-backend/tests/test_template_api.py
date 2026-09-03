@@ -124,13 +124,16 @@ class TemplateApiTestCase(unittest.TestCase):
     def test_save_with_advanced_overrides_clears_the_palette(self):
         response = self.client.patch(
             self.url(), headers=self.headers(),
-            json={"theme_overrides": {"price": "#7A1F2B", "nav_chip_text": "#FFFFFF"}},
+            # `nav_chip_text` oscuro sobre el dorado por defecto de
+            # `nav_chip_bg`: pasa el contraste igual que el negro que ya
+            # usaba `text_color` sobre ese mismo dorado.
+            json={"theme_overrides": {"price": "#7A1F2B", "nav_chip_text": "#111111"}},
         )
         self.assertEqual(response.status_code, 200)
         theme = response.get_json()["template"]["theme"]
         self.assertIsNone(theme["color_preset_key"])
         self.assertEqual(theme["tokens"]["price"], "#7A1F2B")
-        self.assertEqual(theme["tokens"]["nav_chip_text"], "#FFFFFF")
+        self.assertEqual(theme["tokens"]["nav_chip_text"], "#111111")
         # Los que no se tocaron siguen viniendo de la paleta por defecto.
         self.assertEqual(theme["tokens"]["surface"], "#FFFDF5")
 
@@ -139,10 +142,21 @@ class TemplateApiTestCase(unittest.TestCase):
             {"color_preset_key": "neon"},
             {"theme_overrides": {"primary": "#FFE05A"}},
             {"theme_overrides": {"price": "not-a-color"}},
+            # Blanco sobre el dorado por defecto: no contrasta lo suficiente.
+            {"theme_overrides": {"nav_chip_text": "#FFFFFF"}},
         ):
             with self.subTest(payload=payload):
                 response = self.client.patch(self.url(), headers=self.headers(), json=payload)
                 self.assertEqual(response.status_code, 400)
+
+    def test_a_curated_palette_with_independent_chip_text_is_allowed_to_save(self):
+        # Antes de desacoplar `nav_chip_text` de `text_color`, esta paleta
+        # (texto claro en general, pero oscuro sobre el chip dorado) hubiera
+        # chocado con la regla vieja de "texto vs. principal".
+        response = self.client.patch(
+            self.url(), headers=self.headers(), json={"color_preset_key": "midnight"}
+        )
+        self.assertEqual(response.status_code, 200)
 
     def test_layout_key_is_accepted_as_the_new_name_for_template_key(self):
         response = self.client.patch(

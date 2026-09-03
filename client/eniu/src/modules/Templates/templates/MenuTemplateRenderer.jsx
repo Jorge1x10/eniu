@@ -114,7 +114,7 @@ function ModernLayout({ business, catalogue, categories, products, theme, coverU
   const visible = active === "all" ? sections : sections.filter((section) => section.id === active);
   return (
     <MenuShell theme={theme} family="modern">
-      <MenuCover business={business} catalogue={catalogue} theme={theme} coverUrl={coverUrl} />
+      <MenuCover business={business} catalogue={catalogue} theme={theme} coverUrl={coverUrl} placeholderColor={tokens.nav_chip_text} />
       <header className="px-5 pb-3 pt-5"><p className="text-xs font-bold uppercase tracking-widest opacity-60">{business?.name || t("Negocio")}</p><h1 className="mt-1 text-3xl font-black leading-tight">{catalogue.name}</h1>{catalogue.description && <p className="mt-2 text-sm opacity-70">{catalogue.description}</p>}</header>
       <CategoryNavigation sections={sections} active={active} onSelect={(id) => { setActive(id); if (id !== "all") onCategorySelect?.(sections.find((section) => section.id === id)?.tracking_key); }} activeBackground={tokens.nav_chip_bg} activeColor={tokens.nav_chip_text} />
       {!products.length ? <EmptyMenu /> : <main className="space-y-7 px-4 pb-4">{visible.map((section) => <section key={section.id}><h2 className="mb-3 text-xl font-extrabold" style={{ color: tokens.category_title }}>{section.name}</h2><div className="grid grid-cols-1 gap-3 min-[370px]:grid-cols-2">{section.products.map((product) => <ModernProductCard key={product.id} product={product} theme={theme} tokens={tokens} />)}</div></section>)}</main>}
@@ -147,7 +147,7 @@ function MinimalLayout({ business, catalogue, categories, products, theme, cover
   const visible = active === "all" ? sections : sections.filter((section) => section.id === active);
   return (
     <MenuShell theme={theme} family="minimal">
-      <MenuCover business={business} catalogue={catalogue} theme={theme} coverUrl={coverUrl} compact />
+      <MenuCover business={business} catalogue={catalogue} theme={theme} coverUrl={coverUrl} compact placeholderColor={tokens.nav_chip_text} />
       <header className="border-b border-current/15 px-5 py-5"><div className="flex items-baseline justify-between gap-3"><h1 className="text-2xl font-semibold">{catalogue.name}</h1><span className="text-[10px] uppercase tracking-widest opacity-55">{business?.name}</span></div>{catalogue.description && <p className="mt-2 text-xs leading-5 opacity-65">{catalogue.description}</p>}</header>
       <CategoryNavigation sections={sections} active={active} onSelect={(id) => { setActive(id); if (id !== "all") onCategorySelect?.(sections.find((section) => section.id === id)?.tracking_key); }} rounded={false} activeBackground={tokens.nav_chip_bg} activeColor={tokens.nav_chip_text} />
       {!products.length ? <EmptyMenu /> : <main className="px-5">{visible.map((section) => <section key={section.id} className="py-4"><h2 className="mb-2 border-l-2 pl-2 text-xs font-bold uppercase tracking-[0.18em]" style={{ borderColor: "var(--menu-accent)", color: tokens.category_title }}>{section.name}</h2><div>{section.products.map((product) => <MinimalProductRow key={product.id} product={product} theme={theme} tokens={tokens} />)}</div></section>)}</main>}
@@ -182,7 +182,7 @@ function ElegantLayout({ business, catalogue, categories, products, theme, cover
     <div className="relative min-h-full overflow-hidden" style={{ "--menu-primary": theme.primary_color, "--menu-accent": theme.accent_color, backgroundColor: theme.background_color, color: theme.text_color, fontFamily: family }}>
       <MenuBackground theme={theme} />
       <div className="relative z-1">
-        <MenuCover business={business} catalogue={catalogue} theme={theme} coverUrl={coverUrl} />
+        <MenuCover business={business} catalogue={catalogue} theme={theme} coverUrl={coverUrl} placeholderColor={tokens.nav_chip_text} />
         <header className="px-7 py-7 text-center"><p className="text-[10px] uppercase tracking-[0.3em] opacity-60">{business?.name}</p><div className="mx-auto my-3 h-px w-12" style={{ backgroundColor: "var(--menu-accent)" }} /><h1 className="text-3xl italic">{catalogue.name}</h1>{catalogue.description && <p className="mx-auto mt-3 max-w-xs text-xs leading-5 opacity-65">{catalogue.description}</p>}</header>
         <CategoryNavigation sections={sections} active={active} onSelect={(id) => { setActive(id); if (id !== "all") onCategorySelect?.(sections.find((section) => section.id === id)?.tracking_key); }} rounded={false} activeBackground={tokens.nav_chip_bg} activeColor={tokens.nav_chip_text} />
         {!products.length ? <EmptyMenu /> : <main className="space-y-10 px-6 py-5">{visible.map((section) => <section key={section.id}><div className="mb-5 flex items-center gap-3"><span className="h-px flex-1 bg-current opacity-20" /><h2 className="text-center text-xl italic" style={{ color: tokens.category_title }}>{section.name}</h2><span className="h-px flex-1 bg-current opacity-20" /></div><div className="space-y-5">{section.products.map((product) => <ElegantProductCard key={product.id} product={product} theme={theme} tokens={tokens} />)}</div></section>)}</main>}
@@ -220,7 +220,7 @@ function AdditionalLayout({ variant, business, catalogue, categories, products, 
     <div className="relative min-h-full overflow-hidden" style={{ "--menu-primary": theme.primary_color, "--menu-accent": theme.accent_color, backgroundColor: theme.background_color, color: theme.text_color, fontFamily: FONT_REGISTRY[theme.font_key]?.family || FONT_REGISTRY.inter.family }}>
       <MenuBackground theme={theme} />
       <div className="relative z-1">
-        <MenuCover business={business} catalogue={catalogue} theme={theme} coverUrl={coverUrl} compact={variant === "minimal"} />
+        <MenuCover business={business} catalogue={catalogue} theme={theme} coverUrl={coverUrl} compact={variant === "minimal"} placeholderColor={tokens.nav_chip_text} />
         <header className={`px-6 py-7 ${style.header}`}><p className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-60">{t(style.eyebrow)}</p><h1 className="mt-2 text-3xl font-black">{catalogue.name}</h1><p className="mt-2 text-xs opacity-70">{catalogue.description || business?.name}</p></header>
         <CategoryNavigation sections={sections} active={active} onSelect={choose} rounded={variant !== "luxury"} activeBackground={tokens.nav_chip_bg} activeColor={tokens.nav_chip_text} />
         {!products.length ? <EmptyMenu /> : <main className="space-y-8 px-5 py-6">{visible.map((section) => <section key={section.id}><h2 className="mb-4 text-xl font-black" style={{ color: tokens.category_title }}>{section.name}</h2><div className={style.grid}>{section.products.map((product) => <AdditionalProductCard key={product.id} product={product} theme={theme} tokens={tokens} className={style.card} variant={variant} />)}</div></section>)}</main>}

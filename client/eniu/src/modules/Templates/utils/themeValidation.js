@@ -31,8 +31,12 @@ export function validateTheme(theme) {
   });
   if (!errors.text_color && !errors.background_color && contrastRatio(theme.text_color, theme.background_color) < 4.5) {
     errors.contrast = i18n.t("El texto no tiene suficiente contraste con el fondo.");
-  } else if (!errors.text_color && !errors.primary_color && contrastRatio(theme.text_color, theme.primary_color) < 4.5) {
-    errors.contrast = i18n.t("El texto no tiene suficiente contraste con el color principal.");
+  } else if (theme.tokens?.nav_chip_text && theme.tokens?.nav_chip_bg && contrastRatio(theme.tokens.nav_chip_text, theme.tokens.nav_chip_bg) < 4.5) {
+    // El texto general ya no va sobre `primary_color` en ningún lado del
+    // menú (el chip activo y la portada sin imagen usan `nav_chip_text`
+    // aparte) — se exige contraste sobre el par que de verdad se dibuja
+    // junto, igual que ya hace el backend (`template/services.py`).
+    errors.contrast = i18n.t("El texto del filtro activo no tiene suficiente contraste con su fondo.");
   }
   if (typeof theme.background_opacity !== "number"
     || !Number.isFinite(theme.background_opacity)

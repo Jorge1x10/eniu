@@ -114,8 +114,6 @@ def _validate_theme(theme, current):
         normalized["background_opacity"] = round(float(value), 2)
     if _contrast(normalized["text_color"], normalized["background_color"]) < 4.5:
         raise ValueError(_("El texto no tiene suficiente contraste con el fondo"))
-    if _contrast(normalized["text_color"], normalized["primary_color"]) < 4.5:
-        raise ValueError(_("El texto no tiene suficiente contraste con el color principal"))
     return normalized
 
 
@@ -306,6 +304,24 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
                     theme["background_color"], theme["primary_color"],
                     theme["accent_color"], theme["text_color"],
                 )
+
+        # El texto ya no se pinta directo sobre `primary_color` en ningún
+        # lado del menú (ver `nav_chip_text` en `catalog.py`): tanto el chip
+        # de categoría activo como la portada sin imagen usan ese token
+        # aparte. Por eso el contraste se exige sobre el par que de verdad se
+        # dibuja junto — no sobre `text_color`/`primary_color`, que ya no
+        # coinciden necesariamente. Para quien nunca tocó paletas, ambos
+        # pares siguen siendo el mismo (`derive_tokens` copia uno del otro),
+        # así que la exigencia no cambia para nadie que ya pasaba hoy.
+        resolved_tokens = catalog.resolve_theme(
+            {
+                "background": theme["background_color"], "primary": theme["primary_color"],
+                "accent": theme["accent_color"], "text": theme["text_color"],
+            },
+            color_preset_key, theme_overrides,
+        )
+        if _contrast(resolved_tokens["nav_chip_text"], resolved_tokens["nav_chip_bg"]) < 4.5:
+            raise ValueError(_("El texto del filtro activo no tiene suficiente contraste con su fondo"))
 
         splash_config = _validate_splash(data.get("splash", {}), current.get("splash", DEFAULT_SPLASH))
 
