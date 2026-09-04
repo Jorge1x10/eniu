@@ -445,6 +445,11 @@ _EN = {
         "Your current plan only includes the basic font."
     ),
     "Stripe no está configurado": "Stripe isn't configured",
+    "RevenueCat no está configurado": "RevenueCat isn't configured",
+    "Tu suscripción se contrató en la tienda de tu teléfono y sigue activa. Cancélala desde los ajustes de suscripciones de tu dispositivo para que dejen de cobrarte.": (
+        "Your subscription was purchased through your phone's store and is still active. "
+        "Cancel it from your device's subscription settings so you stop being charged."
+    ),
     "Aún no existe una cuenta de facturación": "There's no billing account yet",
     "No se encontró el precio activo del Plan Esencial": (
         "We couldn't find an active price for the Essential plan"

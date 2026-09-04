@@ -104,6 +104,16 @@ class Config:
         "STRIPE_ESSENTIAL_LOOKUP_KEY",
         "eniu_essential_monthly",
     )
+    # RevenueCat: las compras dentro de la app (App Store / Google Play). El
+    # secreto es el valor que se escribe en el panel de RevenueCat como cabecera
+    # `Authorization` del webhook; sin él el endpoint responde 503 en vez de
+    # aceptar entregas sin verificar.
+    REVENUECAT_WEBHOOK_AUTH = os.getenv("REVENUECAT_WEBHOOK_AUTH")
+    # Las pruebas en sandbox llegan al mismo webhook que las compras reales.
+    # Aceptarlas en producción dejaría regalar el plan de pago con una cuenta de
+    # prueba de Apple, así que se ignoran salvo que se active a propósito.
+    REVENUECAT_ALLOW_SANDBOX = (os.getenv("REVENUECAT_ALLOW_SANDBOX", "").lower()
+                                in {"1", "true", "yes", "on"})
     # Base de los menús publicados: de aquí sale el `/m/<slug>` que la app mete
     # dentro del código QR. Dos condiciones que no son obvias y que ya rompieron
     # los menús una vez:

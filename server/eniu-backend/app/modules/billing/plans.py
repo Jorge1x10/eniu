@@ -60,6 +60,46 @@ PLANS[PRO] = {**PLANS[ESSENTIAL], "name": "Plan Pro"}
 
 PAID_PLAN_KEYS = (ESSENTIAL, PRO)
 
+# De dónde salió la suscripción que el usuario tiene hoy. Importa más allá de
+# la contabilidad: una comprada en la tienda no se puede cancelar desde el
+# servidor (sólo el usuario, desde los ajustes de su teléfono), y la app no
+# debe ofrecer comprar de nuevo a quien ya paga por la web.
+PROVIDER_STRIPE = "stripe"
+PROVIDER_APP_STORE = "app_store"
+PROVIDER_PLAY_STORE = "play_store"
+STORE_PROVIDERS = (PROVIDER_APP_STORE, PROVIDER_PLAY_STORE)
+
+# `store` tal como lo manda RevenueCat en el webhook.
+REVENUECAT_STORES = {
+    "APP_STORE": PROVIDER_APP_STORE,
+    "MAC_APP_STORE": PROVIDER_APP_STORE,
+    "PLAY_STORE": PROVIDER_PLAY_STORE,
+}
+
+# Identificador del "entitlement" configurado en el panel de RevenueCat → plan
+# de Eniu. Se mapea por entitlement y no por `product_id` a propósito: los
+# identificadores de producto cambian entre tiendas y entre periodos (mensual,
+# anual), mientras que el entitlement es justo el concepto estable de "a qué
+# tiene derecho quien compró esto".
+REVENUECAT_ENTITLEMENTS = {
+    "essential": ESSENTIAL,
+    "pro": PRO,
+}
+
+
+def plan_key_for_entitlements(entitlement_ids):
+    """Plan que corresponde a los entitlements de una compra; None si ninguno.
+
+    Devolver None es información, no un error: significa que la compra no
+    concede ningún plan conocido —un producto nuevo que todavía no está
+    mapeado aquí— y quien llama debe registrarlo en vez de adivinar un plan.
+    """
+    for entitlement_id in entitlement_ids or []:
+        plan_key = REVENUECAT_ENTITLEMENTS.get(entitlement_id)
+        if plan_key:
+            return plan_key
+    return None
+
 
 def limits_for(plan_key):
     """Devuelve los límites del plan; cae a gratuito si la clave no existe."""
@@ -116,16 +156,22 @@ def to_public_dict(plan_key):
 
 
 def plan_payload(plan_key, effective_key=None, status="inactive", has_access=False,
-                 cancel_at_period_end=False, current_period_end=None):
+                 cancel_at_period_end=False, current_period_end=None, provider=None):
     """Plan tal como lo consumen el dashboard web y la app móvil.
 
     `plan_key` es lo que el usuario contrató y `effective_key` lo que
     realmente aplica hoy: alguien con el pago rechazado sigue viendo "Plan
     Esencial" en pantalla, pero con los límites del gratuito.
+
+    `provider` viaja para que cada cliente sepa qué puede ofrecer: la app no
+    debe mostrar el botón de comprar a quien ya paga por Stripe, y el panel web
+    no debe ofrecer su portal de facturación a quien compró en la App Store,
+    donde Stripe no sabe nada de esa suscripción.
     """
     effective_key = effective_key or plan_key
     return {
         "key": plan_key,
+        "provider": provider,
         # El nombre se traduce aquí y no en `PLANS` porque ese diccionario es la
         # fuente en español que sirve de clave del catálogo. Los clientes
         # también reciben `key`, por si prefieren rotularlo ellos mismos.

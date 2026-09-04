@@ -7,7 +7,7 @@ from app import storage
 from app.database.db import db
 from app.extensions import bcrypt
 from app.modules.auth.services import revoke_apple_token
-from app.modules.billing.services import cancel_subscription_for_user
+from app.modules.billing.services import cancel_subscription_for_user, store_subscription_needs_manual_cancel
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 from app.modules.products.model import Product
@@ -147,6 +147,10 @@ def delete_current_user(user_id, password=None, confirmation=None):
     elif not isinstance(confirmation, str) or confirmation.strip().upper() != CONFIRMATION_WORD:
         return {"message": _("Escribe {word} para confirmar", word=CONFIRMATION_WORD)}, 400
 
+    # Se consulta antes de borrar: después la fila ya no existe y no habría
+    # forma de saber que quedó un cobro vivo en la tienda.
+    manual_cancel_pending = store_subscription_needs_manual_cancel(user)
+
     cancelled, detail = cancel_subscription_for_user(user)
     if not cancelled:
         current_app.logger.warning("No se pudo cancelar la suscripción al borrar la cuenta: %s", detail)
@@ -179,4 +183,12 @@ def delete_current_user(user_id, password=None, confirmation=None):
         except OSError as error:
             current_app.logger.warning("No se pudo borrar %s: %s", filename, error)
 
+    if manual_cancel_pending:
+        return {
+            "message": _("Tu cuenta y todos sus datos se eliminaron correctamente"),
+            # La suscripción la cobra la tienda, no Eniu: si no la cancela ahí,
+            # le seguirán cobrando por una cuenta que ya no existe.
+            "warning": _("Tu suscripción se contrató en la tienda de tu teléfono y sigue activa. Cancélala desde los ajustes de suscripciones de tu dispositivo para que dejen de cobrarte."),
+            "store_subscription_active": True,
+        }, 200
     return {"message": _("Tu cuenta y todos sus datos se eliminaron correctamente")}, 200

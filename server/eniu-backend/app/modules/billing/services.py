@@ -1,3 +1,5 @@
+import hmac
+import json
 import random
 import string
 from datetime import datetime, timezone
@@ -9,7 +11,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.database.db import db
 from app.extensions import cache
-from app.modules.billing.model import BillingSubscription, StripeWebhookEvent
+from app.modules.billing.model import BillingSubscription, RevenueCatWebhookEvent, StripeWebhookEvent
 from app.modules.billing import plans
 from app.modules.billing.plans import FREE, plan_payload
 from app.modules.business.model import Business
@@ -320,11 +322,22 @@ def _sync_subscription(subscription, fallback_user_id=None):
     record.status = subscription.get("status", "inactive")
     record.cancel_at_period_end = bool(subscription.get("cancel_at_period_end"))
     record.current_period_end = _period_end(subscription)
+    record.provider = plans.PROVIDER_STRIPE
 
-    if had_access and record.status in TERMINAL_STATUSES:
-        owner = db.session.get(User, record.user_id)
-        if owner:
-            apply_free_plan_state(owner)
+    _downgrade_if_access_lost(record, had_access)
+
+
+def _downgrade_if_access_lost(record, had_access):
+    """Deja la cuenta como el plan gratuito si acaba de perder el acceso.
+
+    Se llama desde los dos webhooks (Stripe y RevenueCat) para que perder el
+    acceso signifique exactamente lo mismo sin importar quién cobraba.
+    """
+    if not had_access or record.status not in TERMINAL_STATUSES:
+        return
+    owner = db.session.get(User, record.user_id)
+    if owner:
+        apply_free_plan_state(owner)
 
 
 def _error_detail(error):
@@ -396,6 +409,185 @@ def process_webhook(payload, signature):
         current_app.logger.exception(error)
         return {"message": _("No fue posible procesar el webhook")}, 500
 
+# --- RevenueCat: compras dentro de la app ----------------------------------
+
+# Eventos que conceden o mantienen el acceso. `PRODUCT_CHANGE` está aquí porque
+# cambiar de mensual a anual no debe dejar a nadie sin plan a mitad del cambio.
+REVENUECAT_GRANTING_EVENTS = {
+    "INITIAL_PURCHASE", "RENEWAL", "UNCANCELLATION", "PRODUCT_CHANGE", "NON_RENEWING_PURCHASE",
+}
+# Estados que RevenueCat provoca sin que se pierda el acceso todavía: la tienda
+# sigue reintentando el cobro o el usuario pausó la suscripción. Igual que con
+# Stripe, no se despublica nada mientras haya posibilidad de recuperarse.
+REVENUECAT_PENDING_STATUSES = {"BILLING_ISSUE": "past_due", "SUBSCRIPTION_PAUSED": "paused"}
+
+
+def _revenuecat_configured():
+    return bool(current_app.config.get("REVENUECAT_WEBHOOK_AUTH"))
+
+
+def _record_revenuecat_event(event_id, event_type, **extra):
+    """Marca el evento como procesado y arma la respuesta.
+
+    Siempre responde 200: RevenueCat reintenta cualquier respuesta que no sea
+    2xx, y los casos que aquí se descartan (sandbox, usuario inexistente) no
+    van a cambiar por reintentar.
+    """
+    try:
+        db.session.add(RevenueCatWebhookEvent(event_id=event_id, event_type=event_type))
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return {"received": True, "duplicate": True}, 200
+    return {"received": True, **extra}, 200
+
+
+def _revenuecat_expiration(event):
+    """Hasta cuándo llega el acceso comprado, en UTC.
+
+    Se toma el máximo entre el vencimiento normal y el del periodo de gracia:
+    cuando la tienda está reintentando un cobro, el segundo va más lejos y es
+    el que de verdad marca hasta cuándo el usuario conserva el acceso.
+    """
+    stamps = [event.get("expiration_at_ms"), event.get("grace_period_expiration_at_ms")]
+    latest = max((value for value in stamps if value), default=None)
+    return datetime.fromtimestamp(latest / 1000, timezone.utc) if latest else None
+
+
+def _apply_revenuecat_event(user, event, event_type):
+    """Traduce un evento de RevenueCat a la misma fila que usa Stripe.
+
+    El resto del backend (`plans.py`, `guards.py`) no sabe ni tiene que saber
+    quién cobró: lee `plan_key` y `status` de esta fila, y por eso una compra
+    en la App Store desbloquea exactamente lo mismo que un pago por Stripe.
+    """
+    record = _get_or_create_record(user)
+    had_access = record.has_access
+    expires_at = _revenuecat_expiration(event)
+    store = plans.REVENUECAT_STORES.get(event.get("store"), plans.PROVIDER_APP_STORE)
+
+    if event_type in REVENUECAT_GRANTING_EVENTS:
+        plan_key = plans.plan_key_for_entitlements(event.get("entitlement_ids"))
+        if not plan_key:
+            # Un producto que todavía no está mapeado en `REVENUECAT_ENTITLEMENTS`.
+            # Conceder "algo" a ciegas sería peor que no conceder nada: quedaría
+            # un plan que nadie sabe de dónde salió.
+            current_app.logger.error(
+                "RevenueCat: entitlements sin plan conocido (%s) para el usuario %s",
+                event.get("entitlement_ids"), user.id,
+            )
+            return "unmapped_entitlement"
+        _warn_if_replacing_stripe(record, user)
+        record.plan_key = plan_key
+        record.status = "trialing" if event.get("period_type") == "TRIAL" else "active"
+        record.cancel_at_period_end = False
+    elif event_type == "CANCELLATION":
+        # Cancelar en la tienda apaga la renovación, no el acceso: se conserva
+        # hasta el final del periodo ya pagado. Un reembolso llega como este
+        # mismo evento pero con el vencimiento ya en el pasado, y entonces sí
+        # corta de inmediato.
+        record.cancel_at_period_end = True
+        if expires_at and expires_at <= datetime.now(timezone.utc):
+            record.status = "canceled"
+    elif event_type == "EXPIRATION":
+        record.status = "canceled"
+    elif event_type in REVENUECAT_PENDING_STATUSES:
+        record.status = REVENUECAT_PENDING_STATUSES[event_type]
+    else:
+        # Un tipo de evento que este código no conoce no debe tocar el plan de
+        # nadie; queda registrado para decidir qué hacer con él.
+        current_app.logger.info("RevenueCat: evento no manejado %s", event_type)
+        return "unhandled"
+
+    record.provider = store
+    record.revenuecat_app_user_id = event.get("app_user_id")
+    record.store_product_id = event.get("product_id") or record.store_product_id
+    if expires_at:
+        record.current_period_end = expires_at
+
+    _downgrade_if_access_lost(record, had_access)
+    return "applied"
+
+
+def _warn_if_replacing_stripe(record, user):
+    """Avisa si alguien acaba de comprar en la tienda teniendo Stripe activo.
+
+    No se borra nada ni se corta el acceso: la compra ya ocurrió y el usuario
+    tiene derecho a lo que pagó. Pero los identificadores de Stripe se
+    conservan y el caso queda registrado como error, porque significa que a esa
+    persona le están cobrando dos veces y alguien tiene que devolvérselo.
+    """
+    if record.stripe_subscription_id and record.status in OPEN_SUBSCRIPTION_STATUSES:
+        current_app.logger.error(
+            "Cobro duplicado: el usuario %s compró en la tienda con la suscripción de Stripe %s todavía activa",
+            user.id, record.stripe_subscription_id,
+        )
+
+
+def process_revenuecat_webhook(payload, authorization):
+    if not _revenuecat_configured():
+        return {"message": _("RevenueCat no está configurado")}, 503
+    # `compare_digest` en vez de `==`: comparar secretos carácter a carácter
+    # filtra por tiempo cuánto del secreto se acertó.
+    expected = current_app.config["REVENUECAT_WEBHOOK_AUTH"]
+    if not hmac.compare_digest((authorization or "").encode(), expected.encode()):
+        return {"message": "Webhook inválido"}, 401
+
+    try:
+        body = json.loads(payload or b"{}")
+        event = body["event"]
+        if not isinstance(event, dict):
+            raise ValueError("event no es un objeto")
+    except (ValueError, TypeError, KeyError):
+        return {"message": "Webhook inválido"}, 400
+
+    event_id, event_type = event.get("id"), event.get("type")
+    if not event_id or not event_type:
+        return {"message": "Webhook inválido"}, 400
+    if RevenueCatWebhookEvent.query.filter_by(event_id=event_id).first():
+        return {"received": True, "duplicate": True}, 200
+
+    try:
+        # El botón "enviar evento de prueba" del panel de RevenueCat: sirve para
+        # comprobar que la URL responde, no trae una compra real.
+        if event_type == "TEST":
+            return _record_revenuecat_event(event_id, event_type, ignored="test")
+
+        # Un evento de sandbox tratado como real dejaría que cualquiera con una
+        # cuenta de prueba de Apple se regalara el plan de pago.
+        if event.get("environment") == "SANDBOX" and not current_app.config.get("REVENUECAT_ALLOW_SANDBOX"):
+            return _record_revenuecat_event(event_id, event_type, ignored="sandbox")
+
+        user = _user(event.get("app_user_id"))
+        if not user:
+            # El `app_user_id` lo fija la app con `Purchases.logIn(user.id)`. Si
+            # no corresponde a nadie es un fallo de configuración, no algo que
+            # se arregle reintentando: se registra y se da por procesado.
+            current_app.logger.warning(
+                "RevenueCat: evento %s para un app_user_id desconocido (%s)",
+                event_type, event.get("app_user_id"),
+            )
+            return _record_revenuecat_event(event_id, event_type, ignored="unknown_user")
+
+        outcome = _apply_revenuecat_event(user, event, event_type)
+        return _record_revenuecat_event(event_id, event_type, outcome=outcome)
+    except SQLAlchemyError as error:
+        db.session.rollback()
+        current_app.logger.exception(error)
+        return {"message": _("No fue posible procesar el webhook")}, 500
+
+
+def store_subscription_needs_manual_cancel(user):
+    """True si al borrar la cuenta queda un cobro que sólo el usuario puede parar.
+
+    Sirve para decírselo en la respuesta del borrado: la cuenta desaparece de
+    Eniu, pero la suscripción vive en Apple/Google y sigue cobrando hasta que
+    la cancele desde los ajustes de su teléfono.
+    """
+    record = getattr(user, "billing_subscription", None)
+    return bool(record and record.is_store_managed and record.has_access)
+
+
 def cancel_subscription_for_user(user):
     """Cancela en Stripe la suscripción del usuario antes de borrar su cuenta.
 
@@ -405,7 +597,20 @@ def cancel_subscription_for_user(user):
     entrar a cancelarlo.
     """
     record = getattr(user, "billing_subscription", None)
-    if not record or not record.stripe_subscription_id:
+    if not record:
+        return True, None
+    # Una suscripción de la App Store o Google Play no se puede cancelar desde
+    # aquí: sólo el dueño del teléfono, desde los ajustes de su tienda. Aun así
+    # el borrado sigue adelante —Apple exige poder borrar la cuenta desde la
+    # app, y bloquearlo por esto dejaría a la persona atrapada—, pero se avisa
+    # arriba para poder decírselo, porque si no cancela le seguirán cobrando.
+    if record.is_store_managed and record.has_access:
+        current_app.logger.warning(
+            "Cuenta borrada con una suscripción de %s activa: el usuario %s debe cancelarla en su tienda",
+            record.provider, user.id,
+        )
+        return True, None
+    if not record.stripe_subscription_id:
         return True, None
     if not _stripe_configured():
         return False, _("Stripe no está configurado")
