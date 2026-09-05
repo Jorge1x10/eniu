@@ -112,7 +112,7 @@ class RevenueCatWebhookTestCase(unittest.TestCase):
         with self.app.app_context():
             self.assertEqual(RevenueCatWebhookEvent.query.count(), 1)
 
-    def test_expiration_downgrades_and_unpublishes_menus(self):
+    def test_expiration_downgrades_but_leaves_one_menu_online(self):
         self.post(self.purchase_event())
         with self.app.app_context():
             user = User.query.one()
@@ -131,8 +131,40 @@ class RevenueCatWebhookTestCase(unittest.TestCase):
             record = self.record()
             self.assertEqual(record.status, "canceled")
             self.assertFalse(record.has_access)
-            # Perder el acceso hace lo mismo que con Stripe: despublicar.
-            self.assertFalse(Catalogue.query.one().is_published)
+            # Perder el acceso hace lo mismo que con Stripe, y eso incluye
+            # respetar el menú que el plan gratuito sí permite tener en línea:
+            # a quien canceló desde la App Store tampoco se le cae el QR de la
+            # mesa. Lo que pierde son las funciones de pago.
+            self.assertTrue(Catalogue.query.one().is_published)
+
+    def test_expiration_unpublishes_every_menu_except_the_last(self):
+        self.post(self.purchase_event())
+        with self.app.app_context():
+            user = User.query.one()
+            business = Business(owner_id=user.id, name="Café Aurora")
+            db.session.add(business)
+            db.session.flush()
+            db.session.add_all([
+                Catalogue(
+                    business_id=business.id, name="Carta vieja", is_published=True,
+                    published_at=datetime(2030, 1, 1, tzinfo=timezone.utc),
+                ),
+                Catalogue(
+                    business_id=business.id, name="Carta nueva", is_published=True,
+                    published_at=datetime(2030, 6, 1, tzinfo=timezone.utc),
+                ),
+            ])
+            db.session.commit()
+
+        self.post(self.purchase_event(
+            id="evt_expiration", type="EXPIRATION", expiration_at_ms=_ms(timedelta(seconds=-1)),
+        ))
+
+        with self.app.app_context():
+            publicados = [c.name for c in Catalogue.query.filter_by(is_published=True).all()]
+            # El gratuito permite un menú publicado, no dos: se conserva el
+            # último que estuvo en línea, que es el que la gente está usando.
+            self.assertEqual(publicados, ["Carta nueva"])
 
     def test_cancellation_keeps_access_until_the_period_ends(self):
         self.post(self.purchase_event())

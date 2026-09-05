@@ -265,13 +265,43 @@ def _deactivate_paid_template_features(catalogue_ids):
             config.splash_enabled = False
 
 
+def _catalogue_to_keep_published(business_id):
+    """El menú que sigue publicado tras la bajada, o `None` si no hay ninguno.
+
+    El plan gratuito incluye un menú publicado con su enlace y su código QR, así
+    que quitárselo al bajar de plan le cobraba al usuario algo a lo que sí tiene
+    derecho: el QR pegado en la mesa dejaba de servir sin que él hiciera nada.
+
+    Se elige entre los que ya estaban publicados y no entre todos, porque un
+    borrador recién creado no debe ganarle a un menú que lleva meses en
+    circulación. Si no había ninguno publicado no hay nada que conservar.
+    """
+    return (
+        Catalogue.query
+        .filter_by(business_id=business_id, is_published=True)
+        # Por fecha de publicación: es la que dice cuál se estuvo usando.
+        # El desempate por id evita que dos publicados en el mismo instante
+        # hagan que "el último" cambie entre consultas.
+        .order_by(
+            Catalogue.published_at.desc().nullslast(),
+            Catalogue.created_at.desc(),
+            Catalogue.id.desc(),
+        )
+        .first()
+    )
+
+
 def apply_free_plan_state(user):
     """Deja la cuenta como la ve el plan gratuito tras perder el de pago.
 
-    Despublica todos los menús, desactiva todos los negocios salvo el más
-    reciente y apaga las funciones de plantilla que el plan gratuito no
-    incluye. No borra nada: el `public_slug` de cada menú se conserva —así que
-    volver a publicar recupera la misma URL y los códigos QR ya impresos siguen
+    Desactiva todos los negocios salvo el más reciente, despublica todos sus
+    menús menos uno y apaga en ese las funciones de plantilla que el plan
+    gratuito no incluye. El que se conserva es el último publicado del negocio
+    que queda activo: el gratuito da derecho a un menú en línea, así que dejar
+    la cuenta sin ninguno sería cobrarle al usuario de más.
+
+    No borra nada: el `public_slug` de cada menú se conserva —así que volver a
+    publicar recupera la misma URL y los códigos QR ya impresos siguen
     sirviendo— y las imágenes subidas se quedan donde estaban.
     """
     businesses = (
@@ -290,9 +320,18 @@ def apply_free_plan_state(user):
         row[0] for row in
         db.session.query(Catalogue.id).filter(Catalogue.business_id.in_(business_ids)).all()
     ]
-    Catalogue.query.filter(Catalogue.business_id.in_(business_ids)).update(
+    # Se resuelve antes de despublicar: después ya no quedaría ninguno marcado
+    # como publicado y no habría cómo saber cuál era el último.
+    conservado = _catalogue_to_keep_published(kept.id)
+
+    a_despublicar = Catalogue.query.filter(Catalogue.business_id.in_(business_ids))
+    if conservado is not None:
+        a_despublicar = a_despublicar.filter(Catalogue.id != conservado.id)
+    a_despublicar.update(
         {"is_published": False, "published_at": None}, synchronize_session=False
     )
+    # Las funciones de pago se apagan en todos, incluido el que sigue en línea:
+    # ese se queda publicado, pero con la plantilla y los extras del gratuito.
     _deactivate_paid_template_features(catalogue_ids)
     for business in businesses:
         business.is_active = business.id == kept.id
