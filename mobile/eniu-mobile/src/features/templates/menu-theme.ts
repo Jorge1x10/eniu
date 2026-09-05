@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-import { FONT_KEYS, TEMPLATE_KEYS, type FontKey, type MenuSplash, type MenuTheme, type TemplateConfig, type TemplateKey, type ThemeColor } from '@/types/models';
+import type { FontKey, MenuSplash, MenuTheme, TemplateConfig, TemplateKey, ThemeColor, ThemeTokens } from '@/types/models';
 import i18n from '@/i18n';
 
 export const DEFAULT_SPLASH: MenuSplash = { enabled: false, duration: 2.5, image_url: null };
@@ -19,6 +19,11 @@ export const DEFAULT_THEME: MenuTheme = {
   background_opacity: 0.2,
   cover_image_url: null,
   background_image_url: null,
+  cover_focal_x: 0.5,
+  cover_focal_y: 0.5,
+  background_preset_key: null,
+  color_preset_key: 'classic',
+  theme_overrides: {},
 };
 
 export const COLOR_FIELDS: { key: ThemeColor; label: string; hint: string }[] = [
@@ -28,37 +33,37 @@ export const COLOR_FIELDS: { key: ThemeColor; label: string; hint: string }[] = 
   { key: 'text_color', label: 'Texto', hint: 'Títulos, precios y descripciones' },
 ];
 
-export const TEMPLATE_OPTIONS: { key: TemplateKey; name: string; description: string }[] = [
-  { key: 'modern', name: 'Moderna', description: 'Tarjetas visuales y navegación redondeada.' },
-  { key: 'minimal', name: 'Minimalista', description: 'Lectura rápida y filas limpias.' },
-  { key: 'elegant', name: 'Elegante', description: 'Composición editorial con más aire.' },
-  { key: 'bistro', name: 'Bistró', description: 'Carta cálida con acentos laterales.' },
-  { key: 'bold', name: 'Impactante', description: 'Bloques fuertes y bordes marcados.' },
-  { key: 'natural', name: 'Natural', description: 'Formas orgánicas y tarjetas suaves.' },
-  { key: 'retro', name: 'Retro', description: 'Marcos punteados y aire nostálgico.' },
-  { key: 'luxury', name: 'Lujo', description: 'Presentación sobria y premium.' },
-];
+/** Los 4 colores que sí tienen columna propia en la base. */
+export const CORE_COLOR_FIELDS = new Set<ThemeColor>(COLOR_FIELDS.map((field) => field.key));
 
-export const FONT_OPTIONS: { key: FontKey; label: string }[] = [
-  { key: 'inter', label: 'Inter' },
-  { key: 'poppins', label: 'Poppins' },
-  { key: 'montserrat', label: 'Montserrat' },
-  { key: 'playfair', label: 'Playfair Display' },
-  { key: 'lora', label: 'Lora' },
-];
+/** Los mismos 4, con el nombre que usan los tokens del catálogo. */
+export const CORE_TOKEN_KEYS = new Set<string>(['background', 'primary', 'accent', 'text']);
 
 /**
- * La app no empaqueta las tipografías del menú publicado, así que la vista
- * previa usa la familia del sistema más parecida: lo que el usuario necesita
- * distinguir aquí es si su menú se lee con serifas o sin ellas.
+ * La app no empaqueta las 35 tipografías del menú publicado —serían decenas de
+ * megas en el binario para una vista previa—, así que usa la familia del
+ * sistema más parecida. Lo que el usuario necesita distinguir aquí es el
+ * carácter de la letra: con serifas, sin ellas, de máquina de escribir o
+ * manuscrita.
  */
+const SERIF_FONTS = new Set([
+  'playfair', 'lora', 'merriweather', 'libre_baskerville', 'crimson_text',
+  'pt_serif', 'cormorant', 'fraunces', 'dm_serif_display', 'bitter', 'abril_fatface',
+]);
+const MONO_FONTS = new Set(['jetbrains_mono', 'space_mono']);
+const HANDWRITTEN_FONTS = new Set(['pacifico', 'dancing_script', 'caveat']);
+
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
+export const MONOSPACE = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
+const HANDWRITTEN = Platform.select({ ios: 'Snell Roundhand', android: 'casual', default: 'cursive' });
 
 export function fontFamilyFor(fontKey: FontKey, templateKey?: TemplateKey) {
-  if (fontKey === 'playfair' || fontKey === 'lora') return SERIF;
-  // Igual que en la web: «Elegante» y «Lujo» ya son editoriales por definición,
-  // y con la tipografía por defecto se muestran con serifas.
-  if (fontKey === 'inter' && (templateKey === 'elegant' || templateKey === 'luxury')) return SERIF;
+  if (MONO_FONTS.has(fontKey)) return MONOSPACE;
+  if (HANDWRITTEN_FONTS.has(fontKey)) return HANDWRITTEN;
+  if (SERIF_FONTS.has(fontKey)) return SERIF;
+  // Igual que en la web: las plantillas editoriales ya son de serifas por
+  // definición, y con la tipografía por defecto se muestran así.
+  if (fontKey === 'inter' && (templateKey === 'elegant' || templateKey === 'luxury' || templateKey === 'story')) return SERIF;
   return undefined;
 }
 
@@ -88,6 +93,52 @@ export function readableOn(background: string) {
   return contrastRatio('#111111', background) >= contrastRatio('#FFFFFF', background) ? '#111111' : '#FFFFFF';
 }
 
+function hexToRgb(hex: string) {
+  const value = hex.replace('#', '');
+  return [0, 2, 4].map((index) => parseInt(value.slice(index, index + 2), 16));
+}
+
+function mix(hexA: string, hexB: string, weight: number) {
+  const a = hexToRgb(hexA);
+  const b = hexToRgb(hexB);
+  const mixed = a.map((channel, index) => Math.round(channel * weight + b[index] * (1 - weight)));
+  return `#${mixed.map((channel) => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+}
+
+/**
+ * Espejo de `catalog.derive_tokens` del backend: da una vista previa correcta
+ * de los tokens que no tienen campo propio mientras se editan los colores, sin
+ * esperar a que el guardado devuelva los valores definitivos.
+ */
+export function deriveTokens(background: string, primary: string, text: string): Omit<ThemeTokens, 'background' | 'primary' | 'accent' | 'text'> {
+  return {
+    surface: background,
+    muted: mix(text, background, 0.65),
+    price: text,
+    category_title: text,
+    nav_chip_bg: primary,
+    nav_chip_text: text,
+  };
+}
+
+/**
+ * Los 10 colores con los que se dibuja, vengan de donde vengan.
+ *
+ * Los 4 planos son las columnas reales de la base y mandan siempre; el resto
+ * sale de `tokens` (que el servidor ya resolvió) y, si todavía no llegó, de
+ * derivarlos igual que lo haría el backend.
+ */
+export function resolveTokens(theme: MenuTheme): ThemeTokens {
+  return {
+    ...deriveTokens(theme.background_color, theme.primary_color, theme.text_color),
+    ...(theme.tokens ?? {}),
+    background: theme.background_color,
+    primary: theme.primary_color,
+    accent: theme.accent_color,
+    text: theme.text_color,
+  };
+}
+
 /**
  * Repite las reglas que aplica el servidor. Sin esto el usuario sólo se entera
  * de que dos colores no contrastan cuando falla el guardado, con todo el resto
@@ -95,19 +146,25 @@ export function readableOn(background: string) {
  */
 export function validateTheme(theme: MenuTheme) {
   const errors: Partial<Record<ThemeColor | 'contrast', string>> = {};
-  COLOR_FIELDS.forEach(({ key }) => { if (!normalizeHex(theme[key])) errors[key] = i18n.t(i18n.t(i18n.t("Usa un color hexadecimal válido."))); });
+  COLOR_FIELDS.forEach(({ key }) => { if (!normalizeHex(theme[key])) errors[key] = i18n.t("Usa un color hexadecimal válido."); });
+  const tokens = resolveTokens(theme);
   if (!errors.text_color && !errors.background_color && contrastRatio(theme.text_color, theme.background_color) < 4.5) {
-    errors.contrast = i18n.t(i18n.t(i18n.t("El texto no contrasta lo suficiente con el fondo.")));
-  } else if (!errors.text_color && !errors.primary_color && contrastRatio(theme.text_color, theme.primary_color) < 4.5) {
-    errors.contrast = i18n.t(i18n.t(i18n.t("El texto no contrasta lo suficiente con el color principal.")));
+    errors.contrast = i18n.t("El texto no contrasta lo suficiente con el fondo.");
+  } else if (contrastRatio(tokens.nav_chip_text, tokens.nav_chip_bg) < 4.5) {
+    // Se mide el par que de verdad se dibuja —el chip de categoría activo—, y
+    // no texto contra color principal: con `nav_chip_text` aparte, una paleta
+    // oscura puede usar texto claro en general y oscuro sólo sobre el chip.
+    errors.contrast = i18n.t("El texto del filtro activo no contrasta lo suficiente con su fondo.");
   }
   return errors;
 }
 
 export function normalizeConfiguration(configuration?: Partial<TemplateConfig> | null): TemplateConfig {
-  const templateKey = TEMPLATE_KEYS.includes(configuration?.template_key as TemplateKey) ? configuration!.template_key! : 'modern';
+  // No se valida la clave contra una lista local: el servidor ya la validó al
+  // guardarla, y rechazarla aquí haría que una plantilla nueva se viera como
+  // "Moderna" hasta publicar una versión en las tiendas.
+  const templateKey = configuration?.template_key || 'modern';
   const theme = { ...DEFAULT_THEME, ...(configuration?.theme ?? {}) };
-  if (!FONT_KEYS.includes(theme.font_key)) theme.font_key = 'inter';
   const splash = { ...DEFAULT_SPLASH, ...(configuration?.splash ?? {}) };
   return { template_key: templateKey, theme, splash };
 }
@@ -128,5 +185,20 @@ export function themePayload(theme: MenuTheme) {
     show_cover: theme.show_cover,
     show_product_images: theme.show_product_images,
     background_opacity: theme.background_opacity,
+    cover_focal_x: theme.cover_focal_x,
+    cover_focal_y: theme.cover_focal_y,
+    background_preset_key: theme.background_preset_key ?? null,
   };
+}
+
+/**
+ * La paleta y los ajustes finos viajan al lado de `theme`, no dentro: el
+ * backend los valida por separado (ver `THEME_FIELDS` en `template/services.py`).
+ * Se manda uno u otro, nunca los dos: elegir paleta descarta los retoques a
+ * mano, y retocar a mano deja de seguir la paleta.
+ */
+export function colorPayload(theme: MenuTheme) {
+  return theme.color_preset_key
+    ? { color_preset_key: theme.color_preset_key }
+    : { theme_overrides: theme.theme_overrides ?? {} };
 }

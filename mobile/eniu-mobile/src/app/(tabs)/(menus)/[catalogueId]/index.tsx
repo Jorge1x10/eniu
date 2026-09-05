@@ -6,7 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { MenuSkeleton } from '@/components/menu-skeleton';
 import { Divider } from '@/components/ui/divider';
-import { ChevronRightIcon, GridIcon, LinkIcon, PaletteIcon, TagIcon, TrashIcon } from '@/components/ui/icons';
+import { ChevronRightIcon, GridIcon, LinkIcon, PaletteIcon, StarIcon, TagIcon, TrashIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
@@ -21,6 +21,7 @@ const actions = [
   { route: 'products', title: 'Productos', description: 'Crea productos con o sin categoría.', action: 'Administrar productos', Icon: TagIcon, unit: ['producto', 'productos'] },
   { route: 'categories', title: 'Categorías', description: 'Organiza los productos de este menú.', action: 'Administrar categorías', Icon: GridIcon, unit: ['categoría', 'categorías'] },
   { route: 'template', title: 'Diseño y plantilla', description: 'Elige el diseño y personaliza la identidad del menú.', action: 'Personalizar plantilla', Icon: PaletteIcon },
+  { route: 'promotions', title: 'Promociones', description: 'Resalta productos en días específicos.', action: 'Administrar promociones', Icon: StarIcon },
   { route: 'publication', title: 'Publicar y compartir', description: 'Publica y comparte este menú con tus clientes.', action: 'Administrar publicación', Icon: LinkIcon },
 ] as const;
 

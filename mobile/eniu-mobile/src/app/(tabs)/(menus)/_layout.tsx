@@ -25,6 +25,7 @@ export default function MenusLayout() {
       <Stack.Screen name="[catalogueId]/products" options={{ title: 'Productos' }} />
       <Stack.Screen name="[catalogueId]/categories" options={{ title: t("Categorías") }} />
       <Stack.Screen name="[catalogueId]/template" options={{ title: t("Diseño del menú") }} />
+      <Stack.Screen name="[catalogueId]/promotions" options={{ title: t("Promociones") }} />
       <Stack.Screen name="[catalogueId]/publication" options={{ title: t("Publicar y compartir") }} />
     </Stack>
   );

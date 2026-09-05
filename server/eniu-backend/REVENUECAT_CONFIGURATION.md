@@ -76,19 +76,42 @@ El endpoint verifica la cabecera en tiempo constante, deduplica por `event.id`
 
 Aplica la migración con `flask db upgrade` antes de habilitar el flujo.
 
-## Lo que la app móvil tiene que hacer
+## La app móvil (ya implementada)
 
-- Llamar a `Purchases.logIn(user.id)` al iniciar sesión: el `app_user_id` de
-  RevenueCat **debe** ser el id de usuario de Eniu, porque es lo único con lo
-  que el webhook sabe a quién aplicarle la compra. Un `app_user_id` que no
-  corresponda a nadie se registra y se descarta.
-- Llamar a `Purchases.logOut()` al cerrar sesión, para no dejar la compra
-  atada a la siguiente persona que use el teléfono.
-- Tras comprar, volver a pedir `/api/auth/me` (o `/api/billing/subscription`)
-  para refrescar el plan: la fuente de verdad sigue siendo el backend.
-- El paywall necesita, por exigencia de Apple: botón visible de **Restaurar
-  compras**, el precio traído de la tienda (no escrito a mano) y enlaces a los
-  Términos y al Aviso de Privacidad.
+El código vive en `mobile/eniu-mobile`:
+
+- `src/features/billing/purchases.ts` — configura el SDK, ata la compra a la
+  cuenta con `Purchases.logIn(user.id)` (el `app_user_id` **debe** ser el id de
+  usuario de Eniu: es lo único con lo que el webhook sabe a quién aplicarle la
+  compra) y expone comprar/restaurar.
+- `src/features/auth/auth-context.tsx` — llama a `identifyPurchases` al iniciar
+  sesión y al recuperar una sesión guardada, y a `forgetPurchases` al salir.
+- `src/app/paywall.tsx` — la pantalla de compra, con lo que Apple exige:
+  **Restaurar compras** visible, el precio traído de la tienda (nunca escrito a
+  mano) y enlaces a Términos y Privacidad. Tras comprar vuelve a pedir
+  `/api/auth/me`, porque el plan lo dicta el backend, no el SDK.
+- No ofrece comprar a quien ya paga por Stripe (`plan.provider === 'stripe'`):
+  se le cobraría dos veces.
+
+### Llaves en el build
+
+Las llaves públicas de RevenueCat van como variables de entorno en los perfiles
+de `eas.json` (son claves de cliente, no secretos de servidor):
+
+```json
+"env": {
+  "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_...",
+  "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_..."
+}
+```
+
+Sin ellas la app funciona igual, sólo que sin ruta de compra: el paywall avisa
+que todavía no está disponible y `PlanNotice` no muestra el botón de mejorar,
+para no llevar a nadie a un callejón sin salida. Ése es el estado normal
+mientras la cuenta de RevenueCat no esté lista.
+
+Como `react-native-purchases` es un módulo nativo, **hace falta un build nuevo**
+(`eas build`): no basta con una actualización OTA.
 
 ## Dos casos que ya están resueltos en el backend
 

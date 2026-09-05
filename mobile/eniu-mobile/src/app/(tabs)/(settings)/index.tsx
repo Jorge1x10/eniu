@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 
 import { BusinessPhotoField } from '@/components/business-photo';
 import { BusinessSwitcher } from '@/components/business-switcher';
@@ -111,6 +112,16 @@ export default function SettingsScreen() {
           <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 12.5 }}>{user?.email}</Text>
         </View>
       </View>
+
+      <Section label={t("Mi plan")}>
+        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>{user?.plan?.name || t("Plan gratuito")}</Text>
+          {user?.plan?.has_access ? <Text style={{ color: theme.muted, fontSize: 12.5 }}>{t("Activo")}</Text> : null}
+        </View>
+        {user?.plan?.has_access
+          ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{t("Administra o cancela tu suscripción desde los ajustes de suscripciones de tu dispositivo.")}</Text>
+          : <Button onPress={() => router.push('/paywall')}>{t("Ver planes")}</Button>}
+      </Section>
 
       <Section label={t("Mi perfil")}><FormField label={t("Nombre visible")} value={profile.name} onChangeText={updateProfile('name')} /><FormField label={t("Nombre de usuario")} value={profile.username} onChangeText={updateProfile('username')} autoCapitalize="none" /><FormField label={t("Teléfono")} value={profile.phone_number} onChangeText={updateProfile('phone_number')} keyboardType="phone-pad" /><FormField label={t("Correo electrónico")} value={user?.email || ''} editable={false} /><Button loading={saving === 'profile'} onPress={saveProfile}>{t("Guardar perfil")}</Button></Section>
 
