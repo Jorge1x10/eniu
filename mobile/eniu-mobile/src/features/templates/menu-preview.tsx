@@ -110,10 +110,40 @@ function variantFor(templateKey: TemplateKey): Variant {
   return VARIANTS[templateKey] ?? VARIANTS.modern;
 }
 
-function buildSections(categories: Category[], products: Product[]): Section[] {
+/**
+ * Secciones del menú, igual que en la web (`templates/menuData.js`).
+ *
+ * "Promociones de hoy" encabeza el menú y repite productos que también salen en
+ * su categoría: la duplicación es el punto, es un escaparate. Sólo aparece si
+ * alguna promoción activa hoy pidió encabezar, así que un menú sin promociones
+ * destacadas se ve exactamente igual que antes.
+ */
+function buildSections(categories: Category[], products: Product[], labels: { other: string; promotionsToday: string }): Section[] {
   const sections = categories.map((category) => ({ id: category.id, name: category.name, products: products.filter((product) => product.category_id === category.id) }));
   const rest = products.filter((product) => !product.category_id);
-  return rest.length ? [...sections, { id: 'other', name: 'Otros', products: rest }] : sections;
+  if (rest.length) sections.push({ id: 'other', name: labels.other, products: rest });
+
+  const featured = products.filter((product) => product.promo_featured);
+  if (!featured.length) return sections;
+  // Ids propios: el mismo producto se dibuja dos veces y las listas necesitan
+  // distinguir las dos tarjetas.
+  return [
+    { id: 'promotions-today', name: labels.promotionsToday, products: featured.map((product) => ({ ...product, id: `promo-${product.id}` })) },
+    ...sections,
+  ];
+}
+
+/**
+ * Etiqueta de promoción del día. Sólo pinta lo que el backend ya resolvió: aquí
+ * no se sabe nada de días ni de fechas.
+ */
+function PromoBadge({ label, tokens, fontFamily }: { label?: string | null; tokens: ThemeTokens; fontFamily?: string }) {
+  if (!label) return null;
+  return (
+    <View style={{ alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1, backgroundColor: tokens.accent }}>
+      <Text numberOfLines={1} style={{ color: '#111111', fontSize: 8, fontWeight: '800', textTransform: 'uppercase', fontFamily }}>{label}</Text>
+    </View>
+  );
 }
 
 function mainImage(product: Product) {
@@ -149,7 +179,7 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
   const baseFont = fontFamilyFor(theme.font_key, templateKey);
   const fontFamily = variant.mono ? MONOSPACE : baseFont;
   const text = tokens.text;
-  const sections = buildSections(categories, products);
+  const sections = buildSections(categories, products, { other: t("Otros"), promotionsToday: t("Promociones de hoy") });
   const [selected, setSelected] = useState('all');
   const active = selected !== 'all' && !sections.some((section) => section.id === selected) ? 'all' : selected;
   const visible = active === 'all' || variant.nav === 'none' ? sections : sections.filter((section) => section.id === active);
@@ -312,6 +342,7 @@ function PreviewProduct({ product, variant, theme, tokens, fontFamily, currency,
     return (
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, paddingVertical: 5, opacity: product.is_available ? 1 : 0.5 }}>
         <Text numberOfLines={1} style={{ color: text, fontSize: 11.5, fontFamily, flexShrink: 1 }}>{product.name}</Text>
+        <PromoBadge label={product.promo_label} tokens={tokens} fontFamily={fontFamily} />
         <View style={{ flex: 1, minWidth: 8, borderBottomWidth: 1, borderStyle: 'dotted', borderColor: text, opacity: 0.4 }} />
         <Text style={{ color: tokens.price, fontSize: 11.5, fontWeight: '700', fontFamily }}>{price}</Text>
       </View>
@@ -341,6 +372,7 @@ function PreviewProduct({ product, variant, theme, tokens, fontFamily, currency,
         {showImages && !stacked && uri ? <Image source={{ uri }} style={{ width: variant.imageHeight, height: variant.imageHeight, borderRadius: 8 }} contentFit="cover" transition={150} /> : null}
         <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
           <Text numberOfLines={2} style={{ color: text, fontSize: featured ? 15 : 12.5, fontWeight: '800', fontFamily, fontStyle: variant.italic ? 'italic' : 'normal' }}>{product.name}</Text>
+          <PromoBadge label={product.promo_label} tokens={tokens} fontFamily={fontFamily} />
           {product.description ? <Text numberOfLines={2} style={{ color: tokens.muted, fontSize: 10.5, lineHeight: 15, fontFamily, fontStyle: variant.italic ? 'italic' : 'normal' }}>{product.description}</Text> : null}
           {product.is_available ? null : <View style={{ alignSelf: 'flex-start', borderWidth: 1, borderColor: text, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1, marginTop: 2 }}><Text style={{ color: text, fontSize: 8, fontWeight: '800', fontFamily }}>{t("Agotado")}</Text></View>}
           {variant.columns === 2 ? <View style={{ alignSelf: 'flex-start', marginTop: 4 }}>{priceLabel}</View> : null}

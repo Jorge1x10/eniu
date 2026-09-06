@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 const EMPTY: Omit<Promotion, 'id'> = {
-  name: '', badge_label: '', is_active: true, days_of_week: [],
+  name: '', badge_label: '', is_active: true, show_in_section: false, days_of_week: [],
   start_date: '', end_date: '', product_ids: [], category_ids: [],
 };
 
@@ -68,6 +68,7 @@ export default function PromotionsScreen() {
         name: form.name.trim(),
         badge_label: form.badge_label?.trim() || null,
         is_active: form.is_active,
+        show_in_section: form.show_in_section,
         days_of_week: [...form.days_of_week].sort((a, b) => a - b),
         // El backend espera AAAA-MM-DD o null; una cadena vacía sería un error.
         start_date: form.start_date?.trim() || null,
@@ -163,6 +164,14 @@ export default function PromotionsScreen() {
             <Switch value={form.is_active} onValueChange={(value) => update('is_active', value)} trackColor={{ true: theme.yellowPressed }} />
           </View>
 
+          <View style={{ gap: 4 }}>
+            <View style={{ minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14, flex: 1 }}>{t("Encabezar el menú")}</Text>
+              <Switch value={form.show_in_section} onValueChange={(value) => update('show_in_section', value)} trackColor={{ true: theme.yellowPressed }} />
+            </View>
+            <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 16 }}>{t("Además de la etiqueta, estos productos se repiten arriba del menú en una sección \"Promociones de hoy\".")}</Text>
+          </View>
+
           {categories.length ? (
             <View style={{ gap: 8 }}>
               <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>{t("Categorías incluidas")}</Text>
@@ -222,6 +231,7 @@ export default function PromotionsScreen() {
                   </View>
                 </View>
                 <Text style={{ color: theme.muted, fontSize: 12.5 }}>{t("Etiqueta")}: {promotion.badge_label || promotion.name}</Text>
+                {promotion.show_in_section ? <Text style={{ color: theme.muted, fontSize: 12.5 }}>{t("Encabeza el menú")}</Text> : null}
                 <Text style={{ color: theme.muted, fontSize: 12.5 }}>{days}</Text>
               </Pressable>
             );

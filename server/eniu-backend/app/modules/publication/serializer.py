@@ -3,7 +3,7 @@ from flask import current_app
 from app import storage
 from app.modules.billing import plans
 from app.modules.billing.guards import plan_key_for_owner_id
-from app.modules.promotion.services import active_product_ids_today
+from app.modules.promotion.services import promotions_today
 from app.modules.template import catalog
 from app.modules.template.services import default_configuration
 from app.modules.analytics.security import tracking_key
@@ -49,7 +49,7 @@ def main_picture(product):
     return next((picture for picture in pictures if picture.get("is_default")), pictures[0] if pictures else None)
 
 
-def _product_data(catalogue, product, api_path, promo_labels):
+def _product_data(catalogue, product, api_path, promo_labels, featured_ids):
     return {
         "tracking_key": tracking_key(catalogue.id, "product", product.id),
         "name": product.name,
@@ -61,6 +61,12 @@ def _product_data(catalogue, product, api_path, promo_labels):
         # `promotion/services.py`) — sólo agrega esta etiqueta para que la
         # plantilla la resalte hoy.
         "promo_label": promo_labels.get(product.id),
+        # Si además encabeza el menú en la sección "Promociones de hoy". Es una
+        # bandera y no un segundo listado a propósito: la URL de la foto se
+        # calcula por posición (sección, índice), así que repetir los productos
+        # en otro arreglo apuntaría a imágenes equivocadas. Cada plantilla arma
+        # la sección filtrando por esta bandera, sin perder el índice original.
+        "promo_featured": product.id in featured_ids,
     }
 
 
@@ -78,7 +84,10 @@ def serialize_public_menu(catalogue):
         catalogue.products,
         key=lambda product: (product.display_order, product.created_at),
     )
-    promo_labels = active_product_ids_today(catalogue.id)
+    promo_labels, featured_product_ids = promotions_today(catalogue.id)
+    def product_data(product, api_path):
+        return _product_data(catalogue, product, api_path, promo_labels, featured_product_ids)
+
     category_payload = []
     for section_index, category in enumerate(categories):
         category_products = [product for product in products if product.category_id == category.id]
@@ -87,24 +96,20 @@ def serialize_public_menu(catalogue):
             "name": category.name,
             "description": category.description,
             "products": [
-                _product_data(
-                    catalogue,
+                product_data(
                     product,
                     f"/api/public/menus/{slug}/product-images/{section_index}/{product_index}"
                     if slug and catalogue.is_published else None,
-                    promo_labels,
                 )
                 for product_index, product in enumerate(category_products)
             ],
         })
     uncategorized = [product for product in products if product.category_id is None]
     uncategorized_payload = [
-        _product_data(
-            catalogue,
+        product_data(
             product,
             f"/api/public/menus/{slug}/product-images/{len(categories)}/{product_index}"
             if slug and catalogue.is_published else None,
-            promo_labels,
         )
         for product_index, product in enumerate(uncategorized)
     ]

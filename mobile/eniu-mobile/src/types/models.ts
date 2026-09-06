@@ -82,6 +82,14 @@ export type Product = {
   is_available: boolean;
   category_id?: string | null;
   category?: Category | null;
+  /**
+   * Resueltos por el backend según las promociones activas *hoy*: la etiqueta
+   * que le toca al producto y si además encabeza el menú. El producto por sí
+   * solo no sabe ninguna de las dos cosas, así que vienen del listado
+   * (`GET .../products`) y del menú público, no del modelo.
+   */
+  promo_label?: string | null;
+  promo_featured?: boolean;
 };
 
 /**
@@ -161,6 +169,8 @@ export type Promotion = {
   name: string;
   badge_label?: string | null;
   is_active: boolean;
+  /** Si además encabeza el menú en la sección "Promociones de hoy". */
+  show_in_section: boolean;
   /** 0 = lunes … 6 = domingo. Vacío significa todos los días. */
   days_of_week: number[];
   start_date?: string | null;

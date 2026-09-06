@@ -620,5 +620,9 @@
   "Sin serifas": "Sans serif",
   "Con serifas": "Serif",
   "Manuscritas": "Handwritten",
-  "Monoespaciadas": "Monospaced"
+  "Monoespaciadas": "Monospaced",
+  "Promociones de hoy": "Today's promotions",
+  "Encabezar el menú": "Lead the menu",
+  "Encabeza el menú": "Leads the menu",
+  "Además de la etiqueta, estos productos se repiten arriba del menú en una sección \"Promociones de hoy\".": "On top of the badge, these products are repeated at the top of the menu in a \"Today's promotions\" section."
 }

@@ -16,7 +16,7 @@ from app.shared.i18n import _
 # reconciliar con lo que ya hay guardado por producto — una función aparte,
 # más grande, que puede llegar después. Esta primera versión sólo resalta.
 EDITABLE_FIELDS = {
-    "name", "badge_label", "is_active", "days_of_week",
+    "name", "badge_label", "is_active", "show_in_section", "days_of_week",
     "start_date", "end_date", "product_ids", "category_ids",
 }
 MAX_NAME_LENGTH = 64
@@ -66,13 +66,21 @@ def _badge_label(data):
     return value or None, True
 
 
-def _is_active(data):
-    if "is_active" not in data:
+def _bool_field(data, field):
+    if field not in data:
         return None, False
-    value = data.get("is_active")
+    value = data.get(field)
     if not isinstance(value, bool):
-        raise ValueError(_("is_active debe ser verdadero o falso"))
+        raise ValueError(_("{field} debe ser verdadero o falso", field=field))
     return value, True
+
+
+def _is_active(data):
+    return _bool_field(data, "is_active")
+
+
+def _show_in_section(data):
+    return _bool_field(data, "show_in_section")
 
 
 def _days_of_week(data):
@@ -169,6 +177,7 @@ def create_promotion(owner_id, business_id, catalogue_id, data):
         name, _has_name = _name(data, required=True)
         badge_label, _has_badge = _badge_label(data)
         is_active, has_active = _is_active(data)
+        show_in_section, has_section = _show_in_section(data)
         days_of_week, _has_days = _days_of_week(data)
         start_date, _has_start = _date(data, "start_date", _("La fecha de inicio"))
         end_date, _has_end = _date(data, "end_date", _("La fecha de fin"))
@@ -182,6 +191,7 @@ def create_promotion(owner_id, business_id, catalogue_id, data):
             name=name,
             badge_label=badge_label,
             is_active=is_active if has_active else True,
+            show_in_section=show_in_section if has_section else False,
             days_of_week=days_of_week or [],
             start_date=start_date,
             end_date=end_date,
@@ -218,6 +228,7 @@ def update_promotion(owner_id, business_id, catalogue_id, promotion_id, data):
         name, has_name = _name(data)
         badge_label, has_badge = _badge_label(data)
         is_active, has_active = _is_active(data)
+        show_in_section, has_section = _show_in_section(data)
         days_of_week, has_days = _days_of_week(data)
         start_date, has_start = _date(data, "start_date", _("La fecha de inicio"))
         end_date, has_end = _date(data, "end_date", _("La fecha de fin"))
@@ -235,6 +246,8 @@ def update_promotion(owner_id, business_id, catalogue_id, promotion_id, data):
             promotion.badge_label = badge_label
         if has_active:
             promotion.is_active = is_active
+        if has_section:
+            promotion.show_in_section = show_in_section
         if has_days:
             promotion.days_of_week = days_of_week or []
         if has_start:
@@ -274,17 +287,25 @@ def delete_promotion(owner_id, business_id, catalogue_id, promotion_id):
         return {"message": _("No fue posible eliminar la promoción")}, 500
 
 
-def active_product_ids_today(catalogue_id, today=None):
-    """Ids de producto resaltados hoy, con la etiqueta que le corresponde a cada uno.
+def promotions_today(catalogue_id, today=None):
+    """Qué se resalta hoy en este catálogo.
 
-    Usado por `publication/serializer.py` al armar el menú público: recorre
-    las promociones activas de este catálogo y junta, por producto, la
-    primera etiqueta que aplique (si dos promociones coinciden en un
-    producto el mismo día, gana la que se creó primero).
+    Devuelve `(labels, featured_ids)`:
+
+    - `labels`: id de producto → etiqueta que le toca hoy. Si dos promociones
+      coinciden en un producto el mismo día gana la que se creó primero, para
+      que el menú no apile dos etiquetas sobre la misma tarjeta.
+    - `featured_ids`: los productos que además deben encabezar el menú en la
+      sección "Promociones de hoy", es decir los de promociones con
+      `show_in_section`. Es un subconjunto de las claves de `labels`.
+
+    Una sola pasada para las dos cosas: esto lo llama el serializador del menú
+    público, que es la ruta que golpea cada escaneo de QR.
     """
     today = today or date_cls.today()
     promotions = Promotion.query.filter_by(catalogue_id=catalogue_id, is_active=True).order_by(Promotion.created_at.asc()).all()
     labels = {}
+    featured = set()
     for promotion in promotions:
         if not promotion.is_active_on(today):
             continue
@@ -293,4 +314,13 @@ def active_product_ids_today(catalogue_id, today=None):
             product_ids.update(product.id for product in category.products)
         for product_id in product_ids:
             labels.setdefault(product_id, promotion.badge_label or promotion.name)
+        if promotion.show_in_section:
+            featured.update(product_ids)
+    return labels, featured
+
+
+def active_product_ids_today(catalogue_id, today=None):
+    """Sólo las etiquetas. Envoltura de `promotions_today` para quien no
+    necesita saber cuáles encabezan el menú."""
+    labels, _featured = promotions_today(catalogue_id, today)
     return labels

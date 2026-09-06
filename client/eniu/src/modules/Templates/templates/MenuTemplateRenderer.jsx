@@ -65,7 +65,14 @@ function MenuShell({ theme, family, children }) {
 }
 
 function useSections(categories, products) {
-  return useMemo(() => buildSections(categories, products), [categories, products]);
+  const { t } = useTranslation();
+  const labels = { other: t("Otros"), promotionsToday: t("Promociones de hoy") };
+  return useMemo(
+    () => buildSections(categories, products, labels),
+    // `labels` se recrea en cada render; lo que importa es el idioma en curso.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [categories, products, labels.other, labels.promotionsToday],
+  );
 }
 
 /**

@@ -12,6 +12,7 @@ from app.modules.billing.guards import ensure_can_create_product
 from app.modules.catalogue.services import catalogue_access
 from app.modules.category.model import Category
 from app.modules.products.model import Product
+from app.modules.promotion.services import promotions_today
 from werkzeug.utils import secure_filename
 from app.shared.i18n import _
 
@@ -292,7 +293,22 @@ def list_products(owner_id, business_id, catalogue_id, category_id=None):
             Product.display_order.asc(),
             Product.created_at.asc(),
         ).all()
-        return {"products": [product.to_dict() for product in products]}, 200
+        # La etiqueta de promoción no vive en `to_dict()`: depende del catálogo
+        # y del día, y el producto por sí solo no sabe ninguna de las dos cosas.
+        # Se agrega aquí para que la vista previa del editor muestre lo mismo
+        # que verá el cliente hoy. Es una consulta extra, pero sobre la ruta
+        # autenticada del panel, no sobre la del escaneo de QR.
+        promo_labels, featured_ids = promotions_today(catalogue.id)
+        return {"products": [
+            {
+                **product.to_dict(),
+                "promo_label": promo_labels.get(product.id),
+                # Para que la vista previa pueda armar la sección "Promociones
+                # de hoy" igual que el menú público, sin una segunda petición.
+                "promo_featured": product.id in featured_ids,
+            }
+            for product in products
+        ]}, 200
     except SQLAlchemyError as error:
         current_app.logger.exception(error)
         return {"message": _("No fue posible consultar los productos")}, 500

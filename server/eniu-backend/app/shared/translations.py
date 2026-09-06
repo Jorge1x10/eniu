@@ -224,7 +224,7 @@ _EN = {
     "El nombre no puede superar {limit} caracteres": "The name can't be longer than {limit} characters",
     "La etiqueta no es válida": "That badge label is not valid",
     "La etiqueta no puede superar {limit} caracteres": "The badge label can't be longer than {limit} characters",
-    "is_active debe ser verdadero o falso": "is_active must be true or false",
+    "{field} debe ser verdadero o falso": "{field} must be true or false",
     "Los días de la semana no son válidos": "Those weekdays are not valid",
     "Los días de la semana deben ser números del 0 (lunes) al 6 (domingo)": (
         "Weekdays must be numbers from 0 (Monday) to 6 (Sunday)"

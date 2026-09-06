@@ -10,7 +10,7 @@ from app.modules.catalogue.model import Catalogue
 from app.modules.category.model import Category
 from app.modules.products.model import Product
 from app.modules.promotion.model import Promotion
-from app.modules.promotion.services import active_product_ids_today
+from app.modules.promotion.services import active_product_ids_today, promotions_today
 from app.modules.users.model import User
 from tests.plan_helpers import grant_plan
 
@@ -201,6 +201,110 @@ class PromotionApiTestCase(unittest.TestCase):
         cake = next(product for product in products if product["name"] == "Pastel")
         self.assertEqual(latte["promo_label"], "Oferta")
         self.assertIsNone(cake["promo_label"])
+
+    def test_section_is_empty_unless_a_promotion_asks_to_lead_the_menu(self):
+        """La sección no aparece sola: estrenarla en un menú ya publicado sería
+        cambiárselo a alguien que no lo pidió."""
+        with self.app.app_context():
+            catalogue = Catalogue.query.filter_by(name="Principal").one()
+            catalogue.is_published = True
+            catalogue.public_slug = "promo-seccion"
+            db.session.add(Promotion(
+                catalogue_id=catalogue.id, name="Sólo etiqueta", badge_label="Oferta",
+                products=[Product.query.filter_by(name="Latte").one()],
+            ))
+            db.session.commit()
+
+        menu = self.client.get("/api/public/menus/promo-seccion").get_json()["menu"]
+        products = [product for category in menu["categories"] for product in category["products"]]
+        latte = next(product for product in products if product["name"] == "Latte")
+        self.assertEqual(latte["promo_label"], "Oferta")
+        self.assertFalse(any(product["promo_featured"] for product in products))
+
+    def test_show_in_section_leads_the_menu_without_breaking_image_urls(self):
+        with self.app.app_context():
+            catalogue = Catalogue.query.filter_by(name="Principal").one()
+            catalogue.is_published = True
+            catalogue.public_slug = "promo-encabeza"
+            db.session.add(Promotion(
+                catalogue_id=catalogue.id, name="Jueves de postre", badge_label="2x1",
+                show_in_section=True, products=[Product.query.filter_by(name="Pastel").one()],
+            ))
+            db.session.commit()
+
+        menu = self.client.get("/api/public/menus/promo-encabeza").get_json()["menu"]
+        products = [product for category in menu["categories"] for product in category["products"]]
+        featured = [product for product in products if product["promo_featured"]]
+        self.assertEqual([product["name"] for product in featured], ["Pastel"])
+        self.assertEqual(featured[0]["promo_label"], "2x1")
+        # La bandera viaja sobre el producto que ya está en su categoría, con su
+        # índice original: la foto sigue resolviendo al archivo correcto.
+        self.assertEqual(featured[0]["image_url"], next(
+            product["image_url"] for product in products if product["name"] == "Pastel"
+        ))
+
+    def test_promotion_that_is_not_active_today_does_not_lead_the_menu(self):
+        with self.app.app_context():
+            catalogue = Catalogue.query.filter_by(name="Principal").one()
+            latte = Product.query.filter_by(name="Latte").one()
+            today = date(2026, 9, 3)  # jueves
+            db.session.add(Promotion(
+                catalogue_id=catalogue.id, name="Sólo lunes", days_of_week=[0],
+                show_in_section=True, products=[latte],
+            ))
+            db.session.commit()
+
+            labels, featured = promotions_today(catalogue.id, today=today)
+            self.assertEqual(labels, {})
+            self.assertEqual(featured, set())
+
+    def test_show_in_section_round_trips_through_the_api(self):
+        created = self.client.post(
+            self.url(), headers=self.headers(self.owner_token),
+            json={"name": "Encabeza", "show_in_section": True},
+        )
+        self.assertEqual(created.status_code, 201)
+        promotion_id = created.get_json()["promotion"]["id"]
+        self.assertTrue(created.get_json()["promotion"]["show_in_section"])
+
+        updated = self.client.patch(
+            self.url(promotion_id), headers=self.headers(self.owner_token),
+            json={"show_in_section": False},
+        )
+        self.assertEqual(updated.status_code, 200)
+        self.assertFalse(updated.get_json()["promotion"]["show_in_section"])
+
+        rejected = self.client.patch(
+            self.url(promotion_id), headers=self.headers(self.owner_token),
+            json={"show_in_section": "sí"},
+        )
+        self.assertEqual(rejected.status_code, 400)
+
+    def test_defaults_to_not_leading_the_menu(self):
+        created = self.client.post(
+            self.url(), headers=self.headers(self.owner_token), json={"name": "Normal"},
+        )
+        self.assertEqual(created.status_code, 201)
+        self.assertFalse(created.get_json()["promotion"]["show_in_section"])
+
+    def test_product_listing_carries_todays_label_for_the_editor_preview(self):
+        """La vista previa del editor lee esta ruta, no la del menú público."""
+        with self.app.app_context():
+            catalogue = Catalogue.query.filter_by(name="Principal").one()
+            db.session.add(Promotion(
+                catalogue_id=catalogue.id, name="Hoy", badge_label="Promo",
+                products=[Product.query.filter_by(name="Latte").one()],
+            ))
+            db.session.commit()
+
+        listing = self.client.get(
+            f"/api/businesses/{self.business_id}/catalogues/{self.catalogue_id}/products",
+            headers=self.headers(self.owner_token),
+        )
+        self.assertEqual(listing.status_code, 200)
+        products = {product["name"]: product for product in listing.get_json()["products"]}
+        self.assertEqual(products["Latte"]["promo_label"], "Promo")
+        self.assertIsNone(products["Pastel"]["promo_label"])
 
 
 if __name__ == "__main__":

@@ -37,6 +37,12 @@ class Promotion(BaseModel):
     # cliente le pone un texto genérico ("Promo") en su propio idioma.
     badge_label = db.Column(db.String(24), nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
+    # Si además de etiquetar los productos, la promoción encabeza el menú en una
+    # sección "Promociones de hoy". Por omisión no: la etiqueta ya resalta el
+    # producto donde está, y repetirlo arriba sólo vale la pena cuando el dueño
+    # lo decide. Estrenar la sección sola en menús ya publicados sería cambiarle
+    # el menú a alguien que no lo pidió.
+    show_in_section = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     # 0 = lunes … 6 = domingo. Lista vacía = aplica todos los días (dentro del
     # rango de fechas, si hay uno).
     days_of_week = db.Column(db.JSON, nullable=False, default=list, server_default="[]")
@@ -65,6 +71,7 @@ class Promotion(BaseModel):
             "name": self.name,
             "badge_label": self.badge_label,
             "is_active": self.is_active,
+            "show_in_section": self.show_in_section,
             "days_of_week": list(self.days_of_week or []),
             "start_date": self.start_date.isoformat() if self.start_date else None,
             "end_date": self.end_date.isoformat() if self.end_date else None,
