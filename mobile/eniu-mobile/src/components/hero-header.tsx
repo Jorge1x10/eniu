@@ -52,9 +52,10 @@ export function HeroHeader({ children, paddingHorizontal, paddingBottom, gap, el
         borderBottomRightRadius: 30,
         borderCurve: 'continuous',
         gap,
-        ...(elevated
-          ? { shadowColor: '#141210', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.35, shadowRadius: 30, elevation: 8 }
-          : null),
+        // La sombra la decide el tema: en oscuro va vacía, porque una sombra
+        // sobre un fondo casi negro no se ve y el relieve lo da que la
+        // cabecera sea el plano más claro.
+        ...(elevated ? theme.heroShadow : null),
         ...style,
       }}
     >
