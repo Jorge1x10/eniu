@@ -48,38 +48,34 @@ function QuickProductRow({ product, currency, businessId, catalogueId }: { produ
   const { bumpPrice, toggleAvailable } = useProductQuickActions(businessId, catalogueId);
   const uri = defaultPictureUrl(product);
   return (
-    <View style={{ padding: 13, flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+    <View style={{ padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
       {uri ? (
         <Image source={{ uri }} style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: theme.background }} contentFit="cover" transition={150} />
       ) : (
         <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><PlusIcon color={theme.border} size={16} /></View>
       )}
-      <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-          <Text numberOfLines={1} style={{ flex: 1, color: theme.text, fontSize: 14.5, fontWeight: '700' }}>{product.name}</Text>
-          <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'], flexShrink: 0 }}>{product.price == null ? 'S/P' : currency.format(Number(product.price))}</Text>
-        </View>
+      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+        <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14.5, fontWeight: '700' }}>{product.name}</Text>
         {product.description ? (
-          <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 11.5, marginTop: -3 }}>{product.description}</Text>
+          <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 11.5 }}>{product.description}</Text>
         ) : null}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          {/* Tocar la disponibilidad la cambia: es lo que se toca varias veces
-              al día, y por eso vive aquí y no dentro del formulario. */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ selected: product.is_available }}
-            onPress={() => toggleAvailable(product)}
-            hitSlop={6}
-            style={({ pressed }) => ({ minHeight: 24, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 9, borderRadius: 999, backgroundColor: theme.surfaceAlt, opacity: pressed ? 0.7 : 1 })}
-          >
-            <View style={{ width: 6, height: 6, borderRadius: 999, backgroundColor: product.is_available ? theme.success : theme.danger }} />
-            <Text style={{ color: product.is_available ? theme.success : theme.danger, fontSize: 11, fontWeight: '700' }}>{product.is_available ? t("Disponible") : t("Agotado")}</Text>
-          </Pressable>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <Pressable accessibilityRole="button" accessibilityLabel={t("Bajar el precio")} onPress={() => bumpPrice(product, -1)} style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 10, borderCurve: 'continuous', backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}><MinusIcon color={theme.text} size={12} /></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={t("Subir el precio")} onPress={() => bumpPrice(product, 1)} style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 10, borderCurve: 'continuous', backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}><PlusIcon color={theme.onYellow} size={12} /></Pressable>
-          </View>
-        </View>
+        {/* Tocar la disponibilidad la cambia: es lo que se toca varias veces al
+            día, y por eso vive aquí y no dentro del formulario. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: product.is_available }}
+          onPress={() => toggleAvailable(product)}
+          hitSlop={6}
+          style={({ pressed }) => ({ alignSelf: 'flex-start', minHeight: 24, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 9, borderRadius: 999, backgroundColor: theme.surfaceAlt, opacity: pressed ? 0.7 : 1 })}
+        >
+          <View style={{ width: 6, height: 6, borderRadius: 999, backgroundColor: product.is_available ? theme.success : theme.danger }} />
+          <Text style={{ color: product.is_available ? theme.success : theme.danger, fontSize: 11, fontWeight: '700' }}>{product.is_available ? t("Disponible") : t("Agotado")}</Text>
+        </Pressable>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Bajar el precio")} onPress={() => bumpPrice(product, -1)} style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 10, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}><MinusIcon color={theme.text} size={12} /></Pressable>
+        <Text style={{ minWidth: 52, textAlign: 'center', color: theme.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{product.price == null ? 'S/P' : currency.format(Number(product.price))}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Subir el precio")} onPress={() => bumpPrice(product, 1)} style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 10, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}><PlusIcon color={theme.onYellow} size={12} /></Pressable>
       </View>
     </View>
   );
