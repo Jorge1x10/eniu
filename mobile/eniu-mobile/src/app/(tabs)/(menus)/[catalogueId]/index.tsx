@@ -8,7 +8,7 @@ import { MenuSkeleton } from '@/components/menu-skeleton';
 import { Divider } from '@/components/ui/divider';
 import { ChevronRightIcon, GridIcon, LinkIcon, PaletteIcon, TagIcon, TrashIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, deleteCatalogue, getCatalogue } from '@/features/catalogues/catalogue-api';
 import { ApiError, api } from '@/lib/api';
@@ -90,7 +90,7 @@ export default function CatalogueDetailScreen() {
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 16, backgroundColor: theme.background }}>
       {query.isLoading ? <LoadingState /> : notFound ? <ErrorState message={t("Este menú ya no existe o pertenece a otro negocio.")} action={t("Volver a Menús")} onAction={() => router.replace('/(tabs)/(menus)')} /> : query.isError || !catalogue ? <ErrorState message={t("No pudimos cargar este menú.")} error={query.error} onRetry={() => query.refetch()} /> : <>
-        <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: '#111111', padding: 20, gap: 16 }}>
+        <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: theme.hero, padding: 20, gap: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <View style={{ minHeight: 26, justifyContent: 'center', borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : 'rgba(255,255,255,0.12)', paddingHorizontal: 10 }}><Text style={{ color: catalogue.is_published ? '#111111' : '#C7C7C7', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 }}>{catalogue.is_published ? 'PUBLICADO' : 'BORRADOR'}</Text></View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text style={{ color: '#C7C7C7', fontSize: 12, fontWeight: '600' }}>{t("Visible")}</Text><Switch value={catalogue.is_published} onValueChange={togglePublication} trackColor={{ true: theme.yellow }} /></View>
@@ -120,7 +120,7 @@ export default function CatalogueDetailScreen() {
           return (
             <Animated.View key={action.route} entering={FadeInDown.duration(300).delay(index * 70)}>
             <Link href={{ pathname: `/(tabs)/(menus)/[catalogueId]/${action.route}`, params: { catalogueId } }} asChild>
-              <Pressable style={({ pressed }) => ({ backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous', overflow: 'hidden', opacity: pressed ? 0.72 : 1 })}>
+              <Pressable style={({ pressed }) => ({ ...cardStyle(theme), overflow: 'hidden', opacity: pressed ? 0.72 : 1 })}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }}>
                   <View style={{ width: 46, height: 46, borderRadius: 14, borderCurve: 'continuous', backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><action.Icon color={theme.onYellow} size={22} /></View>
                   <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
@@ -153,7 +153,7 @@ export default function CatalogueDetailScreen() {
             onLongPress={confirmDelete}
             delayLongPress={600}
             disabled={deleting}
-            style={({ pressed }) => ({ minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, borderRadius: 16, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface, opacity: deleting ? 0.6 : pressed ? 0.75 : 1 })}
+            style={({ pressed }) => ({ ...cardStyle(theme, 16), minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, opacity: deleting ? 0.6 : pressed ? 0.75 : 1 })}
           >
             {deleting ? <ActivityIndicator color={theme.danger} /> : <TrashIcon color={theme.danger} size={15} />}
             <Text style={{ color: theme.danger, fontSize: 14, fontWeight: '800' }}>{deleting ? 'Eliminando…' : t("Eliminar menú")}</Text>

@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { ScrollView, Text, View } from 'react-native';
 
+import { AreaChart } from '@/components/area-chart';
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useScreenTopPadding } from '@/constants/layout';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
@@ -30,7 +31,6 @@ export default function AnalyticsScreen() {
   const selected = menus.data?.catalogues[0];
   const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, selected?.id, 30], queryFn: () => api.get<Analytics>(`businesses/${selectedBusiness!.id}/catalogues/${selected!.id}/analytics?${queryRange()}`), enabled: Boolean(selectedBusiness && selected) && limits.allow_analytics });
   const points = analytics.data?.visits_over_time ?? [];
-  const max = Math.max(1, ...points.map((point) => Number(point.views || 0)));
   const total = points.reduce((sum, point) => sum + Number(point.views || 0), 0);
   const busiest = points.reduce((best, point) => Number(point.views || 0) > Number(best?.views || 0) ? point : best, points[0]);
   const sources = (analytics.data?.sources ?? []).filter((source) => Number(source.views) > 0).sort((a, b) => Number(b.views) - Number(a.views));
@@ -46,20 +46,20 @@ export default function AnalyticsScreen() {
       {!selectedBusiness ? <EmptyState title={t("Sin negocio seleccionado")} description={t("Crea un negocio desde Inicio.")} /> : !limits.allow_analytics ? <EmptyState title={t("Tu plan actual no incluye analíticas")} description={t("Las visitas de tu menú se siguen registrando mientras tanto, así que al activarlas no empiezas de cero.")} /> : menus.isLoading || analytics.isLoading ? <LoadingState label={t("Calculando analíticas…")} /> : menus.isError || analytics.isError ? <ErrorState message={t("No pudimos cargar las analíticas.")} error={menus.error ?? analytics.error} onRetry={() => { menus.refetch(); analytics.refetch(); }} /> : !selected ? <EmptyState title={t("Sin datos todavía")} description={t("Crea un menú para comenzar a registrar visitas.")} /> : <>
         <Text style={{ color: theme.muted }}>{t("Menú:")} <Text style={{ color: theme.text, fontWeight: '900' }}>{selected.name}</Text></Text>
 
-        <View style={{ minHeight: 260, padding: 20, gap: 16, backgroundColor: '#111111', borderRadius: 24, borderCurve: 'continuous' }}>
+        <View style={{ minHeight: 250, padding: 20, gap: 16, backgroundColor: theme.hero, borderRadius: 24, borderCurve: 'continuous' }}>
           <View style={{ gap: 4 }}>
-            <Text style={{ color: '#C7C7C7', fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Vistas del menú")}</Text>
-            <Text selectable style={{ color: theme.yellow, fontSize: 38, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 42 }}>{total.toLocaleString(currentLocale())}</Text>
+            <Text style={{ color: theme.heroMuted, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Vistas del menú")}</Text>
+            <Text selectable style={{ color: theme.yellow, fontSize: 44, lineHeight: 46, fontWeight: '900', fontVariant: ['tabular-nums'], letterSpacing: -1.5 }}>{total.toLocaleString(currentLocale())}</Text>
           </View>
-          <View accessibilityLabel={t("Gráfica de vistas, total {{total}}", { total: total })} style={{ height: 150, flexDirection: 'row', alignItems: 'flex-end', gap: 3 }}>{points.map((point) => <View key={point.date} style={{ flex: 1, minHeight: 4, height: `${Math.max(3, Number(point.views || 0) * 100 / max)}%`, borderRadius: 3, backgroundColor: Number(point.views || 0) === max && max > 0 ? theme.yellow : '#555555' }} />)}</View>
+          <AreaChart series={points.map((point) => Number(point.views || 0))} height={130} color={theme.yellow} dotStroke={theme.hero} />
           {points.length ? <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ color: '#8A8578', fontSize: 10.5, fontWeight: '600' }}>{shortDate(points[0].date)}</Text>
-            {busiest && Number(busiest.views) > 0 ? <Text style={{ color: theme.yellow, fontSize: 10.5, fontWeight: '600' }}>{shortDate(busiest.date)} · {Number(busiest.views).toLocaleString(currentLocale())} vistas</Text> : null}
-            <Text style={{ color: '#8A8578', fontSize: 10.5, fontWeight: '600' }}>{shortDate(points[points.length - 1].date)}</Text>
+            <Text style={{ color: theme.heroMuted, fontSize: 10.5, fontWeight: '600' }}>{shortDate(points[0].date)}</Text>
+            {busiest && Number(busiest.views) > 0 ? <Text style={{ color: theme.yellow, fontSize: 10.5, fontWeight: '600' }}>{shortDate(busiest.date)} · {t("{{count}} vistas", { count: Number(busiest.views) })}</Text> : null}
+            <Text style={{ color: theme.heroMuted, fontSize: 10.5, fontWeight: '600' }}>{shortDate(points[points.length - 1].date)}</Text>
           </View> : null}
         </View>
 
-        {sources.length ? <View style={{ borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 18, gap: 15 }}>
+        {sources.length ? <View style={{ ...cardStyle(theme), padding: 18, gap: 15 }}>
           <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("De dónde llegan")}</Text>
           <View style={{ gap: 12 }}>{sources.map((source, index) => <View key={source.key} style={{ gap: 6 }}>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>

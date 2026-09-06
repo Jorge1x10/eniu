@@ -10,8 +10,27 @@ export function ChevronDownIcon({ color, size = 12 }: IconProps) {
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="m6 9 6 6 6-6" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
 }
 
+/** Tendencia al alza — junto al porcentaje de cambio vs. el día anterior */
+export function TrendUpIcon({ color, size = 10 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M12 19V6m0 0-6 6m6-6 6 6" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
+}
+
+/** Tendencia a la baja */
+export function TrendDownIcon({ color, size = 10 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M12 5v13m0 0-6-6m6 6 6-6" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
+}
+
 export function PlusIcon({ color, size = 16 }: IconProps) {
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M12 5v14M5 12h14" stroke={color} strokeWidth={2.4} strokeLinecap="round" /></Svg>;
+}
+
+export function MinusIcon({ color, size = 16 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M5 12h14" stroke={color} strokeWidth={2.4} strokeLinecap="round" /></Svg>;
+}
+
+/** Editar en el lugar — lápiz pequeño en filas con edición en sitio */
+export function PencilIcon({ color, size = 14 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16v4Z" stroke={color} strokeWidth={2} strokeLinejoin="round" /></Svg>;
 }
 
 export function CheckIcon({ color, size = 14 }: IconProps) {
