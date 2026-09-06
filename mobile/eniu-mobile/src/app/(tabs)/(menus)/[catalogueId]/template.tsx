@@ -20,6 +20,7 @@ import { getCatalogue } from '@/features/catalogues/catalogue-api';
 import { BackgroundPresetPicker } from '@/features/templates/background-preset-picker';
 import { CoverFocalField } from '@/features/templates/cover-focal-field';
 import { MenuPreview } from '@/features/templates/menu-preview';
+import { FontPicker } from '@/features/templates/font-picker';
 import { PalettePicker } from '@/features/templates/palette-picker';
 import { CORE_COLOR_FIELDS, CORE_TOKEN_KEYS, COLOR_FIELDS, SPLASH_RANGE, colorPayload, deriveTokens, normalizeConfiguration, resolveTokens, splashPayload, themePayload, validateTheme } from '@/features/templates/menu-theme';
 import { useTemplateCatalog } from '@/features/templates/template-catalog';
@@ -369,25 +370,12 @@ export default function TemplateScreen() {
       </Section>
 
       <Section title={t("Tipografía")} description={t("La vista previa usa la fuente del sistema más parecida a la del menú publicado.")}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {catalog.fonts.map((option) => {
-            const on = draft.theme.font_key === option.key;
-            const locked = !allowsFont(option.key);
-            return (
-              <Pressable
-                key={option.key}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on, disabled: locked }}
-                disabled={locked}
-                onPress={() => updateTheme('font_key', option.key)}
-                style={({ pressed }) => ({ minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 15, borderRadius: 999, backgroundColor: on ? appTheme.yellow : appTheme.background, borderWidth: 1, borderColor: on ? appTheme.yellowPressed : appTheme.border, opacity: locked ? 0.5 : pressed ? 0.75 : 1 })}
-              >
-                {locked ? <LockIcon color={appTheme.muted} size={12} /> : null}
-                <Text style={{ color: on ? appTheme.onYellow : appTheme.text, fontSize: 13.5, fontWeight: on ? '800' : '600' }}>{option.name}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <FontPicker
+          fonts={catalog.fonts}
+          value={draft.theme.font_key}
+          onChange={(key) => updateTheme('font_key', key)}
+          isLocked={(key) => !allowsFont(key)}
+        />
         {fontsLocked ? <PlanNotice message={t("Tu plan actual sólo incluye la tipografía básica.")} /> : null}
       </Section>
 

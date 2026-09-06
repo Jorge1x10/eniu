@@ -57,6 +57,33 @@ const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'seri
 export const MONOSPACE = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
 const HANDWRITTEN = Platform.select({ ios: 'Snell Roundhand', android: 'casual', default: 'cursive' });
 
+/**
+ * Familia visual de una tipografía. El catálogo del servidor no la trae —sólo
+ * clave y nombre—, pero la app ya tenía que clasificarlas para aproximar la
+ * vista previa, así que la lista de selección reutiliza esa misma
+ * clasificación en vez de pedirle un campo nuevo a la API.
+ *
+ * Una clave que no esté en ningún conjunto cae en 'sans', que es el grupo más
+ * grande y el que mejor aproxima una tipografía desconocida: el servidor puede
+ * agregar fuentes sin que esta pantalla necesite una versión nueva.
+ */
+export type FontCategory = 'sans' | 'serif' | 'handwritten' | 'mono';
+
+export function fontCategory(fontKey: string): FontCategory {
+  if (MONO_FONTS.has(fontKey)) return 'mono';
+  if (HANDWRITTEN_FONTS.has(fontKey)) return 'handwritten';
+  if (SERIF_FONTS.has(fontKey)) return 'serif';
+  return 'sans';
+}
+
+/** La familia del sistema con la que se dibuja cada grupo. */
+export const CATEGORY_FAMILY: Record<FontCategory, string | undefined> = {
+  sans: undefined,
+  serif: SERIF,
+  handwritten: HANDWRITTEN,
+  mono: MONOSPACE,
+};
+
 export function fontFamilyFor(fontKey: FontKey, templateKey?: TemplateKey) {
   if (MONO_FONTS.has(fontKey)) return MONOSPACE;
   if (HANDWRITTEN_FONTS.has(fontKey)) return HANDWRITTEN;

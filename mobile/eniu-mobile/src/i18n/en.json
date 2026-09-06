@@ -615,5 +615,10 @@
   "año": "year",
   "años": "years",
   "{{n}} {{unit}} gratis": "{{n}} {{unit}} free",
-  "{{price}} los primeros {{n}} {{unit}}": "{{price}} for the first {{n}} {{unit}}"
+  "{{price}} los primeros {{n}} {{unit}}": "{{price}} for the first {{n}} {{unit}}",
+  "Elegir tipografía": "Choose a font",
+  "Sin serifas": "Sans serif",
+  "Con serifas": "Serif",
+  "Manuscritas": "Handwritten",
+  "Monoespaciadas": "Monospaced"
 }
