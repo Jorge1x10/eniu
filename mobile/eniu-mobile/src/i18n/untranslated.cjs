@@ -105,6 +105,15 @@ function translatedNodes(ast) {
     if (node.type === "NewExpression" && node.callee?.name === "Error") {
       for (const arg of node.arguments) wrapped.add(arg);
     }
+    // Lo mismo con `console.*`: sale por el log de depuracion, no por la
+    // interfaz. Traducirlo solo dificultaria buscar el mensaje.
+    if (
+      node.type === "CallExpression" &&
+      node.callee?.type === "MemberExpression" &&
+      node.callee.object?.name === "console"
+    ) {
+      for (const arg of node.arguments) wrapped.add(arg);
+    }
     for (const key of Object.keys(node)) {
       if (key === "loc" || key.endsWith("Comments")) continue;
       const child = node[key];

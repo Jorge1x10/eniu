@@ -557,5 +557,12 @@
   "¿Quieres salir de Eniu en este dispositivo?": "Sign out of Eniu on this device?",
   "¿Todavía no tienes cuenta?": "Don't have an account yet?",
   "¿Ya tienes una cuenta?": "Already have an account?",
-  "“{{name}}” dejará de resaltar productos en tu menú.": "“{{name}}” will stop highlighting products in your menu."
+  "“{{name}}” dejará de resaltar productos en tu menú.": "“{{name}}” will stop highlighting products in your menu.",
+  "PLAN COMPLETO": "FULL PLAN",
+  "TODO LO QUE INCLUYE": "EVERYTHING INCLUDED",
+  "Cancela cuando quieras desde los ajustes de tu tienda.": "Cancel anytime from your store settings.",
+  "No pudimos cargar el precio. Revisa tu conexión.": "We couldn't load the price. Check your connection.",
+  "Todavía no podemos mostrarte el precio. La tienda no está devolviendo el plan.": "We can't show you the price yet. The store isn't returning the plan.",
+  "Todavía no podemos mostrarte el precio. No hay ninguna oferta activa.": "We can't show you the price yet. There's no active offering.",
+  "Todavía no podemos mostrarte el precio. El plan aún no está disponible en la tienda.": "We can't show you the price yet. The plan isn't available in the store yet."
 }

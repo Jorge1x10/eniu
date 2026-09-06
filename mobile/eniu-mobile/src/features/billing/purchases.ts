@@ -63,16 +63,48 @@ export async function forgetPurchases() {
 }
 
 /**
+ * Por qué no hay nada que ofrecer. Cada valor es un error de configuración
+ * distinto en el panel de RevenueCat, y se distinguen a propósito: sin esto,
+ * "no hay oferta", "la oferta está vacía" y "la llamada falló" se ven todos
+ * igual en pantalla y no hay forma de saber qué arreglar.
+ */
+export type OfferingProblem =
+  /** El proyecto no tiene ninguna oferta, o la tienda no devolvió los productos. */
+  | 'sin-ofertas'
+  /** Hay ofertas, pero ninguna marcada como "Current" en RevenueCat. */
+  | 'sin-oferta-actual'
+  /** La oferta actual existe pero no tiene ningún paquete con producto. */
+  | 'oferta-vacia';
+
+export type OfferingResult =
+  | { item: PurchasesPackage; problem: null }
+  | { item: null; problem: OfferingProblem };
+
+/**
  * El paquete que se ofrece hoy. Se toma de la oferta activa del panel de
  * RevenueCat, no de una lista escrita aquí: así cambiar de producto o de
  * precio no obliga a publicar una versión nueva en las tiendas.
+ *
+ * Un producto sólo llega hasta aquí si App Store Connect lo devuelve, y eso
+ * exige el Contrato de Apps de Pago activo y el producto al menos en "Listo
+ * para enviar". Mientras falte cualquiera de las dos, la oferta viaja sin
+ * paquetes y el resultado es `oferta-vacia`, no un error.
  */
-export async function currentPackage(): Promise<PurchasesPackage | null> {
-  if (!ensureConfigured()) return null;
+export async function currentPackage(): Promise<OfferingResult> {
+  if (!ensureConfigured()) return { item: null, problem: 'sin-ofertas' };
   const offerings = await Purchases.getOfferings();
   const current = offerings.current;
-  if (!current) return null;
-  return current.availablePackages[0] ?? null;
+  if (!current) {
+    const problem = Object.keys(offerings.all).length ? 'sin-oferta-actual' : 'sin-ofertas';
+    console.warn('RevenueCat: sin oferta utilizable', { problem, ofertas: Object.keys(offerings.all) });
+    return { item: null, problem };
+  }
+  const item = current.availablePackages[0];
+  if (!item) {
+    console.warn('RevenueCat: la oferta actual no trae paquetes', { oferta: current.identifier });
+    return { item: null, problem: 'oferta-vacia' };
+  }
+  return { item, problem: null };
 }
 
 export type PurchaseOutcome = 'purchased' | 'cancelled';
