@@ -13,7 +13,7 @@ import { ImageField, ImageQualitySelector } from '@/components/ui/image-field';
 import { PlanNotice } from '@/components/ui/plan-notice';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { Slider } from '@/components/ui/slider';
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
 import { getCatalogue } from '@/features/catalogues/catalogue-api';
@@ -33,7 +33,7 @@ import { currentLocale } from '@/i18n/formats';
 function Section({ title, description, children }: React.PropsWithChildren<{ title: string; description?: string }>) {
   const theme = useEniuTheme();
   return (
-    <View style={{ gap: 13, padding: 17, borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}>
+    <View style={{ ...cardStyle(theme, 22), gap: 13, padding: 17 }}>
       <View style={{ gap: 3 }}>
         <Text style={{ color: theme.text, fontSize: 16.5, fontWeight: '900' }}>{title}</Text>
         {description ? <Text style={{ color: theme.muted, fontSize: 12, lineHeight: 18 }}>{description}</Text> : null}

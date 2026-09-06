@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { api } from '@/lib/api';
 import type { Category, Product, Promotion } from '@/types/models';
@@ -131,7 +131,7 @@ export default function PromotionsScreen() {
       <Button onPress={() => (formOpen ? setFormOpen(false) : startEdit())}>{formOpen ? t("Cerrar formulario") : t("Crear promoción")}</Button>
 
       {formOpen ? (
-        <View style={{ padding: 18, gap: 15, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous' }}>
+        <View style={{ ...cardStyle(theme, 20), padding: 18, gap: 15 }}>
           <Text style={{ color: theme.text, fontSize: 19, fontWeight: '900' }}>{editing ? t("Editar promoción") : t("Nueva promoción")}</Text>
           <FormField label={t("Nombre")} value={form.name} onChangeText={(value) => update('name', value)} maxLength={64} placeholder={t("Martes de tacos")} />
           <FormField label={t("Etiqueta")} value={form.badge_label ?? ''} onChangeText={(value) => update('badge_label', value)} maxLength={24} placeholder={t("2x1 hoy")} />
@@ -213,7 +213,7 @@ export default function PromotionsScreen() {
                 key={promotion.id}
                 onPress={() => startEdit(promotion)}
                 onLongPress={() => remove(promotion)}
-                style={({ pressed }) => ({ padding: 16, borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, gap: 5, opacity: pressed ? 0.72 : 1 })}
+                style={({ pressed }) => ({ ...cardStyle(theme, 18), padding: 16, gap: 5, opacity: pressed ? 0.72 : 1 })}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
                   <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700', flex: 1, minWidth: 0 }}>{promotion.name}</Text>

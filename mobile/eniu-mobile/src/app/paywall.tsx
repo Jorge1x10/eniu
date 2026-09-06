@@ -18,7 +18,7 @@ import {
   StarIcon,
   TagIcon,
 } from '@/components/ui/icons';
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { PRIVACY_URL, TERMS_URL } from '@/constants/legal';
 import { useAuth } from '@/features/auth/auth-context';
 import { usePlan } from '@/features/auth/use-plan';
@@ -134,7 +134,7 @@ export default function PaywallScreen() {
       ? t("No pudimos cargar el precio. Revisa tu conexión.")
       : t(PROBLEM_MESSAGE[offering.data?.problem ?? 'sin-ofertas']);
     return (
-      <View style={{ padding: 18, borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, gap: 12 }}>
+      <View style={{ ...cardStyle(theme, 18), backgroundColor: theme.surfaceAlt, padding: 18, gap: 12 }}>
         <Text style={{ color: theme.muted, fontSize: 13.5, lineHeight: 20 }}>{message}</Text>
         <Button variant="secondary" loading={offering.isFetching} onPress={() => offering.refetch()}>{t("Reintentar")}</Button>
       </View>
@@ -172,7 +172,7 @@ export default function PaywallScreen() {
 
         <View style={{ gap: 10 }}>
           <Text style={{ color: theme.muted, fontSize: 11.5, fontWeight: '800', letterSpacing: 0.9 }}>{t("TODO LO QUE INCLUYE")}</Text>
-          <View style={{ borderRadius: 20, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, overflow: 'hidden' }}>
+          <View style={{ ...cardStyle(theme, 20), overflow: 'hidden' }}>
             {BENEFITS.map(({ icon: Icon, label }, index) => (
               <View
                 key={label}
@@ -190,22 +190,22 @@ export default function PaywallScreen() {
         <Feedback message={error} />
 
         {paysOnWeb ? (
-          <View style={{ padding: 18, borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, gap: 6 }}>
+          <View style={{ ...cardStyle(theme, 18), backgroundColor: theme.surfaceAlt, padding: 18, gap: 6 }}>
             <Text style={{ color: theme.text, fontSize: 14.5, fontWeight: '800' }}>{t("Ya tienes una suscripción activa")}</Text>
             <Text style={{ color: theme.muted, fontSize: 13.5, lineHeight: 20 }}>{t("La contrataste desde la web. Adminístrala desde ahí para no pagar dos veces.")}</Text>
           </View>
         ) : !purchasesAvailable() ? (
-          <View style={{ padding: 18, borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border }}>
+          <View style={{ ...cardStyle(theme, 18), backgroundColor: theme.surfaceAlt, padding: 18 }}>
             <Text style={{ color: theme.muted, fontSize: 13.5, lineHeight: 20 }}>{t("Las compras dentro de la app todavía no están disponibles. Puedes contratar tu plan desde la web.")}</Text>
           </View>
         ) : offering.isLoading ? (
-          <View style={{ padding: 18, borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}>
+          <View style={{ ...cardStyle(theme, 18), padding: 18 }}>
             <Text style={{ color: theme.muted, fontSize: 13.5 }}>{t("Cargando el precio…")}</Text>
           </View>
         ) : item ? (
           /* El precio y el periodo se toman de la tienda, nunca escritos a
              mano: es lo que de verdad se le va a cobrar y en su moneda. */
-          <View style={{ padding: 18, borderRadius: 20, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 2, borderColor: theme.yellow, gap: 4 }}>
+          <View style={{ ...cardStyle(theme, 20), padding: 18, borderWidth: 2, borderColor: theme.yellow, gap: 4 }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 7 }}>
               <Text style={{ color: theme.text, fontSize: 32, fontWeight: '900', letterSpacing: -0.8 }}>{item.product.priceString}</Text>
               <Text style={{ color: theme.muted, fontSize: 14, fontWeight: '700', paddingBottom: 5 }}>

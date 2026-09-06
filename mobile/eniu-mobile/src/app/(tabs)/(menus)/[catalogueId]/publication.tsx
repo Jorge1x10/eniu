@@ -7,7 +7,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { Button } from '@/components/ui/button';
 import { CheckIcon, EyeIcon, QrIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { api } from '@/lib/api';
 import { useTranslation } from 'react-i18next';
@@ -69,7 +69,7 @@ export default function PublicationScreen() {
             mientras no esté publicado ese enlace responde 404, así que aquí sólo
             se ofrece cuando de verdad lleva a algún lado. */}
         {publication.is_published && publication.public_url ? <>
-          <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 22, alignItems: 'center', gap: 16 }}>
+          <View style={{ ...cardStyle(theme, 24), padding: 22, alignItems: 'center', gap: 16 }}>
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, borderCurve: 'continuous', padding: 16 }}><QRCode value={`${publication.public_url}?src=qr`} size={196} color="#111111" backgroundColor="#FFFFFF" /></View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 38, paddingHorizontal: 14, borderRadius: 99, backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border }}>
               <Text selectable numberOfLines={1} style={{ color: theme.muted, fontSize: 12.5, fontWeight: '600', maxWidth: 220 }}>{publication.public_url.replace(/^https?:\/\//, '')}</Text>
@@ -85,7 +85,7 @@ export default function PublicationScreen() {
             <Button variant="secondary" onPress={share}>{t("Compartir enlace")}</Button>
           </View>
         </> : publication.public_url ? (
-          <View style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 16, gap: 6 }}>
+          <View style={{ ...cardStyle(theme, 18), padding: 16, gap: 6 }}>
             <Text style={{ color: theme.text, fontSize: 13.5, fontWeight: '700' }}>{t("Su dirección ya está apartada")}</Text>
             <Text selectable style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{publication.public_url.replace(/^https?:\/\//, '')}</Text>
             <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("No cambiará al publicar y despublicar, así que un código QR impreso sigue sirviendo. El QR aparece aquí en cuanto publiques.")}</Text>
