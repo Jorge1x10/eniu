@@ -9,6 +9,7 @@ from app.modules.analytics.routes import analytics_bp
 from app.modules.users.routes import users_bp
 from app.modules.system.routes import system_bp
 from app.modules.billing.routes import billing_bp
+from app.modules.promotion.routes import promotion_bp
 
 def register_routes(app):
     app.register_blueprint(auth_bp)
@@ -22,3 +23,4 @@ def register_routes(app):
     app.register_blueprint(users_bp)
     app.register_blueprint(system_bp)
     app.register_blueprint(billing_bp)
+    app.register_blueprint(promotion_bp)

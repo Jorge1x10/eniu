@@ -17,12 +17,16 @@ import { useEniuTheme } from '@/constants/eniu-theme';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
 import { getCatalogue } from '@/features/catalogues/catalogue-api';
+import { BackgroundPresetPicker } from '@/features/templates/background-preset-picker';
+import { CoverFocalField } from '@/features/templates/cover-focal-field';
 import { MenuPreview } from '@/features/templates/menu-preview';
-import { COLOR_FIELDS, FONT_OPTIONS, SPLASH_RANGE, TEMPLATE_OPTIONS, normalizeConfiguration, splashPayload, themePayload, validateTheme } from '@/features/templates/menu-theme';
+import { PalettePicker } from '@/features/templates/palette-picker';
+import { CORE_COLOR_FIELDS, CORE_TOKEN_KEYS, COLOR_FIELDS, SPLASH_RANGE, colorPayload, deriveTokens, normalizeConfiguration, resolveTokens, splashPayload, themePayload, validateTheme } from '@/features/templates/menu-theme';
+import { useTemplateCatalog } from '@/features/templates/template-catalog';
 import { api } from '@/lib/api';
 import { appendImage, type ImageQuality, type PickedPicture } from '@/lib/image-file';
 import { usePrivateImage } from '@/lib/private-image';
-import type { Category, MenuSplash, MenuTheme, Product, TemplateConfig, TemplateKey } from '@/types/models';
+import type { Category, MenuSplash, MenuTheme, Product, TemplateConfig, TemplateKey, ThemeTokenKey } from '@/types/models';
 import { useTranslation } from 'react-i18next';
 import { currentLocale } from '@/i18n/formats';
 
@@ -50,6 +54,12 @@ function TemplateThumb({ templateKey, theme }: { templateKey: TemplateKey; theme
   if (templateKey === 'bold') return <View style={[frame, { flexDirection: 'row' }]}><View style={[block, { borderRadius: 0, borderWidth: 1.5, borderColor: theme.accent_color }]} /><View style={[block, { borderRadius: 0, borderWidth: 1.5, borderColor: theme.accent_color }]} /></View>;
   if (templateKey === 'retro') return <View style={[frame, { flexDirection: 'row', borderWidth: 1.5, borderStyle: 'dashed', borderColor: theme.accent_color }]}><View style={block} /><View style={block} /></View>;
   if (templateKey === 'natural') return <View style={frame}><View style={{ flex: 1, backgroundColor: theme.primary_color, borderRadius: 12 }} /><View style={{ flex: 1, backgroundColor: theme.accent_color, borderRadius: 12, opacity: 0.6 }} /></View>;
+  if (templateKey === 'chalkboard') return <View style={[frame, { alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderStyle: 'dashed', borderColor: theme.accent_color }]}><Text style={{ color: theme.text_color, fontSize: 12, fontStyle: 'italic', fontWeight: '900' }}>Aa</Text></View>;
+  // Revista: un destacado a lo ancho arriba y dos columnas debajo.
+  if (templateKey === 'magazine') return <View style={frame}><View style={{ flex: 1.4, backgroundColor: theme.primary_color, borderRadius: 3 }} /><View style={{ flex: 1, flexDirection: 'row', gap: 3 }}><View style={block} /><View style={block} /></View></View>;
+  if (templateKey === 'sidebar') return <View style={[frame, { flexDirection: 'row' }]}><View style={{ width: 12, backgroundColor: theme.primary_color, borderRadius: 3 }} /><View style={{ flex: 1, gap: 3, justifyContent: 'center' }}><View style={[line, { width: '85%' }]} /><View style={[line, { width: '65%' }]} /><View style={[line, { width: '75%' }]} /></View></View>;
+  if (templateKey === 'receipt') return <View style={[frame, { justifyContent: 'center', gap: 4 }]}>{[0, 1, 2].map((row) => <View key={row} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}><View style={[line, { width: 12, height: 2 }]} /><View style={{ flex: 1, borderBottomWidth: 1, borderStyle: 'dotted', borderColor: theme.text_color, opacity: 0.4 }} /><View style={[line, { width: 7, height: 2 }]} /></View>)}</View>;
+  if (templateKey === 'story') return <View style={[frame, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}><View style={{ width: 14, height: 14, borderRadius: 999, backgroundColor: theme.primary_color }} /><View style={{ flex: 1, gap: 3 }}><View style={[line, { width: '80%' }]} /><View style={[line, { width: '60%' }]} /></View></View>;
   return <View style={[frame, { flexDirection: 'row' }]}><View style={block} /><View style={block} /></View>;
 }
 
@@ -62,8 +72,14 @@ export default function TemplateScreen() {
   const { catalogueId } = useLocalSearchParams<{ catalogueId: string }>();
   const { selectedBusiness } = useBusiness();
   const { limits, allowsTemplate, allowsFont } = usePlan();
-  const templatesLocked = TEMPLATE_OPTIONS.some((option) => !allowsTemplate(option.key));
-  const fontsLocked = FONT_OPTIONS.some((option) => !allowsFont(option.key));
+  // Layouts, paletas, tipografías y fondos salen del backend: así una
+  // plantilla nueva aparece en la app sin publicar una versión en las tiendas.
+  const { catalog } = useTemplateCatalog();
+  const templatesLocked = catalog.layouts.some((layout) => !allowsTemplate(layout.key));
+  const fontsLocked = catalog.fonts.some((font) => !allowsFont(font.key));
+  // Los 4 primeros tokens ya tienen su propio selector arriba (son las
+  // columnas planas); aquí sólo van los que no tienen campo propio.
+  const advancedTokens = catalog.color_tokens.filter((token) => !CORE_TOKEN_KEYS.has(token.key));
   const coverLocked = !limits.allow_cover;
   const backgroundLocked = !limits.allow_background;
   const splashLocked = !limits.allow_splash;
@@ -88,6 +104,7 @@ export default function TemplateScreen() {
   const [assetVersion, setAssetVersion] = useState(0);
   const [quality, setQuality] = useState<ImageQuality>('alta');
   const [expanded, setExpanded] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -112,7 +129,66 @@ export default function TemplateScreen() {
   const splash = splashPicked ? { uri: splashPicked.uri } : privateSplash;
 
   function updateTheme<K extends keyof MenuTheme>(field: K, value: MenuTheme[K]) {
-    setDraft((current) => (current ? { ...current, theme: { ...current.theme, [field]: value } } : current));
+    setDraft((current) => {
+      if (!current) return current;
+      const theme = { ...current.theme, [field]: value };
+      // Tocar un color a mano es "quiero personalizarlo": deja de seguir a la
+      // paleta, y los tokens sin campo propio (precio, superficie, chip…) se
+      // recalculan para que la vista previa no se quede con los de la paleta
+      // anterior mientras se sigue editando.
+      if (CORE_COLOR_FIELDS.has(field as never)) {
+        theme.color_preset_key = null;
+        theme.tokens = {
+          ...deriveTokens(theme.background_color, theme.primary_color, theme.text_color),
+          background: theme.background_color, primary: theme.primary_color, accent: theme.accent_color, text: theme.text_color,
+          ...(current.theme.theme_overrides ?? {}),
+        };
+      }
+      return { ...current, theme };
+    });
+    setError(''); setSuccess('');
+  }
+
+  function choosePalette(key: string | null) {
+    setDraft((current) => {
+      if (!current) return current;
+      // "Personalizado" parte de los colores que ya se veían: cambiar de
+      // opinión sobre la paleta no debe borrar lo que la persona eligió.
+      if (key === null) return { ...current, theme: { ...current.theme, color_preset_key: null } };
+      const palette = catalog.palettes.find((item) => item.key === key);
+      if (!palette) return current;
+      return {
+        ...current,
+        theme: {
+          ...current.theme,
+          background_color: palette.tokens.background,
+          primary_color: palette.tokens.primary,
+          accent_color: palette.tokens.accent,
+          text_color: palette.tokens.text,
+          color_preset_key: key,
+          theme_overrides: {},
+          tokens: palette.tokens,
+        },
+      };
+    });
+    setError(''); setSuccess('');
+  }
+
+  function updateTokenOverride(tokenKey: ThemeTokenKey, value: string) {
+    setDraft((current) => (current ? {
+      ...current,
+      theme: {
+        ...current.theme,
+        color_preset_key: null,
+        theme_overrides: { ...(current.theme.theme_overrides ?? {}), [tokenKey]: value },
+        tokens: { ...resolveTokens(current.theme), [tokenKey]: value },
+      },
+    } : current));
+    setError(''); setSuccess('');
+  }
+
+  function updateFocalPoint(x: number, y: number) {
+    setDraft((current) => (current ? { ...current, theme: { ...current.theme, cover_focal_x: x, cover_focal_y: y } } : current));
     setError(''); setSuccess('');
   }
   function updateTemplate(templateKey: TemplateKey) {
@@ -148,6 +224,9 @@ export default function TemplateScreen() {
     try {
       const theme = themePayload(draft.theme);
       const splashData = splashPayload(draft.splash);
+      // La paleta y los retoques finos viajan al lado de `theme`, no dentro:
+      // el backend los valida por separado.
+      const colors = colorPayload(draft.theme);
       const touchesImages = Boolean(coverPicked || removeCover || backgroundPicked || removeBackground || splashPicked || removeSplash);
       let data: { template: TemplateConfig };
       if (touchesImages) {
@@ -155,6 +234,9 @@ export default function TemplateScreen() {
         form.append('template_key', draft.template_key);
         form.append('theme', JSON.stringify(theme));
         form.append('splash', JSON.stringify(splashData));
+        Object.entries(colors).forEach(([field, value]) => {
+          form.append(field, typeof value === 'string' ? value : JSON.stringify(value));
+        });
         form.append('remove_cover', String(removeCover));
         form.append('remove_background', String(removeBackground));
         form.append('remove_splash', String(removeSplash));
@@ -163,7 +245,7 @@ export default function TemplateScreen() {
         if (splashPicked) appendImage(form, 'splash', splashPicked);
         data = await api.patchForm<{ template: TemplateConfig }>(`${base}/template`, form);
       } else {
-        data = await api.patch<{ template: TemplateConfig }>(`${base}/template`, { template_key: draft.template_key, theme, splash: splashData });
+        data = await api.patch<{ template: TemplateConfig }>(`${base}/template`, { template_key: draft.template_key, theme, splash: splashData, ...colors });
       }
       const configuration = normalizeConfiguration(data.template);
       queryClient.setQueryData(key, { template: configuration });
@@ -182,6 +264,9 @@ export default function TemplateScreen() {
   if (query.isError || !draft || !saved) return <ErrorState message={t("No pudimos cargar la plantilla.")} error={query.error} onRetry={() => query.refetch()} />;
 
   const problems = validateTheme(draft.theme);
+  // Los 10 colores ya resueltos: lo que de verdad se dibuja, que es también lo
+  // que deben mostrar los selectores de los ajustes avanzados.
+  const draftTokens = resolveTokens(draft.theme);
   const dirty = JSON.stringify(saved) !== JSON.stringify(draft) || Boolean(coverPicked || removeCover || backgroundPicked || removeBackground || splashPicked || removeSplash);
   const catalogue = catalogueQuery.data?.catalogue ?? { name: t("Tu menú"), description: null };
   const categories = categoriesQuery.data?.categories ?? [];
@@ -215,7 +300,7 @@ export default function TemplateScreen() {
 
       <Section title={t("Plantilla")} description={t("Define la composición del menú: tarjetas, listas o carta editorial.")}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
-          {TEMPLATE_OPTIONS.map((option) => {
+          {catalog.layouts.map((option) => {
             const on = draft.template_key === option.key;
             const locked = !allowsTemplate(option.key);
             return (
@@ -230,9 +315,9 @@ export default function TemplateScreen() {
                 <TemplateThumb templateKey={option.key} theme={draft.theme} />
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   {locked ? <LockIcon color={appTheme.muted} size={13} /> : null}
-                  <Text style={{ color: appTheme.text, fontSize: 14, fontWeight: '800' }}>{option.name}</Text>
+                  <Text style={{ color: appTheme.text, fontSize: 14, fontWeight: '800' }}>{t(option.name)}</Text>
                 </View>
-                <Text style={{ color: appTheme.muted, fontSize: 11, lineHeight: 16 }}>{option.description}</Text>
+                <Text style={{ color: appTheme.muted, fontSize: 11, lineHeight: 16 }}>{t(option.description)}</Text>
               </Pressable>
             );
           })}
@@ -240,23 +325,52 @@ export default function TemplateScreen() {
         {templatesLocked ? <PlanNotice message={t("Tu plan actual sólo incluye la plantilla básica.")} /> : null}
       </Section>
 
-      <Section title={t("Colores")} description={t("Toca un color para elegirlo de la paleta o escribe el código de tu marca.")}>
+      <Section title={t("Colores")} description={t("Empieza por una paleta lista o elige cada color a mano.")}>
+        <PalettePicker palettes={catalog.palettes} value={draft.theme.color_preset_key} onChange={choosePalette} />
         {COLOR_FIELDS.map((field) => (
           <ColorField
             key={field.key}
-            label={field.label}
-            hint={field.hint}
+            label={t(field.label)}
+            hint={t(field.hint)}
             value={draft.theme[field.key]}
             original={saved.theme[field.key]}
             error={problems[field.key]}
             onChange={(value) => updateTheme(field.key, value)}
           />
         ))}
+
+        {advancedTokens.length ? (
+          <>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: advancedOpen }}
+              onPress={() => setAdvancedOpen((open) => !open)}
+              style={({ pressed }) => ({ minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 14, borderRadius: 13, borderCurve: 'continuous', borderWidth: 1, borderColor: appTheme.border, backgroundColor: appTheme.background, opacity: pressed ? 0.75 : 1 })}
+            >
+              <Text style={{ color: appTheme.text, fontSize: 13.5, fontWeight: '700' }}>{t("Colores avanzados")}</Text>
+              <Text style={{ color: appTheme.muted, fontSize: 13, fontWeight: '700' }}>{advancedOpen ? '−' : '+'}</Text>
+            </Pressable>
+            {advancedOpen ? (
+              <View style={{ gap: 13 }}>
+                <Text style={{ color: appTheme.muted, fontSize: 11.5, lineHeight: 16 }}>{t("Colores de elementos específicos: precio, título de categoría y el filtro de categoría seleccionado.")}</Text>
+                {advancedTokens.map((token) => (
+                  <ColorField
+                    key={token.key}
+                    label={t(token.label)}
+                    hint={t(token.hint)}
+                    value={draftTokens[token.key as ThemeTokenKey]}
+                    onChange={(value) => updateTokenOverride(token.key as ThemeTokenKey, value)}
+                  />
+                ))}
+              </View>
+            ) : null}
+          </>
+        ) : null}
       </Section>
 
       <Section title={t("Tipografía")} description={t("La vista previa usa la fuente del sistema más parecida a la del menú publicado.")}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {FONT_OPTIONS.map((option) => {
+          {catalog.fonts.map((option) => {
             const on = draft.theme.font_key === option.key;
             const locked = !allowsFont(option.key);
             return (
@@ -269,7 +383,7 @@ export default function TemplateScreen() {
                 style={({ pressed }) => ({ minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 15, borderRadius: 999, backgroundColor: on ? appTheme.yellow : appTheme.background, borderWidth: 1, borderColor: on ? appTheme.yellowPressed : appTheme.border, opacity: locked ? 0.5 : pressed ? 0.75 : 1 })}
               >
                 {locked ? <LockIcon color={appTheme.muted} size={12} /> : null}
-                <Text style={{ color: on ? appTheme.onYellow : appTheme.text, fontSize: 13.5, fontWeight: on ? '800' : '600' }}>{option.label}</Text>
+                <Text style={{ color: on ? appTheme.onYellow : appTheme.text, fontSize: 13.5, fontWeight: on ? '800' : '600' }}>{option.name}</Text>
               </Pressable>
             );
           })}
@@ -286,6 +400,14 @@ export default function TemplateScreen() {
             ? <PlanNotice message={t("Tu plan actual no incluye portada en el menú.")} />
             : <ImageField title="portada" emptyText={t("Sin portada")} source={cover} quality={quality} onPicked={pickCover} onRemove={dropCover} onError={setError} note="Se muestra arriba del menú. Se guarda al tocar «Guardar»." />}
         </View>
+        {!coverLocked ? (
+          <CoverFocalField
+            source={cover}
+            focalX={draft.theme.cover_focal_x ?? 0.5}
+            focalY={draft.theme.cover_focal_y ?? 0.5}
+            onChange={updateFocalPoint}
+          />
+        ) : null}
         {([['show_cover', t("Mostrar portada")], ['show_product_images', t("Mostrar imágenes de productos")]] as const).map(([field, label]) => {
           const locked = field === 'show_cover' ? coverLocked : productImagesLocked;
           return (
@@ -299,6 +421,14 @@ export default function TemplateScreen() {
 
       <Section title={t("Fondo del menú")} description={t("La imagen queda detrás del contenido y no reemplaza la portada.")}>
         {backgroundLocked ? <PlanNotice message={t("Tu plan actual no incluye imagen de fondo en el menú.")} /> : null}
+        <Text style={{ color: appTheme.text, fontSize: 13, fontWeight: '700' }}>{t("Fondo prediseñado")}</Text>
+        <BackgroundPresetPicker
+          backgrounds={catalog.backgrounds}
+          value={draft.theme.background_preset_key}
+          disabled={backgroundLocked}
+          onChange={(key) => updateTheme('background_preset_key', key)}
+        />
+        <Text style={{ color: appTheme.text, fontSize: 13, fontWeight: '700' }}>{t("O sube tu propia imagen")}</Text>
         <ImageField title="fondo" emptyText={t("Sin imagen de fondo")} source={background} quality={quality} onPicked={pickBackground} onRemove={dropBackground} onError={setError} disabled={backgroundLocked} note="Baja la opacidad para que el texto siga leyéndose." />
         <Slider label={t("Opacidad del fondo")} value={draft.theme.background_opacity} disabled={backgroundLocked} onChange={(value) => updateTheme('background_opacity', value)} />
       </Section>

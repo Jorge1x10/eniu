@@ -6,6 +6,7 @@ lugar de cablearlos: así cambiar un límite no obliga a publicar una versión
 nueva en las tiendas.
 """
 
+from app.modules.template import catalog
 from app.shared.i18n import _
 
 FREE = "free"
@@ -15,8 +16,8 @@ PRO = "pro"
 # Un límite en None significa "sin tope".
 UNLIMITED = None
 
-DEFAULT_TEMPLATE_KEY = "modern"
-DEFAULT_FONT_KEY = "inter"
+DEFAULT_LAYOUT_KEY = catalog.DEFAULT_LAYOUT_KEY
+DEFAULT_FONT_KEY = catalog.DEFAULT_FONT_KEY
 
 
 PLANS = {
@@ -25,8 +26,11 @@ PLANS = {
         "max_businesses": 1,
         "max_catalogues_per_business": 1,
         "max_products_per_catalogue": 15,
-        "template_keys": {DEFAULT_TEMPLATE_KEY},
+        "layout_keys": {DEFAULT_LAYOUT_KEY},
         "font_keys": {DEFAULT_FONT_KEY},
+        # El color nunca fue una función de pago: el gratuito siempre pudo
+        # elegir cualquier color, y sigue pudiendo elegir cualquier paleta
+        # curada o entrar en modo avanzado igual que un plan pago.
         "allow_cover": False,
         "allow_background": False,
         "allow_product_images": True,
@@ -39,8 +43,8 @@ PLANS = {
         "max_businesses": 3,
         "max_catalogues_per_business": 5,
         "max_products_per_catalogue": UNLIMITED,
-        "template_keys": None,  # None = todas las plantillas disponibles
-        "font_keys": None,      # None = todas las tipografías disponibles
+        "layout_keys": None,  # None = todas las plantillas disponibles
+        "font_keys": None,    # None = todas las tipografías disponibles
         "allow_cover": True,
         "allow_background": True,
         "allow_product_images": True,
@@ -55,6 +59,46 @@ PLANS = {
 PLANS[PRO] = {**PLANS[ESSENTIAL], "name": "Plan Pro"}
 
 PAID_PLAN_KEYS = (ESSENTIAL, PRO)
+
+# De dónde salió la suscripción que el usuario tiene hoy. Importa más allá de
+# la contabilidad: una comprada en la tienda no se puede cancelar desde el
+# servidor (sólo el usuario, desde los ajustes de su teléfono), y la app no
+# debe ofrecer comprar de nuevo a quien ya paga por la web.
+PROVIDER_STRIPE = "stripe"
+PROVIDER_APP_STORE = "app_store"
+PROVIDER_PLAY_STORE = "play_store"
+STORE_PROVIDERS = (PROVIDER_APP_STORE, PROVIDER_PLAY_STORE)
+
+# `store` tal como lo manda RevenueCat en el webhook.
+REVENUECAT_STORES = {
+    "APP_STORE": PROVIDER_APP_STORE,
+    "MAC_APP_STORE": PROVIDER_APP_STORE,
+    "PLAY_STORE": PROVIDER_PLAY_STORE,
+}
+
+# Identificador del "entitlement" configurado en el panel de RevenueCat → plan
+# de Eniu. Se mapea por entitlement y no por `product_id` a propósito: los
+# identificadores de producto cambian entre tiendas y entre periodos (mensual,
+# anual), mientras que el entitlement es justo el concepto estable de "a qué
+# tiene derecho quien compró esto".
+REVENUECAT_ENTITLEMENTS = {
+    "essential": ESSENTIAL,
+    "pro": PRO,
+}
+
+
+def plan_key_for_entitlements(entitlement_ids):
+    """Plan que corresponde a los entitlements de una compra; None si ninguno.
+
+    Devolver None es información, no un error: significa que la compra no
+    concede ningún plan conocido —un producto nuevo que todavía no está
+    mapeado aquí— y quien llama debe registrarlo en vez de adivinar un plan.
+    """
+    for entitlement_id in entitlement_ids or []:
+        plan_key = REVENUECAT_ENTITLEMENTS.get(entitlement_id)
+        if plan_key:
+            return plan_key
+    return None
 
 
 def limits_for(plan_key):
@@ -75,9 +119,9 @@ def effective_plan_key(user):
     return subscription.plan_key if subscription.plan_key in PLANS else FREE
 
 
-def allows_template(plan_key, template_key):
-    allowed = limits_for(plan_key)["template_keys"]
-    return allowed is None or template_key in allowed
+def allows_layout(plan_key, layout_key):
+    allowed = limits_for(plan_key)["layout_keys"]
+    return allowed is None or layout_key in allowed
 
 
 def allows_font(plan_key, font_key):
@@ -97,7 +141,10 @@ def to_public_dict(plan_key):
         "max_businesses": limits["max_businesses"],
         "max_catalogues_per_business": limits["max_catalogues_per_business"],
         "max_products_per_catalogue": limits["max_products_per_catalogue"],
-        "template_keys": sorted(limits["template_keys"]) if limits["template_keys"] else None,
+        "layout_keys": sorted(limits["layout_keys"]) if limits["layout_keys"] else None,
+        # Alias: clientes que todavía no leen `layout_keys` (app/web sin
+        # actualizar) siguen encontrando el campo con el nombre de siempre.
+        "template_keys": sorted(limits["layout_keys"]) if limits["layout_keys"] else None,
         "font_keys": sorted(limits["font_keys"]) if limits["font_keys"] else None,
         "allow_cover": limits["allow_cover"],
         "allow_background": limits["allow_background"],
@@ -109,16 +156,22 @@ def to_public_dict(plan_key):
 
 
 def plan_payload(plan_key, effective_key=None, status="inactive", has_access=False,
-                 cancel_at_period_end=False, current_period_end=None):
+                 cancel_at_period_end=False, current_period_end=None, provider=None):
     """Plan tal como lo consumen el dashboard web y la app móvil.
 
     `plan_key` es lo que el usuario contrató y `effective_key` lo que
     realmente aplica hoy: alguien con el pago rechazado sigue viendo "Plan
     Esencial" en pantalla, pero con los límites del gratuito.
+
+    `provider` viaja para que cada cliente sepa qué puede ofrecer: la app no
+    debe mostrar el botón de comprar a quien ya paga por Stripe, y el panel web
+    no debe ofrecer su portal de facturación a quien compró en la App Store,
+    donde Stripe no sabe nada de esa suscripción.
     """
     effective_key = effective_key or plan_key
     return {
         "key": plan_key,
+        "provider": provider,
         # El nombre se traduce aquí y no en `PLANS` porque ese diccionario es la
         # fuente en español que sirve de clave del catálogo. Los clientes
         # también reciben `key`, por si prefieren rotularlo ellos mismos.
@@ -142,18 +195,19 @@ def sanitize_public_splash(plan_key, splash):
     return {**splash, "enabled": False, "image_url": None}
 
 
-def sanitize_public_theme(plan_key, template_key, theme):
+def sanitize_public_theme(plan_key, layout_key, theme):
     """Ajusta la plantilla de un menú público a lo que el plan permite.
 
     Se aplica al dibujar, no al guardar. Un usuario que baja de plan conserva
     intacta su configuración en la base y ve el menú con la plantilla básica;
-    al volver a pagar recupera su diseño sin haber perdido nada.
+    al volver a pagar recupera su diseño sin haber perdido nada. El color
+    nunca se degrada aquí: nunca fue una función de pago.
     """
     limits = limits_for(plan_key)
     theme = dict(theme)
 
-    if not allows_template(plan_key, template_key):
-        template_key = DEFAULT_TEMPLATE_KEY
+    if not allows_layout(plan_key, layout_key):
+        layout_key = DEFAULT_LAYOUT_KEY
     if not allows_font(plan_key, theme.get("font_key")):
         theme["font_key"] = DEFAULT_FONT_KEY
     if not limits["allow_cover"]:
@@ -165,4 +219,4 @@ def sanitize_public_theme(plan_key, template_key, theme):
     if not limits["allow_product_images"]:
         theme["show_product_images"] = False
 
-    return template_key, theme
+    return layout_key, theme

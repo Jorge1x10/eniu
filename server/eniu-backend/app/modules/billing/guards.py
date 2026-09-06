@@ -87,7 +87,7 @@ def ensure_analytics_access(owner_id):
     return _blocked(_("Tu plan actual no incluye analíticas."))
 
 
-def ensure_template_allowed(owner_id, template_key=None, theme=None, cover_upload=False,
+def ensure_template_allowed(owner_id, layout_key=None, theme=None, cover_upload=False,
                             background_upload=False, splash=None, splash_upload=False,
                             current=None):
     """Valida los cambios de plantilla que el plan permite.
@@ -118,7 +118,11 @@ def ensure_template_allowed(owner_id, template_key=None, theme=None, cover_uploa
     if splash_upload and not limits["allow_splash"]:
         return _blocked(_("Tu plan actual no incluye la pantalla de bienvenida del menú."))
 
-    if changed(template_key, current.get("template_key")) and not plans.allows_template(plan_key, template_key):
+    # Se compara contra `template_key`, no `layout_key`: es el campo que
+    # siempre estuvo poblado de forma confiable (incluye filas creadas antes
+    # de que `layout_key` existiera). Ambos representan hoy el mismo catálogo
+    # de 8 claves, así que no cambia a qué se le aplica el límite.
+    if changed(layout_key, current.get("template_key")) and not plans.allows_layout(plan_key, layout_key):
         return _blocked(_("Tu plan actual sólo incluye la plantilla básica."))
 
     font_key = theme.get("font_key")

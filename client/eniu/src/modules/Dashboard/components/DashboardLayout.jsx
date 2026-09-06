@@ -20,6 +20,7 @@ const dashboardOptions = [
   { key: "products", label: "Productos", path: "/dashboard/productos", icon: DASH_ICONS.products },
   { key: "categories", label: "Categorías", path: "/dashboard/categorias", icon: DASH_ICONS.categories },
   { key: "templates", label: "Plantillas", path: "/dashboard/templates", icon: DASH_ICONS.templates },
+  { key: "promotions", label: "Promociones", path: "/dashboard/promociones", icon: DASH_ICONS.promotions },
   { key: "qr", label: "Códigos QR", path: "/dashboard/qr", icon: DASH_ICONS.qrcodes },
   { key: "analytics", label: "Analíticas", path: "/dashboard/analiticas", icon: DASH_ICONS.analytics },
   { key: "settings", label: "Configuración", path: "/dashboard/configuracion", icon: DASH_ICONS.config },
@@ -31,6 +32,7 @@ const CATALOGUE_SECTIONS = {
   products: "products",
   categories: "categories",
   templates: "templates",
+  promotions: "promotions",
   qr: "qr",
   analytics: "analytics",
 };

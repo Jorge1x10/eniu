@@ -12,6 +12,7 @@ export default function DeleteContentModal({ item, type, onClose, onDelete, onDe
   const confirmRef = useRef(null);
   const deletingRef = useRef(false);
   const isCategory = type === "category";
+  const isPromotion = type === "promotion";
 
   async function confirmDelete() {
     if (deletingRef.current) return;
@@ -27,7 +28,9 @@ export default function DeleteContentModal({ item, type, onClose, onDelete, onDe
       // traducciones que suenan a máquina.
       setError(getErrorMessage(response, isCategory
         ? t("No pudimos eliminar la categoría.")
-        : t("No pudimos eliminar el producto.")));
+        : isPromotion
+          ? t("No pudimos eliminar la promoción.")
+          : t("No pudimos eliminar el producto.")));
       return;
     }
     onDeleted(item.id);
@@ -45,7 +48,9 @@ export default function DeleteContentModal({ item, type, onClose, onDelete, onDe
       </div>
       <h2 id="delete-content-title" className="mt-5 text-xl font-bold text-[#111111]">{isCategory
         ? t("¿Eliminar la categoría “{{name}}”?", { name: item.name })
-        : t("¿Eliminar el producto “{{name}}”?", { name: item.name })}</h2>
+        : isPromotion
+          ? t("¿Eliminar la promoción “{{name}}”?", { name: item.name })
+          : t("¿Eliminar el producto “{{name}}”?", { name: item.name })}</h2>
       <p id="delete-content-description" className="mt-2 text-sm leading-6 text-[#666666]">
         {isCategory
           ? t("Sus productos no se eliminarán; quedarán disponibles en “Sin categoría”.")
@@ -54,7 +59,7 @@ export default function DeleteContentModal({ item, type, onClose, onDelete, onDe
       {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
       <div className="mt-6 flex justify-end gap-3">
         <button type="button" onClick={onClose} disabled={isDeleting} className="cursor-pointer rounded-xl px-4 py-2.5 font-semibold hover:bg-black/5 disabled:cursor-not-allowed">{t("Cancelar")}</button>
-        <button ref={confirmRef} type="button" onClick={confirmDelete} disabled={isDeleting} className="cursor-pointer rounded-xl bg-[#DC2626] px-4 py-2.5 font-semibold text-white hover:bg-[#B91C1C] disabled:cursor-not-allowed disabled:opacity-50">{isDeleting ? t("Eliminando...") : isCategory ? t("Eliminar categoría") : t("Eliminar producto")}</button>
+        <button ref={confirmRef} type="button" onClick={confirmDelete} disabled={isDeleting} className="cursor-pointer rounded-xl bg-[#DC2626] px-4 py-2.5 font-semibold text-white hover:bg-[#B91C1C] disabled:cursor-not-allowed disabled:opacity-50">{isDeleting ? t("Eliminando...") : isCategory ? t("Eliminar categoría") : isPromotion ? t("Eliminar promoción") : t("Eliminar producto")}</button>
       </div>
     </AccessibleModal>
   );
