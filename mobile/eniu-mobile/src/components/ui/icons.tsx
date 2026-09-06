@@ -6,6 +6,10 @@ export function ChevronRightIcon({ color, size = 14 }: IconProps) {
   return <Svg width={size} height={size * 1.14} viewBox="0 0 8 14" fill="none"><Path d="M1 1l6 6-6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
 }
 
+export function ChevronLeftIcon({ color, size = 14 }: IconProps) {
+  return <Svg width={size} height={size * 1.14} viewBox="0 0 8 14" fill="none"><Path d="M7 1L1 7l6 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
+}
+
 export function ChevronDownIcon({ color, size = 12 }: IconProps) {
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="m6 9 6 6 6-6" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
 }

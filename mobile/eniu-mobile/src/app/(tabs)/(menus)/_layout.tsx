@@ -21,7 +21,9 @@ export default function MenusLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false, title: t("Menús") }} />
-      <Stack.Screen name="[catalogueId]/index" options={{ title: t("Menú") }} />
+      {/* Sin header nativo: esta pantalla dibuja su propia cabecera oscura, que
+          sube hasta el borde y lleva el interruptor de visibilidad. */}
+      <Stack.Screen name="[catalogueId]/index" options={{ headerShown: false, title: t("Menú") }} />
       <Stack.Screen name="[catalogueId]/products" options={{ title: 'Productos' }} />
       <Stack.Screen name="[catalogueId]/categories" options={{ title: t("Categorías") }} />
       <Stack.Screen name="[catalogueId]/template" options={{ title: t("Diseño del menú") }} />

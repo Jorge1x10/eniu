@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, Text, useWindowDimensions, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AreaChart } from '@/components/area-chart';
 import { BusinessSwitcher } from '@/components/business-switcher';
@@ -12,7 +13,6 @@ import { MilestoneSheet } from '@/components/milestone-sheet';
 import { MinusIcon, PlusIcon, ShareIcon, TrendDownIcon, TrendUpIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
-import { useScreenTopPadding } from '@/constants/layout';
 import { useAuth } from '@/features/auth/auth-context';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
@@ -70,7 +70,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
 
   const theme = useEniuTheme();
-  const topPadding = useScreenTopPadding();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { user } = useAuth();
   const { limits } = usePlan();
@@ -121,20 +121,22 @@ export default function HomeScreen() {
   }
 
   const inset = width < 380 ? 16 : 20;
+  // La cabecera oscura sube hasta el borde de la pantalla y se mete bajo la
+  // barra de estado, así que el ScrollView no debe insertar nada por su cuenta:
+  // el área segura la respeta el contenido de la cabecera, no el contenedor.
+  const safeTop = Math.max(insets.top, 12);
 
   return (
     <ScrollView
-      // "automatic" deja que iOS aplique el área segura una sola vez. Sumarla a
-      // mano encima la duplicaba y dejaba un hueco grande bajo la isla dinámica.
-      contentInsetAdjustmentBehavior="automatic"
+      contentInsetAdjustmentBehavior="never"
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: topPadding, paddingBottom: 120 }}
+      contentContainerStyle={{ paddingBottom: 120 }}
     >
       <View style={{ width: '100%', maxWidth: 760, alignSelf: 'center' }}>
         {loadingBusinesses ? (
-          <View style={{ paddingHorizontal: inset, gap: 5 }}><LoadingState label={t("Cargando tus negocios…")} /></View>
+          <View style={{ paddingHorizontal: inset, paddingTop: safeTop + 12, gap: 5 }}><LoadingState label={t("Cargando tus negocios…")} /></View>
         ) : !selectedBusiness ? (
-          <View style={{ paddingHorizontal: inset, gap: 16 }}>
+          <View style={{ paddingHorizontal: inset, paddingTop: safeTop + 12, gap: 16 }}>
             <View style={{ gap: 5 }}><Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>{t("Hola,")} {user?.name || user?.username}</Text><Text style={{ color: theme.muted, lineHeight: 20 }}>{t("Así se están comportando tus menús hoy.")}</Text></View>
             <View style={{ alignItems: 'center', gap: 16, paddingVertical: 30 }}>
               <Text style={{ color: theme.text, fontSize: 22, fontWeight: '900', textAlign: 'center' }}>{t("Crea tu primer negocio")}</Text>
@@ -143,11 +145,11 @@ export default function HomeScreen() {
             </View>
           </View>
         ) : catalogues.isLoading ? (
-          <View style={{ paddingHorizontal: inset }}><LoadingState label={t("Preparando resumen…")} /></View>
+          <View style={{ paddingHorizontal: inset, paddingTop: safeTop + 12 }}><LoadingState label={t("Preparando resumen…")} /></View>
         ) : catalogues.isError ? (
-          <View style={{ paddingHorizontal: inset }}><ErrorState message={t("No pudimos cargar el resumen de tu negocio.")} error={catalogues.error} onRetry={() => catalogues.refetch()} /></View>
+          <View style={{ paddingHorizontal: inset, paddingTop: safeTop + 12 }}><ErrorState message={t("No pudimos cargar el resumen de tu negocio.")} error={catalogues.error} onRetry={() => catalogues.refetch()} /></View>
         ) : <>
-          <View style={{ backgroundColor: theme.hero, paddingHorizontal: inset, paddingTop: 22, paddingBottom: 26, borderRadius: 30, borderCurve: 'continuous', gap: 4, shadowColor: '#141210', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.35, shadowRadius: 30, elevation: 8 }}>
+          <View style={{ backgroundColor: theme.hero, paddingHorizontal: inset, paddingTop: safeTop + 14, paddingBottom: 26, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, borderCurve: 'continuous', gap: 4, shadowColor: '#141210', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.35, shadowRadius: 30, elevation: 8 }}>
             <BusinessSwitcher variant="dark" />
 
             <View style={{ height: 22 }} />

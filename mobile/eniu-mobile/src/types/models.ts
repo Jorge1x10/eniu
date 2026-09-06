@@ -108,8 +108,23 @@ export type MenuSplash = {
 
 export type TemplateConfig = { template_key: TemplateKey; theme: MenuTheme; splash: MenuSplash };
 
+/** Métrica del resumen: el backend manda el valor, el del periodo anterior y el cambio. */
+export type AnalyticsMetric = {
+  value?: number;
+  previous_value?: number;
+  /** null cuando no hay periodo anterior con el que comparar (change_status: "new"). */
+  percentage_change?: number | null;
+  change_status?: 'increased' | 'decreased' | 'unchanged' | 'new';
+};
+
 export type Analytics = {
-  summary?: { menu_views?: { value?: number } };
-  visits_over_time?: { date: string; views: number }[];
-  sources?: { key: string; views: number }[];
+  summary?: {
+    menu_views?: AnalyticsMetric;
+    approximate_unique_visitors?: AnalyticsMetric;
+    product_interactions?: AnalyticsMetric;
+  };
+  visits_over_time?: { date: string; views: number; approximate_unique_visitors?: number }[];
+  /** `label` ya viene traducido por el backend; `key` es el identificador crudo. */
+  sources?: { key: string; label?: string; views: number; percentage?: number }[];
+  top_products?: { name: string; category_name?: string; interactions: number; is_available?: boolean }[];
 };

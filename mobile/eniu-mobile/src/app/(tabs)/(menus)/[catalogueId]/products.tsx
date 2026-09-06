@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
@@ -9,7 +9,7 @@ import { MAX_PICTURES, ProductImagePicker, type DefaultKey, type PickedPicture }
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
-import { ImageIcon, MinusIcon, PencilIcon, PlusIcon } from '@/components/ui/icons';
+import { ImageIcon, PencilIcon, PlusIcon } from '@/components/ui/icons';
 import { PlanNotice } from '@/components/ui/plan-notice';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
@@ -26,13 +26,13 @@ import { currentLocale } from '@/i18n/formats';
 const UNCATEGORIZED = 'uncategorized';
 
 /**
- * Precio y disponibilidad se cambian aquí mismo, sin abrir el formulario: son
- * el ajuste que se hace varias veces al día, mientras que nombre, fotos o
- * categoría se tocan de vez en cuando y sí ameritan el formulario completo.
+ * La disponibilidad se cambia desde la lista porque es el ajuste que se hace
+ * varias veces al día. El precio no: se edita en el formulario, junto al resto
+ * de los datos del producto.
  */
 function ProductRow({ product, currency, theme, businessId, catalogueId, onEdit, onLongPress }: { product: Product; currency: Intl.NumberFormat; theme: ReturnType<typeof useEniuTheme>; businessId?: string; catalogueId?: string; onEdit: () => void; onLongPress: () => void }) {
   const { t } = useTranslation();
-  const { bumpPrice, toggleAvailable } = useProductQuickActions(businessId, catalogueId);
+  const { toggleAvailable } = useProductQuickActions(businessId, catalogueId);
 
   const uri = defaultPictureUrl(product);
   const extra = (product.pictures?.length ?? 0) - 1;
@@ -59,9 +59,10 @@ function ProductRow({ product, currency, theme, businessId, catalogueId, onEdit,
           <Text style={{ color: product.is_available ? theme.success : theme.danger, fontSize: 11.5, fontWeight: '700' }}>{product.is_available ? t("Disponible") : t("Agotado")}</Text>
         </Pressable>
         <View style={{ flex: 1 }} />
-        <Pressable onPress={() => bumpPrice(product, -1)} style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 11, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}><MinusIcon color={theme.text} size={13} /></Pressable>
-        <Pressable onPress={() => bumpPrice(product, 1)} style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 11, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}><PlusIcon color={theme.onYellow} size={13} /></Pressable>
-        <Pressable onPress={onEdit} style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 11, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}><PencilIcon color={theme.muted} size={14} /></Pressable>
+        <Pressable onPress={onEdit} accessibilityRole="button" accessibilityLabel={t("Editar {{name}}", { name: product.name })} style={({ pressed }) => ({ minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 11, backgroundColor: theme.background, opacity: pressed ? 0.7 : 1 })}>
+          <PencilIcon color={theme.muted} size={14} />
+          <Text style={{ color: theme.muted, fontSize: 11.5, fontWeight: '700' }}>{t("Editar")}</Text>
+        </Pressable>
       </View>
     </Pressable>
   );
@@ -186,6 +187,24 @@ export default function ProductsScreen() {
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 100, gap: 16, backgroundColor: theme.background }}>
+      {/* El botón de agregar vive en la cabecera, que es donde se busca, y no
+          al final de la lista: con muchos productos quedaba fuera de la vista. */}
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("Crear producto")}
+              accessibilityState={{ disabled: atProductLimit }}
+              disabled={atProductLimit}
+              onPress={() => startEdit()}
+              style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 11, borderCurve: 'continuous', backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: atProductLimit ? 0.4 : pressed ? 0.75 : 1 })}
+            >
+              <PlusIcon color={theme.onYellow} size={17} />
+            </Pressable>
+          ),
+        }}
+      />
       {categories.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
         <Pressable onPress={() => setFilter(null)} style={({ pressed }) => ({ minHeight: 34, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 99, backgroundColor: filter === null ? theme.hero : theme.surface, borderWidth: filter === null ? 0 : 1, borderColor: theme.border, opacity: pressed ? 0.75 : 1 })}><Text style={{ color: filter === null ? theme.yellow : theme.text, fontSize: 12.5, fontWeight: '700' }}>{t("Todos ·")} {products.length}</Text></Pressable>
         {categories.map((category) => { const count = products.filter((product) => product.category_id === category.id).length; return <Pressable key={category.id} onPress={() => setFilter(category.id)} style={({ pressed }) => ({ minHeight: 34, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 99, backgroundColor: filter === category.id ? theme.hero : theme.surface, borderWidth: filter === category.id ? 0 : 1, borderColor: theme.border, opacity: pressed ? 0.75 : 1 })}><Text style={{ color: filter === category.id ? theme.yellow : theme.text, fontSize: 12.5, fontWeight: '600' }}>{category.name} · {count}</Text></Pressable>; })}
@@ -208,7 +227,7 @@ export default function ProductsScreen() {
         </Animated.View>
       ) : null}
 
-      {products.length ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Ajusta precio y disponibilidad aquí mismo. Toca el lápiz para editar el resto, mantén presionado para eliminar.")}</Text> : null}
+      {products.length ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Marca lo agotado desde la lista. Toca «Editar» para el precio y el resto, mantén presionado para eliminar.")}</Text> : null}
       {query.isLoading ? <LoadingState /> : query.isError ? <ErrorState message={t("No pudimos cargar los productos.")} error={query.error} onRetry={() => query.refetch()} /> : products.length ? <View style={{ gap: 18 }}>
         {groups.map((group) => <View key={group.id} style={{ gap: 10 }}>
           <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{group.name}</Text>
