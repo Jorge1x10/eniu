@@ -4,7 +4,6 @@ import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -61,27 +60,27 @@ const PROBLEM_MESSAGE: Record<OfferingProblem, string> = {
 };
 
 /**
- * Fondo del bloque de promesa. Un amarillo plano se lee como un aviso; el
- * degradado hacia el ámbar le da profundidad y hace que la tarjeta parezca un
- * objeto, que es lo que sostiene la decisión de pagar. Va en SVG porque es lo
- * que el proyecto ya tiene compilado: sumar expo-linear-gradient obligaría a
- * un build nativo nuevo para un fondo.
+ * Textura del bloque de promesa: dos círculos claros y muy transparentes en la
+ * esquina, que le dan profundidad sin competir con el texto.
+ *
+ * La primera versión usaba un degradado en SVG con `width="100%"`, y no llenaba
+ * la tarjeta: el porcentaje se resolvía contra un lienzo que no coincidía con
+ * la caja, y quedaba amarillo en una parte y crema en el resto. Vistas normales
+ * con `position: absolute` no tienen ese problema — el fondo plano lo pinta la
+ * tarjeta y estos círculos sólo lo matizan.
  */
 function HeroBackdrop() {
   return (
-    <Svg style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} width="100%" height="100%">
-      <Defs>
-        <LinearGradient id="promesa" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#FFE97F" />
-          <Stop offset="0.55" stopColor="#FFE05A" />
-          <Stop offset="1" stopColor="#E8C93D" />
-        </LinearGradient>
-      </Defs>
-      <Rect x="0" y="0" width="100%" height="100%" fill="url(#promesa)" />
-      {/* Dos círculos apenas visibles: dan textura sin competir con el texto. */}
-      <Circle cx="88%" cy="-6%" r="72" fill="#FFFFFF" opacity={0.22} />
-      <Circle cx="97%" cy="46%" r="46" fill="#FFFFFF" opacity={0.13} />
-    </Svg>
+    <>
+      <View
+        pointerEvents="none"
+        style={{ position: 'absolute', top: -46, right: -30, width: 150, height: 150, borderRadius: 999, backgroundColor: '#FFFFFF', opacity: 0.24 }}
+      />
+      <View
+        pointerEvents="none"
+        style={{ position: 'absolute', top: 74, right: -54, width: 104, height: 104, borderRadius: 999, backgroundColor: '#FFFFFF', opacity: 0.14 }}
+      />
+    </>
   );
 }
 
@@ -182,8 +181,13 @@ export default function PaywallScreen() {
    * esta pantalla puede hacer al respecto.
    */
   function renderOfferingProblem() {
+    // Cuando la llamada revienta, lo que dice la tienda es más útil que
+    // "revisa tu conexión": casi nunca es la red, es la configuración de
+    // RevenueCat o del producto en App Store Connect, y sin el texto original
+    // no hay forma de saber cuál de las dos.
+    const detail = offering.error instanceof Error ? offering.error.message.trim() : '';
     const message = offering.isError
-      ? t("No pudimos cargar el precio. Revisa tu conexión.")
+      ? (detail || t("No pudimos cargar el precio. Revisa tu conexión."))
       : t(PROBLEM_MESSAGE[offering.data?.problem ?? 'sin-ofertas']);
     return (
       <View style={{ ...cardStyle(theme, 18), backgroundColor: theme.surfaceAlt, padding: 18, gap: 12 }}>
@@ -213,7 +217,7 @@ export default function PaywallScreen() {
 
         {/* El amarillo de marca sostiene la promesa. Es el único bloque de
             color saturado de la pantalla, para que la vista caiga aquí. */}
-        <View style={{ padding: 24, borderRadius: 26, borderCurve: 'continuous', overflow: 'hidden', gap: 10, shadowColor: '#8A6D00', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.22, shadowRadius: 22, elevation: 6 }}>
+        <View style={{ padding: 24, borderRadius: 26, borderCurve: 'continuous', overflow: 'hidden', backgroundColor: theme.yellow, gap: 10, shadowColor: '#8A6D00', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.22, shadowRadius: 22, elevation: 6 }}>
           <HeroBackdrop />
           <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: theme.onYellow }}>
             <StarIcon color={theme.yellow} size={12} />

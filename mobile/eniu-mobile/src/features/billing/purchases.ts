@@ -92,7 +92,22 @@ export type OfferingResult =
  */
 export async function currentPackage(): Promise<OfferingResult> {
   if (!ensureConfigured()) return { item: null, problem: 'sin-ofertas' };
-  const offerings = await Purchases.getOfferings();
+  let offerings;
+  try {
+    offerings = await Purchases.getOfferings();
+  } catch (error) {
+    // El SDK trae `code` y `underlyingErrorMessage`, que es donde viene lo que
+    // de verdad falló (llave inválida, producto que la tienda no devuelve, la
+    // cuenta sin configurar). Sin registrarlo, la pantalla sólo puede decir
+    // "no se pudo" y no hay nada que investigar.
+    const detail = error as { code?: string; message?: string; underlyingErrorMessage?: string };
+    console.warn('RevenueCat: getOfferings falló', {
+      code: detail?.code,
+      message: detail?.message,
+      underlying: detail?.underlyingErrorMessage,
+    });
+    throw error;
+  }
   const current = offerings.current;
   if (!current) {
     const problem = Object.keys(offerings.all).length ? 'sin-oferta-actual' : 'sin-ofertas';

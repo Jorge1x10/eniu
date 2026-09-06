@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Switch, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,6 +9,7 @@ import { Divider } from '@/components/ui/divider';
 import { ChevronLeftIcon, ChevronRightIcon, GridIcon, LinkIcon, PaletteIcon, StarIcon, TagIcon, TrashIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { HeroHeader } from '@/components/hero-header';
+import { HeroScreen } from '@/components/hero-screen';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, deleteCatalogue, getCatalogue } from '@/features/catalogues/catalogue-api';
@@ -108,7 +109,7 @@ export default function CatalogueDetailScreen() {
   }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="never" style={{ backgroundColor: theme.background }} contentContainerStyle={{ paddingBottom: 120, backgroundColor: theme.background }}>
+    <HeroScreen contentContainerStyle={{ paddingBottom: 120 }}>
       {query.isLoading ? <View style={{ padding: 18, paddingTop: safeTop + 12 }}><LoadingState /></View> : notFound ? <View style={{ padding: 18, paddingTop: safeTop + 12 }}><ErrorState message={t("Este menú ya no existe o pertenece a otro negocio.")} action={t("Volver a Menús")} onAction={() => router.replace('/(tabs)/(menus)')} /></View> : query.isError || !catalogue ? <View style={{ padding: 18, paddingTop: safeTop + 12 }}><ErrorState message={t("No pudimos cargar este menú.")} error={query.error} onRetry={() => query.refetch()} /></View> : <>
         {/* Cabecera a sangre: ocupa todo el ancho y sube hasta el borde, con las
             esquinas redondeadas sólo abajo. El contenido arranca bajo el notch. */}
@@ -190,6 +191,6 @@ export default function CatalogueDetailScreen() {
         </View>
         </View>
       </>}
-    </ScrollView>
+    </HeroScreen>
   );
 }

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AreaChart } from '@/components/area-chart';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { HeroHeader } from '@/components/hero-header';
+import { HeroScreen } from '@/components/hero-screen';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
@@ -57,7 +58,7 @@ export default function AnalyticsScreen() {
   if (!selected) return <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={padded}><EmptyState title={t("Sin datos todavía")} description={t("Crea un menú para comenzar a registrar visitas.")} /></ScrollView>;
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ paddingBottom: 120 }}>
+    <HeroScreen contentContainerStyle={{ paddingBottom: 120 }}>
       {/* Cabecera a sangre, con el número protagonista en amarillo sobre negro. */}
       <HeroHeader paddingHorizontal={20} paddingBottom={26} gap={20}>
         <View style={{ gap: 3 }}>
@@ -121,6 +122,6 @@ export default function AnalyticsScreen() {
           </View>
         ) : null}
       </View>
-    </ScrollView>
+    </HeroScreen>
   );
 }

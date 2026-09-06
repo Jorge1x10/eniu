@@ -13,6 +13,7 @@ import { MilestoneSheet } from '@/components/milestone-sheet';
 import { MinusIcon, PlusIcon, ShareIcon, TrendDownIcon, TrendUpIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { HeroHeader } from '@/components/hero-header';
+import { HeroScreen } from '@/components/hero-screen';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useAuth } from '@/features/auth/auth-context';
 import { usePlan } from '@/features/auth/use-plan';
@@ -142,11 +143,7 @@ export default function HomeScreen() {
   const safeTop = Math.max(insets.top, 12);
 
   return (
-    <ScrollView
-      contentInsetAdjustmentBehavior="never"
-      style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingBottom: 120 }}
-    >
+    <HeroScreen contentContainerStyle={{ paddingBottom: 120 }}>
       <View style={{ width: '100%', maxWidth: 760, alignSelf: 'center' }}>
         {loadingBusinesses ? (
           <View style={{ paddingHorizontal: inset, paddingTop: safeTop + 12, gap: 5 }}><LoadingState label={t("Cargando tus negocios…")} /></View>
@@ -283,6 +280,6 @@ export default function HomeScreen() {
           onDismiss={dismissMilestone}
         />
       ) : null}
-    </ScrollView>
+    </HeroScreen>
   );
 }
