@@ -12,6 +12,7 @@ import { CreateBusinessCard } from '@/components/create-business-card';
 import { MilestoneSheet } from '@/components/milestone-sheet';
 import { MinusIcon, PlusIcon, ShareIcon, TrendDownIcon, TrendUpIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
+import { HeroHeader } from '@/components/hero-header';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useAuth } from '@/features/auth/auth-context';
 import { usePlan } from '@/features/auth/use-plan';
@@ -149,7 +150,7 @@ export default function HomeScreen() {
         ) : catalogues.isError ? (
           <View style={{ paddingHorizontal: inset, paddingTop: safeTop + 12 }}><ErrorState message={t("No pudimos cargar el resumen de tu negocio.")} error={catalogues.error} onRetry={() => catalogues.refetch()} /></View>
         ) : <>
-          <View style={{ backgroundColor: theme.hero, paddingHorizontal: inset, paddingTop: safeTop + 14, paddingBottom: 26, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, borderCurve: 'continuous', gap: 4, shadowColor: '#141210', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.35, shadowRadius: 30, elevation: 8 }}>
+          <HeroHeader paddingHorizontal={inset} paddingBottom={26} gap={4} elevated>
             <BusinessSwitcher variant="dark" />
 
             <View style={{ height: 22 }} />
@@ -176,7 +177,7 @@ export default function HomeScreen() {
               <HeroStat value={qrViews.toLocaleString(currentLocale())} label={t("escaneos de QR")} />
               <HeroStat value={publishedCount} label={t("menús publicados")} />
             </View>
-          </View>
+          </HeroHeader>
 
           <View style={{ paddingHorizontal: inset, paddingTop: 22, gap: 22 }}>
             {showDemoBadge ? <View style={{ borderRadius: 16, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}><View style={{ minHeight: 24, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 999, backgroundColor: theme.yellow, paddingHorizontal: 9 }}><Text style={{ color: '#111111', fontSize: 10, fontWeight: '800', letterSpacing: 0.6 }}>EJEMPLO</Text></View><Text style={{ flex: 1, color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Todavía no tienes visitas reales. Esto es cómo se verá tu panel cuando tus clientes empiecen a escanear.")}</Text></View> : null}

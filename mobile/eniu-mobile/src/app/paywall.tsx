@@ -4,8 +4,10 @@ import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
@@ -57,6 +59,55 @@ const PROBLEM_MESSAGE: Record<OfferingProblem, string> = {
   'sin-oferta-actual': 'Todavía no podemos mostrarte el precio. No hay ninguna oferta activa.',
   'oferta-vacia': 'Todavía no podemos mostrarte el precio. El plan aún no está disponible en la tienda.',
 };
+
+/**
+ * Fondo del bloque de promesa. Un amarillo plano se lee como un aviso; el
+ * degradado hacia el ámbar le da profundidad y hace que la tarjeta parezca un
+ * objeto, que es lo que sostiene la decisión de pagar. Va en SVG porque es lo
+ * que el proyecto ya tiene compilado: sumar expo-linear-gradient obligaría a
+ * un build nativo nuevo para un fondo.
+ */
+function HeroBackdrop() {
+  return (
+    <Svg style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} width="100%" height="100%">
+      <Defs>
+        <LinearGradient id="promesa" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#FFE97F" />
+          <Stop offset="0.55" stopColor="#FFE05A" />
+          <Stop offset="1" stopColor="#E8C93D" />
+        </LinearGradient>
+      </Defs>
+      <Rect x="0" y="0" width="100%" height="100%" fill="url(#promesa)" />
+      {/* Dos círculos apenas visibles: dan textura sin competir con el texto. */}
+      <Circle cx="88%" cy="-6%" r="72" fill="#FFFFFF" opacity={0.22} />
+      <Circle cx="97%" cy="46%" r="46" fill="#FFFFFF" opacity={0.13} />
+    </Svg>
+  );
+}
+
+/**
+ * Lo que la tienda ofrece de entrada, si ofrece algo. Nunca se escribe a mano:
+ * prometer una prueba que Apple no va a dar es la clase de cosa por la que
+ * rebotan una app, y además se le estaría mintiendo a quien va a pagar. Si el
+ * producto no trae `introPrice`, no se dice nada.
+ */
+function introLabel(item: PurchasesPackage, t: TFunction): string | null {
+  const intro = item.product.introPrice;
+  if (!intro) return null;
+  // Sin `count`: pasarlo activaría la pluralización de i18next, que este
+  // proyecto no usa en ninguna clave. El singular se elige aquí y a la vista.
+  const n = intro.periodNumberOfUnits;
+  const unit = {
+    DAY: n === 1 ? t("día") : t("días"),
+    WEEK: n === 1 ? t("semana") : t("semanas"),
+    MONTH: n === 1 ? t("mes") : t("meses"),
+    YEAR: n === 1 ? t("año") : t("años"),
+  }[intro.periodUnit];
+  if (!unit) return null;
+  return intro.price === 0
+    ? t("{{n}} {{unit}} gratis", { n, unit })
+    : t("{{price}} los primeros {{n}} {{unit}}", { price: intro.priceString, n, unit });
+}
 
 export default function PaywallScreen() {
   const { t } = useTranslation();
@@ -122,6 +173,7 @@ export default function PaywallScreen() {
   // veces, y la suscripción de Stripe no se puede cancelar desde la tienda.
   const paysOnWeb = !isFree && plan?.provider === 'stripe';
   const canBuy = Boolean(item) && !paysOnWeb;
+  const intro = item ? introLabel(item, t) : null;
 
   /**
    * Un fallo de red y una oferta mal configurada no son lo mismo, pero para
@@ -161,13 +213,14 @@ export default function PaywallScreen() {
 
         {/* El amarillo de marca sostiene la promesa. Es el único bloque de
             color saturado de la pantalla, para que la vista caiga aquí. */}
-        <View style={{ padding: 22, borderRadius: 24, borderCurve: 'continuous', backgroundColor: theme.yellow, gap: 10 }}>
+        <View style={{ padding: 24, borderRadius: 26, borderCurve: 'continuous', overflow: 'hidden', gap: 10, shadowColor: '#8A6D00', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.22, shadowRadius: 22, elevation: 6 }}>
+          <HeroBackdrop />
           <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: theme.onYellow }}>
             <StarIcon color={theme.yellow} size={12} />
             <Text style={{ color: theme.yellow, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 }}>{t("PLAN COMPLETO")}</Text>
           </View>
-          <Text style={{ color: theme.onYellow, fontSize: 30, fontWeight: '900', lineHeight: 35, letterSpacing: -0.5 }}>{t("Lleva tu menú más lejos")}</Text>
-          <Text style={{ color: theme.onYellow, fontSize: 14.5, lineHeight: 21, opacity: 0.72 }}>{t("Desbloquea el diseño completo y quita los límites del plan gratuito.")}</Text>
+          <Text style={{ color: theme.onYellow, fontSize: 32, fontWeight: '900', lineHeight: 36, letterSpacing: -0.8 }}>{t("Lleva tu menú más lejos")}</Text>
+          <Text style={{ color: theme.onYellow, fontSize: 14.5, lineHeight: 21, opacity: 0.66 }}>{t("Desbloquea el diseño completo y quita los límites del plan gratuito.")}</Text>
         </View>
 
         <View style={{ gap: 10 }}>
@@ -205,13 +258,22 @@ export default function PaywallScreen() {
         ) : item ? (
           /* El precio y el periodo se toman de la tienda, nunca escritos a
              mano: es lo que de verdad se le va a cobrar y en su moneda. */
-          <View style={{ ...cardStyle(theme, 20), padding: 18, borderWidth: 2, borderColor: theme.yellow, gap: 4 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 7 }}>
-              <Text style={{ color: theme.text, fontSize: 32, fontWeight: '900', letterSpacing: -0.8 }}>{item.product.priceString}</Text>
-              <Text style={{ color: theme.muted, fontSize: 14, fontWeight: '700', paddingBottom: 5 }}>
-                {item.product.subscriptionPeriod === 'P1Y' ? t("por año") : t("por mes")}
-              </Text>
+          <View style={{ ...cardStyle(theme, 20), padding: 18, borderWidth: 2, borderColor: theme.yellow, gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 7 }}>
+                <Text style={{ color: theme.text, fontSize: 34, fontWeight: '900', letterSpacing: -1 }}>{item.product.priceString}</Text>
+                <Text style={{ color: theme.muted, fontSize: 14, fontWeight: '700', paddingBottom: 6 }}>
+                  {item.product.subscriptionPeriod === 'P1Y' ? t("por año") : t("por mes")}
+                </Text>
+              </View>
+              {/* Sólo aparece si la tienda de verdad ofrece prueba o descuento. */}
+              {intro ? (
+                <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: theme.yellow }}>
+                  <Text style={{ color: theme.onYellow, fontSize: 11.5, fontWeight: '900' }}>{intro}</Text>
+                </View>
+              ) : null}
             </View>
+            <View style={{ height: 1, backgroundColor: theme.border }} />
             <Text style={{ color: theme.muted, fontSize: 13, lineHeight: 19 }}>{t("Cancela cuando quieras desde los ajustes de tu tienda.")}</Text>
           </View>
         ) : (

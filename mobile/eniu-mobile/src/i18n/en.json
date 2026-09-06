@@ -605,5 +605,15 @@
   "¿Quieres salir de Eniu en este dispositivo?": "Sign out of Eniu on this device?",
   "¿Todavía no tienes cuenta?": "Don't have an account yet?",
   "¿Ya tienes una cuenta?": "Already have an account?",
-  "“{{name}}” dejará de resaltar productos en tu menú.": "“{{name}}” will stop highlighting products in your menu."
+  "“{{name}}” dejará de resaltar productos en tu menú.": "“{{name}}” will stop highlighting products in your menu.",
+  "día": "day",
+  "días": "days",
+  "semana": "week",
+  "semanas": "weeks",
+  "mes": "month",
+  "meses": "months",
+  "año": "year",
+  "años": "years",
+  "{{n}} {{unit}} gratis": "{{n}} {{unit}} free",
+  "{{price}} los primeros {{n}} {{unit}}": "{{price}} for the first {{n}} {{unit}}"
 }

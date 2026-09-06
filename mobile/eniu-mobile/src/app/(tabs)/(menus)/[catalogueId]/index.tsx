@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Divider } from '@/components/ui/divider';
 import { ChevronLeftIcon, ChevronRightIcon, GridIcon, LinkIcon, PaletteIcon, StarIcon, TagIcon, TrashIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
+import { HeroHeader } from '@/components/hero-header';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, deleteCatalogue, getCatalogue } from '@/features/catalogues/catalogue-api';
@@ -111,7 +112,7 @@ export default function CatalogueDetailScreen() {
       {query.isLoading ? <View style={{ padding: 18, paddingTop: safeTop + 12 }}><LoadingState /></View> : notFound ? <View style={{ padding: 18, paddingTop: safeTop + 12 }}><ErrorState message={t("Este menú ya no existe o pertenece a otro negocio.")} action={t("Volver a Menús")} onAction={() => router.replace('/(tabs)/(menus)')} /></View> : query.isError || !catalogue ? <View style={{ padding: 18, paddingTop: safeTop + 12 }}><ErrorState message={t("No pudimos cargar este menú.")} error={query.error} onRetry={() => query.refetch()} /></View> : <>
         {/* Cabecera a sangre: ocupa todo el ancho y sube hasta el borde, con las
             esquinas redondeadas sólo abajo. El contenido arranca bajo el notch. */}
-        <View style={{ backgroundColor: theme.hero, paddingHorizontal: 20, paddingTop: safeTop + 10, paddingBottom: 24, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, borderCurve: 'continuous', gap: 18 }}>
+        <HeroHeader paddingHorizontal={20} paddingBottom={24} gap={18}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Pressable
               accessibilityRole="button"
@@ -132,7 +133,7 @@ export default function CatalogueDetailScreen() {
             <Text selectable style={{ color: '#FFFDF5', fontSize: 30, lineHeight: 33, fontWeight: '900' }}>{catalogue.name}</Text>
             <Text style={{ color: theme.heroMuted, fontSize: 12.5, lineHeight: 19 }}>{metaLine}</Text>
           </View>
-        </View>
+        </HeroHeader>
 
         <View style={{ paddingHorizontal: 18, paddingTop: 20, gap: 16 }}>
         <View style={{ gap: 12 }}>{actions.map((action, index) => {

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AreaChart } from '@/components/area-chart';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
+import { HeroHeader } from '@/components/hero-header';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
@@ -58,7 +59,7 @@ export default function AnalyticsScreen() {
   return (
     <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ paddingBottom: 120 }}>
       {/* Cabecera a sangre, con el número protagonista en amarillo sobre negro. */}
-      <View style={{ backgroundColor: theme.hero, paddingHorizontal: 20, paddingTop: safeTop + 10, paddingBottom: 26, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, borderCurve: 'continuous', gap: 20 }}>
+      <HeroHeader paddingHorizontal={20} paddingBottom={26} gap={20}>
         <View style={{ gap: 3 }}>
           <Text numberOfLines={1} style={{ color: theme.heroMuted, fontSize: 10, fontWeight: '800', letterSpacing: 1.3, textTransform: 'uppercase' }}>{selectedBusiness.name} · {t("30 días")}</Text>
           <Text style={{ color: '#FFFDF5', fontSize: 24, fontWeight: '900' }}>{t("Analíticas")}</Text>
@@ -83,7 +84,7 @@ export default function AnalyticsScreen() {
             <Text style={{ color: '#6E685D', fontSize: 10.5, fontWeight: '600' }}>{t("hoy")}</Text>
           </View>
         ) : null}
-      </View>
+      </HeroHeader>
 
       <View style={{ paddingHorizontal: 18, paddingTop: 20, gap: 22 }}>
         {sources.length ? (
