@@ -93,8 +93,148 @@ class TemplateApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         template = response.get_json()["template"]
         self.assertEqual(template["template_key"], "modern")
+        self.assertEqual(template["layout_key"], "modern")
         self.assertEqual(template["theme"]["background_color"], "#FFFDF5")
         self.assertTrue(template["theme"]["show_cover"])
+        self.assertEqual(template["theme"]["color_preset_key"], "classic")
+        self.assertEqual(template["theme"]["tokens"]["nav_chip_bg"], "#FFE05A")
+
+    def test_templates_catalog_lists_layouts_palettes_fonts_and_tokens(self):
+        response = self.client.get("/api/templates")
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual({layout["key"] for layout in body["layouts"]}, {
+            "modern", "minimal", "elegant", "bistro", "bold", "natural", "retro", "luxury",
+            "chalkboard", "magazine", "sidebar", "receipt", "story",
+        })
+        self.assertEqual({palette["key"] for palette in body["palettes"]}, {"classic", "midnight", "vineyard"})
+        self.assertEqual({font["key"] for font in body["fonts"]}, {
+            "inter", "poppins", "montserrat", "playfair", "lora",
+            "roboto", "open_sans", "nunito", "raleway", "work_sans", "rubik", "karla", "manrope", "sora", "space_grotesk", "barlow", "archivo",
+            "merriweather", "libre_baskerville", "crimson_text", "pt_serif", "cormorant", "fraunces", "dm_serif_display", "bitter",
+            "bebas_neue", "oswald", "anton", "abril_fatface", "righteous",
+            "pacifico", "dancing_script", "caveat",
+            "jetbrains_mono", "space_mono",
+        })
+        self.assertIn("nav_chip_text", {token["key"] for token in body["color_tokens"]})
+        self.assertEqual(
+            {bg["key"] for bg in body["backgrounds"]},
+            {"paper", "dots", "grid", "stripes", "crosshatch"},
+        )
+
+    def test_save_with_a_curated_palette_mirrors_its_core_colors(self):
+        response = self.client.patch(
+            self.url(), headers=self.headers(), json={"color_preset_key": "midnight"}
+        )
+        self.assertEqual(response.status_code, 200)
+        theme = response.get_json()["template"]["theme"]
+        self.assertEqual(theme["color_preset_key"], "midnight")
+        self.assertEqual(theme["background_color"], "#18140D")
+        self.assertEqual(theme["tokens"]["nav_chip_text"], "#18140D")
+        self.assertEqual(theme["theme_overrides"], {})
+
+    def test_save_with_advanced_overrides_clears_the_palette(self):
+        response = self.client.patch(
+            self.url(), headers=self.headers(),
+            # `nav_chip_text` oscuro sobre el dorado por defecto de
+            # `nav_chip_bg`: pasa el contraste igual que el negro que ya
+            # usaba `text_color` sobre ese mismo dorado.
+            json={"theme_overrides": {"price": "#7A1F2B", "nav_chip_text": "#111111"}},
+        )
+        self.assertEqual(response.status_code, 200)
+        theme = response.get_json()["template"]["theme"]
+        self.assertIsNone(theme["color_preset_key"])
+        self.assertEqual(theme["tokens"]["price"], "#7A1F2B")
+        self.assertEqual(theme["tokens"]["nav_chip_text"], "#111111")
+        # Los que no se tocaron siguen viniendo de la paleta por defecto.
+        self.assertEqual(theme["tokens"]["surface"], "#FFFDF5")
+
+    def test_rejects_unknown_palette_and_override_tokens(self):
+        for payload in (
+            {"color_preset_key": "neon"},
+            {"theme_overrides": {"primary": "#FFE05A"}},
+            {"theme_overrides": {"price": "not-a-color"}},
+            # Blanco sobre el dorado por defecto: no contrasta lo suficiente.
+            {"theme_overrides": {"nav_chip_text": "#FFFFFF"}},
+        ):
+            with self.subTest(payload=payload):
+                response = self.client.patch(self.url(), headers=self.headers(), json=payload)
+                self.assertEqual(response.status_code, 400)
+
+    def test_a_curated_palette_with_independent_chip_text_is_allowed_to_save(self):
+        # Antes de desacoplar `nav_chip_text` de `text_color`, esta paleta
+        # (texto claro en general, pero oscuro sobre el chip dorado) hubiera
+        # chocado con la regla vieja de "texto vs. principal".
+        response = self.client.patch(
+            self.url(), headers=self.headers(), json={"color_preset_key": "midnight"}
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_layout_key_is_accepted_as_the_new_name_for_template_key(self):
+        response = self.client.patch(
+            self.url(), headers=self.headers(), json={"layout_key": "bistro"}
+        )
+        self.assertEqual(response.status_code, 200)
+        template = response.get_json()["template"]
+        self.assertEqual(template["template_key"], "bistro")
+        self.assertEqual(template["layout_key"], "bistro")
+
+    def test_cover_focal_point_defaults_to_centered_and_can_be_moved(self):
+        response = self.client.get(self.url(), headers=self.headers())
+        theme = response.get_json()["template"]["theme"]
+        self.assertEqual(theme["cover_focal_x"], 0.5)
+        self.assertEqual(theme["cover_focal_y"], 0.5)
+
+        moved = self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"theme": {"cover_focal_x": 0.2, "cover_focal_y": 0.9}},
+        )
+        self.assertEqual(moved.status_code, 200)
+        moved_theme = moved.get_json()["template"]["theme"]
+        self.assertEqual(moved_theme["cover_focal_x"], 0.2)
+        self.assertEqual(moved_theme["cover_focal_y"], 0.9)
+
+        for payload in (
+            {"theme": {"cover_focal_x": 1.5}},
+            {"theme": {"cover_focal_y": -0.1}},
+            {"theme": {"cover_focal_x": "middle"}},
+        ):
+            with self.subTest(payload=payload):
+                response = self.client.patch(self.url(), headers=self.headers(), json=payload)
+                self.assertEqual(response.status_code, 400)
+
+    def test_background_preset_can_be_chosen_and_rejects_unknown_keys(self):
+        response = self.client.patch(
+            self.url(), headers=self.headers(), json={"theme": {"background_preset_key": "dots"}}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["template"]["theme"]["background_preset_key"], "dots")
+
+        cleared = self.client.patch(
+            self.url(), headers=self.headers(), json={"theme": {"background_preset_key": None}}
+        )
+        self.assertEqual(cleared.status_code, 200)
+        self.assertIsNone(cleared.get_json()["template"]["theme"]["background_preset_key"])
+
+        invalid = self.client.patch(
+            self.url(), headers=self.headers(), json={"theme": {"background_preset_key": "glitter"}}
+        )
+        self.assertEqual(invalid.status_code, 400)
+
+    def test_changing_the_four_core_colors_re_derives_the_extra_tokens(self):
+        response = self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"theme": {
+                "background_color": "#000000", "primary_color": "#222222",
+                "accent_color": "#0000FF", "text_color": "#FFFFFF",
+            }},
+        )
+        self.assertEqual(response.status_code, 200)
+        theme = response.get_json()["template"]["theme"]
+        self.assertIsNone(theme["color_preset_key"])
+        self.assertEqual(theme["tokens"]["price"], "#FFFFFF")
+        self.assertEqual(theme["tokens"]["nav_chip_bg"], "#222222")
+        self.assertEqual(theme["tokens"]["surface"], "#000000")
 
     def test_save_valid_template_theme_and_keep_catalogue_content(self):
         payload = {
@@ -262,6 +402,57 @@ class TemplateApiTestCase(unittest.TestCase):
         self.assertNotIn("private database detail", response.get_data(as_text=True))
         with self.app.app_context():
             self.assertEqual(CatalogueTemplate.query.count(), 0)
+
+    def test_legacy_client_does_not_downgrade_a_layout_it_cannot_represent(self):
+        """La app 1.0.0 sigue publicada mientras se revisa la 2.0.
+
+        Normaliza al leer —una plantilla que no conoce se vuelve `modern`— y
+        manda esa normalización al guardar. Sin este freno, tocar cualquier
+        ajuste desde la app vieja borraría una plantilla elegida en la web.
+        """
+        self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"layout_key": "magazine", "theme": {"font_key": "pacifico"}},
+        )
+
+        # Un cliente viejo: manda `template_key`, nunca `layout_key`.
+        response = self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"template_key": "modern", "theme": {"font_key": "inter"}},
+        )
+        self.assertEqual(response.status_code, 200)
+        template = response.get_json()["template"]
+        self.assertEqual(template["layout_key"], "magazine")
+        self.assertEqual(template["theme"]["font_key"], "pacifico")
+
+    def test_legacy_client_can_still_change_between_layouts_it_knows(self):
+        """El freno no debe congelar a quien sí está eligiendo."""
+        self.client.patch(
+            self.url(), headers=self.headers(), json={"layout_key": "bistro"},
+        )
+        response = self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"template_key": "modern", "theme": {"font_key": "inter"}},
+        )
+        self.assertEqual(response.status_code, 200)
+        template = response.get_json()["template"]
+        self.assertEqual(template["layout_key"], "modern")
+        self.assertEqual(template["theme"]["font_key"], "inter")
+
+    def test_a_new_client_can_still_move_to_modern_from_a_new_layout(self):
+        """Mandar `layout_key` es señal de cliente nuevo: se respeta tal cual."""
+        self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"layout_key": "magazine", "theme": {"font_key": "pacifico"}},
+        )
+        response = self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"layout_key": "modern", "theme": {"font_key": "inter"}},
+        )
+        self.assertEqual(response.status_code, 200)
+        template = response.get_json()["template"]
+        self.assertEqual(template["layout_key"], "modern")
+        self.assertEqual(template["theme"]["font_key"], "inter")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
@@ -9,50 +9,61 @@ import { MAX_PICTURES, ProductImagePicker, type DefaultKey, type PickedPicture }
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
-import { ImageIcon } from '@/components/ui/icons';
+import { ImageIcon, PencilIcon, PlusIcon } from '@/components/ui/icons';
 import { PlanNotice } from '@/components/ui/plan-notice';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
-import { api, resolveMediaUrl } from '@/lib/api';
+import { useProductQuickActions } from '@/features/catalogues/product-quick-actions';
+import { api } from '@/lib/api';
 import { appendImage } from '@/lib/image-file';
+import { defaultPictureUrl } from '@/lib/product-image';
 import type { Category, Product, ProductPicture } from '@/types/models';
 import { useTranslation } from 'react-i18next';
 import { currentLocale } from '@/i18n/formats';
 
 const UNCATEGORIZED = 'uncategorized';
 
-function defaultPicture(product: Product) {
-  const pictures = product.pictures ?? [];
-  return pictures.find((picture) => picture.is_default) ?? pictures[0] ?? null;
-}
-
-function ProductRow({ product, currency, theme, onPress, onLongPress }: { product: Product; currency: Intl.NumberFormat; theme: ReturnType<typeof useEniuTheme>; onPress: () => void; onLongPress: () => void }) {
+/**
+ * La disponibilidad se cambia desde la lista porque es el ajuste que se hace
+ * varias veces al día. El precio no: se edita en el formulario, junto al resto
+ * de los datos del producto.
+ */
+function ProductRow({ product, currency, theme, businessId, catalogueId, onEdit, onLongPress }: { product: Product; currency: Intl.NumberFormat; theme: ReturnType<typeof useEniuTheme>; businessId?: string; catalogueId?: string; onEdit: () => void; onLongPress: () => void }) {
   const { t } = useTranslation();
+  const { toggleAvailable } = useProductQuickActions(businessId, catalogueId);
 
-  const picture = defaultPicture(product);
-  const uri = resolveMediaUrl(picture?.url);
+  const uri = defaultPictureUrl(product);
   const extra = (product.pictures?.length ?? 0) - 1;
   return (
-    <Pressable onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => ({ borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 13, opacity: pressed ? 0.72 : 1 })}>
-      {uri ? (
-        <View style={{ width: 58, height: 58, borderRadius: 13, borderCurve: 'continuous', overflow: 'hidden', flexShrink: 0, backgroundColor: theme.surfaceAlt }}>
-          <Image source={{ uri }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={150} />
-          {extra > 0 ? <View style={{ position: 'absolute', right: 3, bottom: 3, minWidth: 20, paddingHorizontal: 5, height: 17, borderRadius: 999, backgroundColor: 'rgba(17,17,17,0.7)', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>+{extra}</Text></View> : null}
+    <Pressable onLongPress={onLongPress} style={{ ...cardStyle(theme, 18), padding: 13, gap: 11 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13 }}>
+        {uri ? (
+          <View style={{ width: 52, height: 52, borderRadius: 15, borderCurve: 'continuous', overflow: 'hidden', flexShrink: 0, backgroundColor: theme.background }}>
+            <Image source={{ uri }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={150} />
+            {extra > 0 ? <View style={{ position: 'absolute', right: 3, bottom: 3, minWidth: 20, paddingHorizontal: 5, height: 17, borderRadius: 999, backgroundColor: 'rgba(17,17,17,0.7)', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>+{extra}</Text></View> : null}
+          </View>
+        ) : (
+          <View style={{ width: 52, height: 52, borderRadius: 15, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><ImageIcon color={theme.yellowPressed} size={19} /></View>
+        )}
+        <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+          <Text numberOfLines={1} style={{ color: product.is_available ? theme.text : theme.muted, fontSize: 15, fontWeight: '700' }}>{product.name}</Text>
+          <Text numberOfLines={1} style={{ color: uri ? theme.muted : theme.yellowPressed, fontSize: 11.5, fontWeight: uri ? '400' : '600' }}>{uri ? (product.description || t("Sin descripción")) : t("Súbele una foto y se ve 3× más")}</Text>
         </View>
-      ) : (
-        <View style={{ width: 58, height: 58, borderRadius: 13, borderWidth: 1.5, borderStyle: 'dashed', borderColor: theme.yellowPressed, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><ImageIcon color={theme.yellowPressed} size={20} /></View>
-      )}
-      <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-        <Text numberOfLines={1} style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>{product.name}</Text>
-        <Text numberOfLines={1} style={{ color: uri ? theme.muted : theme.yellowPressed, fontSize: 12, fontWeight: uri ? '400' : '600' }}>{uri ? (product.description || t("Sin descripción")) : t("Súbele una foto y se ve 3× más")}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 1 }}>
-          <View style={{ width: 6, height: 6, borderRadius: 99, backgroundColor: product.is_available ? theme.success : theme.muted }} />
-          <Text style={{ color: product.is_available ? theme.success : theme.muted, fontSize: 11, fontWeight: '600' }}>{product.is_available ? t("Disponible") : t("Agotado")}</Text>
-        </View>
+        <Text selectable style={{ color: product.is_available ? theme.text : theme.muted, fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'], flexShrink: 0 }}>{product.price == null ? 'S/P' : currency.format(Number(product.price))}</Text>
       </View>
-      <Text selectable style={{ color: theme.text, fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'], flexShrink: 0 }}>{product.price == null ? 'S/P' : currency.format(Number(product.price))}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Pressable onPress={() => toggleAvailable(product)} style={({ pressed }) => ({ minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 11, backgroundColor: product.is_available ? 'rgba(22,128,58,0.1)' : 'rgba(198,40,40,0.1)', opacity: pressed ? 0.75 : 1 })}>
+          <View style={{ width: 7, height: 7, borderRadius: 99, backgroundColor: product.is_available ? theme.success : theme.danger }} />
+          <Text style={{ color: product.is_available ? theme.success : theme.danger, fontSize: 11.5, fontWeight: '700' }}>{product.is_available ? t("Disponible") : t("Agotado")}</Text>
+        </Pressable>
+        <View style={{ flex: 1 }} />
+        <Pressable onPress={onEdit} accessibilityRole="button" accessibilityLabel={t("Editar {{name}}", { name: product.name })} style={({ pressed }) => ({ minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 11, backgroundColor: theme.background, opacity: pressed ? 0.7 : 1 })}>
+          <PencilIcon color={theme.muted} size={14} />
+          <Text style={{ color: theme.muted, fontSize: 11.5, fontWeight: '700' }}>{t("Editar")}</Text>
+        </Pressable>
+      </View>
     </Pressable>
   );
 }
@@ -176,16 +187,34 @@ export default function ProductsScreen() {
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 18, paddingBottom: 100, gap: 16, backgroundColor: theme.background }}>
+      {/* El botón de agregar vive en la cabecera, que es donde se busca, y no
+          al final de la lista: con muchos productos quedaba fuera de la vista. */}
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("Crear producto")}
+              accessibilityState={{ disabled: atProductLimit }}
+              disabled={atProductLimit}
+              onPress={() => startEdit()}
+              style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 11, borderCurve: 'continuous', backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: atProductLimit ? 0.4 : pressed ? 0.75 : 1 })}
+            >
+              <PlusIcon color={theme.onYellow} size={17} />
+            </Pressable>
+          ),
+        }}
+      />
       {categories.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-        <Pressable onPress={() => setFilter(null)} style={({ pressed }) => ({ minHeight: 34, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 99, backgroundColor: filter === null ? '#111111' : theme.surface, borderWidth: filter === null ? 0 : 1, borderColor: theme.border, opacity: pressed ? 0.75 : 1 })}><Text style={{ color: filter === null ? theme.yellow : theme.text, fontSize: 12.5, fontWeight: '700' }}>{t("Todos ·")} {products.length}</Text></Pressable>
-        {categories.map((category) => { const count = products.filter((product) => product.category_id === category.id).length; return <Pressable key={category.id} onPress={() => setFilter(category.id)} style={({ pressed }) => ({ minHeight: 34, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 99, backgroundColor: filter === category.id ? '#111111' : theme.surface, borderWidth: filter === category.id ? 0 : 1, borderColor: theme.border, opacity: pressed ? 0.75 : 1 })}><Text style={{ color: filter === category.id ? theme.yellow : theme.text, fontSize: 12.5, fontWeight: '600' }}>{category.name} · {count}</Text></Pressable>; })}
+        <Pressable onPress={() => setFilter(null)} style={({ pressed }) => ({ minHeight: 34, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 99, backgroundColor: filter === null ? theme.hero : theme.surface, borderWidth: filter === null ? 0 : 1, borderColor: theme.border, opacity: pressed ? 0.75 : 1 })}><Text style={{ color: filter === null ? theme.yellow : theme.text, fontSize: 12.5, fontWeight: '700' }}>{t("Todos ·")} {products.length}</Text></Pressable>
+        {categories.map((category) => { const count = products.filter((product) => product.category_id === category.id).length; return <Pressable key={category.id} onPress={() => setFilter(category.id)} style={({ pressed }) => ({ minHeight: 34, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 99, backgroundColor: filter === category.id ? theme.hero : theme.surface, borderWidth: filter === category.id ? 0 : 1, borderColor: theme.border, opacity: pressed ? 0.75 : 1 })}><Text style={{ color: filter === category.id ? theme.yellow : theme.text, fontSize: 12.5, fontWeight: '600' }}>{category.name} · {count}</Text></Pressable>; })}
       </ScrollView> : null}
       {categories.length ? <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17, marginTop: -6 }}>{t("Las secciones sólo filtran esta lista. La categoría de cada producto se elige en el formulario.")}</Text> : null}
 
       {atProductLimit && !formOpen ? <PlanNotice message={t("Tu plan actual permite hasta {{limit}} productos por menú.", { limit: limits.max_products_per_catalogue })} /> : null}
       <Button disabled={atProductLimit && !formOpen} onPress={() => formOpen ? setFormOpen(false) : startEdit()}>{formOpen ? t("Cerrar formulario") : t("Crear producto")}</Button>
       {formOpen ? (
-        <Animated.View entering={FadeIn.duration(220)} style={{ padding: 18, gap: 14, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous' }}>
+        <Animated.View entering={FadeIn.duration(220)} style={{ padding: 18, gap: 14, ...cardStyle(theme) }}>
           <Text style={{ color: theme.text, fontSize: 19, fontWeight: '900' }}>{editing ? t("Editar producto") : t("Nuevo producto")}</Text>
           <FormField label={t("Nombre")} value={name} onChangeText={setName} maxLength={64} placeholder={t("Hamburguesa clásica")} />
           <FormField label={t("Descripción")} value={description} onChangeText={setDescription} multiline placeholder={t("Ingredientes y detalles")} />
@@ -198,11 +227,11 @@ export default function ProductsScreen() {
         </Animated.View>
       ) : null}
 
-      {products.length ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Toca un producto para editarlo, mantén presionado para eliminarlo.")}</Text> : null}
+      {products.length ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Marca lo agotado desde la lista. Toca «Editar» para el precio y el resto, mantén presionado para eliminar.")}</Text> : null}
       {query.isLoading ? <LoadingState /> : query.isError ? <ErrorState message={t("No pudimos cargar los productos.")} error={query.error} onRetry={() => query.refetch()} /> : products.length ? <View style={{ gap: 18 }}>
         {groups.map((group) => <View key={group.id} style={{ gap: 10 }}>
           <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{group.name}</Text>
-          <View style={{ gap: 10 }}>{group.items.map((product, index) => <Animated.View key={product.id} entering={FadeInDown.duration(280).delay(index * 50)} layout={LinearTransition.duration(200)}><ProductRow product={product} currency={currency} theme={theme} onPress={() => startEdit(product)} onLongPress={() => remove(product)} /></Animated.View>)}</View>
+          <View style={{ gap: 10 }}>{group.items.map((product, index) => <Animated.View key={product.id} entering={FadeInDown.duration(280).delay(index * 50)} layout={LinearTransition.duration(200)}><ProductRow product={product} currency={currency} theme={theme} businessId={selectedBusiness?.id} catalogueId={catalogueId} onEdit={() => startEdit(product)} onLongPress={() => remove(product)} /></Animated.View>)}</View>
         </View>)}
       </View> : <EmptyState title={t("Sin productos")} description={t("Agrega el primer producto de este menú.")} action={t("Crear producto")} onAction={() => startEdit()} />}
     </ScrollView>

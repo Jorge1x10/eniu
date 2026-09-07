@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 
 import { BusinessPhotoField } from '@/components/business-photo';
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '@/constants/legal';
 import { useScreenTopPadding } from '@/constants/layout';
 import { useAuth } from '@/features/auth/auth-context';
@@ -30,7 +31,7 @@ function LinkRow({ label, url }: { label: string; url: string }) {
 
 function Section({ label, children }: React.PropsWithChildren<{ label: string }>) {
   const theme = useEniuTheme();
-  return <View style={{ gap: 11 }}><Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{label}</Text><View style={{ padding: 18, gap: 14, borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}>{children}</View></View>;
+  return <View style={{ gap: 11 }}><Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{label}</Text><View style={{ padding: 18, gap: 14, ...cardStyle(theme) }}>{children}</View></View>;
 }
 
 const LANGUAGE_OPTIONS = [
@@ -104,17 +105,31 @@ export default function SettingsScreen() {
       <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>{t("Ajustes")}</Text>
       <Feedback message={error} /><Feedback message={success} tone="success" />
 
-      <View style={{ borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-        <View style={{ width: 54, height: 54, borderRadius: 18, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.yellow, flexShrink: 0 }}><Text style={{ color: '#111111', fontSize: 22, fontWeight: '900' }}>{(user?.name || user?.username || 'E').charAt(0).toUpperCase()}</Text></View>
+      <View style={{ borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.hero, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+        <View style={{ width: 54, height: 54, borderRadius: 18, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.yellow, flexShrink: 0 }}><Text style={{ color: theme.onYellow, fontSize: 22, fontWeight: '900' }}>{(user?.name || user?.username || 'E').charAt(0).toUpperCase()}</Text></View>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text numberOfLines={1} style={{ color: theme.text, fontSize: 16, fontWeight: '700' }}>{user?.name || user?.username}</Text>
-          <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 12.5 }}>{user?.email}</Text>
+          <Text numberOfLines={1} style={{ color: '#FFFDF5', fontSize: 16, fontWeight: '800' }}>{user?.name || user?.username}</Text>
+          <Text numberOfLines={1} style={{ color: theme.heroMuted, fontSize: 12.5 }}>{user?.email}</Text>
         </View>
       </View>
 
+      <Section label={t("Mi plan")}>
+        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>{user?.plan?.name || t("Plan gratuito")}</Text>
+          {user?.plan?.has_access ? <Text style={{ color: theme.muted, fontSize: 12.5 }}>{t("Activo")}</Text> : null}
+        </View>
+        {user?.plan?.has_access
+          ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{t("Administra o cancela tu suscripción desde los ajustes de suscripciones de tu dispositivo.")}</Text>
+          : <Button onPress={() => router.push('/paywall')}>{t("Ver planes")}</Button>}
+      </Section>
+
       <Section label={t("Mi perfil")}><FormField label={t("Nombre visible")} value={profile.name} onChangeText={updateProfile('name')} /><FormField label={t("Nombre de usuario")} value={profile.username} onChangeText={updateProfile('username')} autoCapitalize="none" /><FormField label={t("Teléfono")} value={profile.phone_number} onChangeText={updateProfile('phone_number')} keyboardType="phone-pad" /><FormField label={t("Correo electrónico")} value={user?.email || ''} editable={false} /><Button loading={saving === 'profile'} onPress={saveProfile}>{t("Guardar perfil")}</Button></Section>
 
-      <Section label={t("Mi negocio")}><BusinessSwitcher />{business ? <><BusinessPhotoField onError={setError} /><FormField label={t("Nombre")} value={business.name} onChangeText={updateBusinessField('name')} /><FormField label={t("Descripción")} value={business.description} onChangeText={updateBusinessField('description')} multiline /><FormField label={t("Teléfono")} value={business.phone} onChangeText={updateBusinessField('phone')} keyboardType="phone-pad" /><FormField label={t("WhatsApp")} value={business.whatsapp} onChangeText={updateBusinessField('whatsapp')} keyboardType="phone-pad" /><FormField label={t("Dirección")} value={business.address} onChangeText={updateBusinessField('address')} /><FormField label={t("Moneda")} value={business.currency} onChangeText={updateBusinessField('currency')} autoCapitalize="characters" maxLength={3} /><Button loading={saving === 'business'} onPress={saveBusiness}>{t("Guardar negocio")}</Button></> : <Text style={{ color: theme.muted }}>{t("Crea un negocio desde Inicio para configurarlo.")}</Text>}</Section>
+      <View style={{ gap: 11 }}>
+        <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Mi negocio")}</Text>
+        <BusinessSwitcher />
+        {business ? <View style={{ padding: 18, gap: 14, ...cardStyle(theme) }}><BusinessPhotoField onError={setError} /><FormField label={t("Nombre")} value={business.name} onChangeText={updateBusinessField('name')} /><FormField label={t("Descripción")} value={business.description} onChangeText={updateBusinessField('description')} multiline /><FormField label={t("Teléfono")} value={business.phone} onChangeText={updateBusinessField('phone')} keyboardType="phone-pad" /><FormField label={t("WhatsApp")} value={business.whatsapp} onChangeText={updateBusinessField('whatsapp')} keyboardType="phone-pad" /><FormField label={t("Dirección")} value={business.address} onChangeText={updateBusinessField('address')} /><FormField label={t("Moneda")} value={business.currency} onChangeText={updateBusinessField('currency')} autoCapitalize="characters" maxLength={3} /><Button loading={saving === 'business'} onPress={saveBusiness}>{t("Guardar negocio")}</Button></View> : <Text style={{ color: theme.muted }}>{t("Crea un negocio desde Inicio para configurarlo.")}</Text>}
+      </View>
 
       <Section label={t("Aplicación")}>
         <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>{t("Apariencia")}</Text><Text style={{ color: theme.muted, fontSize: 12.5 }}>{t("Automática")}</Text></View>

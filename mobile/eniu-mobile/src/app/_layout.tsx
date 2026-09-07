@@ -34,6 +34,9 @@ export default function RootLayout() {
                   <Stack.Screen name="(auth)" />
                   <Stack.Screen name="(onboarding)" />
                   <Stack.Screen name="(tabs)" />
+                  {/* En modal y en la raíz: se abre desde cualquier pestaña
+                      cuando una función bloqueada invita a mejorar el plan. */}
+                  <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
                 </Stack>
               </ThemeProvider>
             </BusinessProvider>

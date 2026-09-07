@@ -24,6 +24,7 @@ import BusinessPage from "../modules/Business/pages/BusinessPage";
 import CataloguesPage from "../modules/Catalogue/pages/CataloguesPage";
 import CatalogueDetailPage from "../modules/Catalogue/pages/CatalogueDetailPage";
 import TemplatesPage from "../modules/Templates/pages/TemplatesPage";
+import PromotionsPage from "../modules/Templates/pages/PromotionsPage";
 import PublicMenuPage from "../modules/Publication/pages/PublicMenuPage";
 import PublicationPage from "../modules/Publication/pages/PublicationPage";
 
@@ -75,6 +76,7 @@ export default function AppRoutes() {
           <Route path="businesses/:businessId/catalogues/:catalogueId/products" element={<ProductsPage />} />
           <Route path="businesses/:businessId/catalogues/:catalogueId/categories" element={<CategoriesPage />} />
           <Route path="businesses/:businessId/catalogues/:catalogueId/templates" element={<TemplatesPage />} />
+          <Route path="businesses/:businessId/catalogues/:catalogueId/promotions" element={<PromotionsPage />} />
           <Route path="businesses/:businessId/catalogues/:catalogueId/qr" element={<PublicationPage />} />
           <Route path="businesses/:businessId/catalogues/:catalogueId/analytics" element={<AnalitycsPage />} />
           <Route path="qr" element={<QrPage />} />

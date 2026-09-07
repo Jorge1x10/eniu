@@ -3,6 +3,8 @@ from flask import current_app
 from app import storage
 from app.modules.billing import plans
 from app.modules.billing.guards import plan_key_for_owner_id
+from app.modules.promotion.services import promotions_today
+from app.modules.template import catalog
 from app.modules.template.services import default_configuration
 from app.modules.analytics.security import tracking_key
 
@@ -47,7 +49,7 @@ def main_picture(product):
     return next((picture for picture in pictures if picture.get("is_default")), pictures[0] if pictures else None)
 
 
-def _product_data(catalogue, product, api_path):
+def _product_data(catalogue, product, api_path, promo_labels, featured_ids):
     return {
         "tracking_key": tracking_key(catalogue.id, "product", product.id),
         "name": product.name,
@@ -55,6 +57,16 @@ def _product_data(catalogue, product, api_path):
         "price": format(product.price, ".2f") if product.price is not None else None,
         "image_url": _product_image_url(product, api_path),
         "is_available": product.is_available,
+        # Ninguna promoción cambia el precio (ver la nota en
+        # `promotion/services.py`) — sólo agrega esta etiqueta para que la
+        # plantilla la resalte hoy.
+        "promo_label": promo_labels.get(product.id),
+        # Si además encabeza el menú en la sección "Promociones de hoy". Es una
+        # bandera y no un segundo listado a propósito: la URL de la foto se
+        # calcula por posición (sección, índice), así que repetir los productos
+        # en otro arreglo apuntaría a imágenes equivocadas. Cada plantilla arma
+        # la sección filtrando por esta bandera, sin perder el índice original.
+        "promo_featured": product.id in featured_ids,
     }
 
 
@@ -72,6 +84,10 @@ def serialize_public_menu(catalogue):
         catalogue.products,
         key=lambda product: (product.display_order, product.created_at),
     )
+    promo_labels, featured_product_ids = promotions_today(catalogue.id)
+    def product_data(product, api_path):
+        return _product_data(catalogue, product, api_path, promo_labels, featured_product_ids)
+
     category_payload = []
     for section_index, category in enumerate(categories):
         category_products = [product for product in products if product.category_id == category.id]
@@ -80,8 +96,7 @@ def serialize_public_menu(catalogue):
             "name": category.name,
             "description": category.description,
             "products": [
-                _product_data(
-                    catalogue,
+                product_data(
                     product,
                     f"/api/public/menus/{slug}/product-images/{section_index}/{product_index}"
                     if slug and catalogue.is_published else None,
@@ -91,8 +106,7 @@ def serialize_public_menu(catalogue):
         })
     uncategorized = [product for product in products if product.category_id is None]
     uncategorized_payload = [
-        _product_data(
-            catalogue,
+        product_data(
             product,
             f"/api/public/menus/{slug}/product-images/{len(categories)}/{product_index}"
             if slug and catalogue.is_published else None,
@@ -107,11 +121,24 @@ def serialize_public_menu(catalogue):
         return _asset_url(folder_key, getattr(catalogue.template_config, attribute), path)
 
     theme = dict(configuration["theme"])
+    # Campos de sólo edición (re-mostrar lo guardado en el editor avanzado):
+    # no aportan nada a quien sólo va a leer el menú, así que no viajan en el
+    # payload público — es la ruta más caliente del backend.
+    theme.pop("color_preset_key", None)
+    theme.pop("theme_overrides", None)
     theme["cover_image_url"] = decoration(
         "cover_filename", "CATALOGUE_COVER_FOLDER", f"/api/public/menus/{slug}/cover"
     )
     theme["background_image_url"] = decoration(
         "background_filename", "CATALOGUE_BACKGROUND_FOLDER", f"/api/public/menus/{slug}/background"
+    )
+    # Resuelto aquí mismo (no sólo la clave) para que la página pública no
+    # tenga que pedir el catálogo aparte sólo para saber qué patrón dibujar
+    # — es la ruta más caliente del backend, un solo request debe bastar.
+    background_preset = catalog.BACKGROUNDS.get(theme.get("background_preset_key"))
+    theme["background_preset"] = (
+        {"key": theme["background_preset_key"], "css": background_preset["css"], "size": background_preset["size"]}
+        if background_preset else None
     )
     splash = dict(configuration.get("splash") or {"enabled": False, "duration": 2.5})
     splash["image_url"] = decoration(
@@ -119,7 +146,9 @@ def serialize_public_menu(catalogue):
     )
 
     plan_key = plan_key_for_owner_id(catalogue.business.owner_id)
-    template_key, theme = plans.sanitize_public_theme(
+    # Se sanea contra `template_key`, no `layout_key`: ver la nota equivalente
+    # en `billing/guards.py` — es el campo siempre poblado de forma confiable.
+    layout_key, theme = plans.sanitize_public_theme(
         plan_key, configuration["template_key"], theme
     )
     splash = plans.sanitize_public_splash(plan_key, splash)
@@ -133,7 +162,10 @@ def serialize_public_menu(catalogue):
             "description": catalogue.description,
         },
         "template": {
-            "key": template_key,
+            "key": layout_key,
+            # Alias hacia adelante: mismo valor, nombre nuevo para clientes
+            # que ya conozcan el concepto de layout en vez de "plantilla".
+            "layout_key": layout_key,
             "theme": theme,
         },
         "splash": splash,

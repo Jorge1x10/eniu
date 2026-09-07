@@ -15,7 +15,23 @@ export function mainProductImage(product) {
   return resolveAssetUrl((pictures.find((picture) => picture.is_default) || pictures[0])?.url);
 }
 
-export function buildSections(categories, products) {
+/**
+ * Secciones del menú, en orden.
+ *
+ * "Promociones de hoy" encabeza el menú y repite productos que también salen en
+ * su categoría: esa duplicación es el punto, es un escaparate. Sólo aparece si
+ * alguna promoción activa hoy pidió encabezar (`promo_featured`), así que un
+ * menú sin promociones destacadas queda exactamente igual que antes.
+ *
+ * Va aquí y no en cada plantilla porque las trece pasan por esta función: la
+ * sección se dibuja con el mismo estilo de categoría que ya tiene cada layout,
+ * sin tocar ninguno.
+ *
+ * Los nombres de las dos secciones que no vienen de la base —"Otros" y
+ * "Promociones de hoy"— los pasa quien llama, ya traducidos: este módulo no es
+ * un componente y no tiene acceso al idioma en curso.
+ */
+export function buildSections(categories, products, labels) {
   const sections = categories.map((category) => ({
     id: category.id,
     name: category.name,
@@ -23,6 +39,18 @@ export function buildSections(categories, products) {
     products: products.filter((product) => product.category_id === category.id),
   }));
   const uncategorized = products.filter((product) => product.category_id === null);
-  if (uncategorized.length) sections.push({ id: "other", name: "Otros", products: uncategorized });
+  if (uncategorized.length) sections.push({ id: "other", name: labels.other, products: uncategorized });
+
+  const featured = products.filter((product) => product.promo_featured);
+  if (featured.length) {
+    sections.unshift({
+      id: "promotions-today",
+      name: labels.promotionsToday,
+      // Ids propios: el mismo producto sale dos veces en la página y React
+      // necesita distinguir las dos tarjetas. El resto del objeto se conserva,
+      // incluida la foto, que ya viene resuelta.
+      products: featured.map((product) => ({ ...product, id: `promo-${product.id}` })),
+    });
+  }
   return sections;
 }

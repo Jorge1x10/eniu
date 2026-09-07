@@ -1,6 +1,6 @@
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -27,5 +27,5 @@ export function ErrorState({ message, error, onRetry, action, onAction }: { mess
   // más útil que "no pudimos cargar los productos", que suena a que el
   // problema está en Eniu y no en la red.
   const text = error instanceof ApiError && error.isOffline ? error.message : message;
-  return <View style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface, borderRadius: 20, borderCurve: 'continuous', padding: 24, gap: 14 }}><Text selectable style={{ color: theme.danger, lineHeight: 20, textAlign: 'center' }}>{text}</Text>{onRetry ? <Button variant="secondary" onPress={onRetry}>{t("Reintentar")}</Button> : null}{action ? <Button onPress={onAction}>{action}</Button> : null}</View>;
+  return <View style={{ ...cardStyle(theme, 20), padding: 24, gap: 14 }}><Text selectable style={{ color: theme.danger, lineHeight: 20, textAlign: 'center' }}>{text}</Text>{onRetry ? <Button variant="secondary" onPress={onRetry}>{t("Reintentar")}</Button> : null}{action ? <Button onPress={onAction}>{action}</Button> : null}</View>;
 }

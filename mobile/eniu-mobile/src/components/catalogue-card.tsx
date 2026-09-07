@@ -4,7 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { MenuSkeleton } from '@/components/menu-skeleton';
 import { Divider } from '@/components/ui/divider';
 import { ChevronRightIcon } from '@/components/ui/icons';
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import type { Catalogue } from '@/types/models';
 import { useTranslation } from 'react-i18next';
 
@@ -16,7 +16,7 @@ export function CatalogueCard({ catalogue }: { catalogue: Catalogue }) {
     <Link href={{ pathname: '/(tabs)/(menus)/[catalogueId]', params: { catalogueId: catalogue.id } }} asChild>
       {/* La acción va bajo una línea divisoria y no suelta dentro del bloque de
           texto: así la tarjeta se lee como un contenedor con su propio pie. */}
-      <Pressable style={({ pressed }) => ({ backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 20, borderCurve: 'continuous', overflow: 'hidden', opacity: pressed ? 0.72 : 1 })}>
+      <Pressable style={({ pressed }) => ({ ...cardStyle(theme), overflow: 'hidden', opacity: pressed ? 0.72 : 1 })}>
         <View style={{ flexDirection: 'row', gap: 14, padding: 16 }}>
           <MenuSkeleton width={52} padding={7} />
           <View style={{ flex: 1, minWidth: 0, gap: 6 }}>

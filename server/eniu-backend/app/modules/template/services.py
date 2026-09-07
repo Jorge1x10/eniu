@@ -9,20 +9,17 @@ from app import images, storage
 from app.database.db import db
 from app.modules.billing.guards import ensure_template_allowed
 from app.modules.catalogue.services import catalogue_access
+from app.modules.template import catalog
 from app.modules.template.model import CatalogueTemplate
 from app.modules.catalogue.model import Catalogue
 from app.modules.business.model import Business
 from app.shared.i18n import _
 
 
-TEMPLATE_KEYS = {
-    "modern", "minimal", "elegant", "bistro", "bold", "natural",
-    "retro", "luxury",
-}
-FONT_KEYS = {"inter", "poppins", "montserrat", "playfair", "lora"}
 THEME_FIELDS = {
     "background_color", "primary_color", "accent_color", "text_color",
     "font_key", "show_cover", "show_product_images", "background_opacity",
+    "cover_focal_x", "cover_focal_y", "background_preset_key",
 }
 # La pantalla de bienvenida del menú público. La duración se acota para que
 # nadie deje a sus comensales cinco segundos mirando un logo.
@@ -41,6 +38,9 @@ DEFAULT_THEME = {
     "cover_image_url": None,
     "background_image_url": None,
     "background_opacity": 0.2,
+    "cover_focal_x": 0.5,
+    "cover_focal_y": 0.5,
+    "background_preset_key": None,
 }
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 ALLOWED_IMAGE_MIMETYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -49,7 +49,25 @@ HEX_PATTERN = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 
 def default_configuration():
-    return {"template_key": "modern", "theme": dict(DEFAULT_THEME), "splash": dict(DEFAULT_SPLASH)}
+    theme = dict(DEFAULT_THEME)
+    theme["color_preset_key"] = catalog.DEFAULT_PALETTE_KEY
+    theme["theme_overrides"] = {}
+    theme["tokens"] = catalog.resolve_theme(
+        {
+            "background": theme["background_color"],
+            "primary": theme["primary_color"],
+            "accent": theme["accent_color"],
+            "text": theme["text_color"],
+        },
+        catalog.DEFAULT_PALETTE_KEY,
+        {},
+    )
+    return {
+        "template_key": catalog.DEFAULT_LAYOUT_KEY,
+        "layout_key": catalog.DEFAULT_LAYOUT_KEY,
+        "theme": theme,
+        "splash": dict(DEFAULT_SPLASH),
+    }
 
 
 def _normalize_hex(value):
@@ -83,7 +101,7 @@ def _validate_theme(theme, current):
         if field in theme:
             normalized[field] = _normalize_hex(theme[field])
     if "font_key" in theme:
-        if theme["font_key"] not in FONT_KEYS:
+        if theme["font_key"] not in catalog.FONTS:
             raise ValueError(_("La tipografía seleccionada no está permitida"))
         normalized["font_key"] = theme["font_key"]
     for field in ("show_cover", "show_product_images"):
@@ -98,11 +116,37 @@ def _validate_theme(theme, current):
         if value < 0 or value > 1:
             raise ValueError(_("La opacidad del fondo debe estar entre 0 y 1"))
         normalized["background_opacity"] = round(float(value), 2)
+    for field in ("cover_focal_x", "cover_focal_y"):
+        if field in theme:
+            value = theme[field]
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(_("El punto focal de la portada debe ser un número"))
+            if value < 0 or value > 1:
+                raise ValueError(_("El punto focal de la portada debe estar entre 0 y 1"))
+            normalized[field] = round(float(value), 3)
+    if "background_preset_key" in theme:
+        value = theme["background_preset_key"]
+        if value is not None and value not in catalog.BACKGROUNDS:
+            raise ValueError(_("El fondo seleccionado no está permitido"))
+        normalized["background_preset_key"] = value
     if _contrast(normalized["text_color"], normalized["background_color"]) < 4.5:
         raise ValueError(_("El texto no tiene suficiente contraste con el fondo"))
-    if _contrast(normalized["text_color"], normalized["primary_color"]) < 4.5:
-        raise ValueError(_("El texto no tiene suficiente contraste con el color principal"))
     return normalized
+
+
+def _validate_color_preset(color_preset_key):
+    if color_preset_key is not None and color_preset_key not in catalog.PALETTES:
+        raise ValueError(_("La paleta seleccionada no está permitida"))
+    return color_preset_key
+
+
+def _validate_theme_overrides(overrides):
+    if not isinstance(overrides, dict):
+        raise ValueError(_("Los colores avanzados no son válidos"))
+    unknown = set(overrides) - catalog.EXTRA_COLOR_KEYS
+    if unknown:
+        raise ValueError(f"Tokens de color no permitidos: {', '.join(sorted(unknown))}")
+    return {key: _normalize_hex(value) for key, value in overrides.items()}
 
 
 def _validate_splash(splash, current):
@@ -212,7 +256,10 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
             return error
         if not isinstance(data, dict):
             return {"message": _("La configuración no es válida")}, 400
-        unknown = set(data) - {"template_key", "theme", "splash", "remove_cover", "remove_background", "remove_splash"}
+        unknown = set(data) - {
+            "template_key", "layout_key", "theme", "color_preset_key", "theme_overrides",
+            "splash", "remove_cover", "remove_background", "remove_splash",
+        }
         if unknown:
             return {"message": f"Campos no permitidos: {', '.join(sorted(unknown))}"}, 400
         if "remove_cover" in data and not isinstance(data["remove_cover"], bool):
@@ -224,12 +271,26 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
 
         config = CatalogueTemplate.query.filter_by(catalogue_id=catalogue.id).first()
         current = config.to_dict() if config else default_configuration()
-        template_key = data.get("template_key", current["template_key"])
-        if template_key not in TEMPLATE_KEYS:
+        # `layout_key` es el campo nuevo; `template_key` se sigue aceptando
+        # como su alias para que un cliente que no conozca el contrato nuevo
+        # (app/web todavía no actualizados) siga guardando sin cambios.
+        legacy_client = "layout_key" not in data and "template_key" in data
+        layout_key = data.get("layout_key", data.get("template_key", current["layout_key"]))
+        if layout_key not in catalog.LAYOUTS:
             return {"message": _("La plantilla seleccionada no está permitida")}, 400
+        # Un cliente viejo que manda su valor por omisión sobre una plantilla que
+        # ni siquiera puede representar no está eligiendo nada: está devolviendo
+        # lo que normalizó al leer. Se conserva lo guardado (ver la nota de
+        # `LEGACY_LAYOUT_KEYS` en catalog.py).
+        if (
+            legacy_client
+            and layout_key == catalog.LEGACY_DEFAULT_LAYOUT_KEY
+            and current["layout_key"] not in catalog.LEGACY_LAYOUT_KEYS
+        ):
+            layout_key = current["layout_key"]
         blocked = ensure_template_allowed(
             owner_id,
-            template_key=data.get("template_key"),
+            layout_key=data.get("layout_key", data.get("template_key")),
             theme=data.get("theme"),
             cover_upload=bool(cover and cover.filename),
             background_upload=bool(background and background.filename),
@@ -240,6 +301,64 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         if blocked:
             return blocked
         theme = _validate_theme(data.get("theme", {}), current["theme"])
+        # Lo mismo que con la plantilla: la app 1.0.0 sólo conoce cinco
+        # tipografías y devuelve `inter` por cualquier otra.
+        if (
+            legacy_client
+            and theme["font_key"] == catalog.LEGACY_DEFAULT_FONT_KEY
+            and current["theme"]["font_key"] not in catalog.LEGACY_FONT_KEYS
+        ):
+            theme["font_key"] = current["theme"]["font_key"]
+
+        # Color: el contrato nuevo (paleta y/o overrides sueltos) manda si
+        # viene en el payload; si no, se cae al contrato viejo (4 colores
+        # planos sueltos, sin saber de paletas) tratándolos como personalizados
+        # y re-derivando los tokens extra para que no queden desactualizados.
+        color_preset_key = current["theme"].get("color_preset_key")
+        theme_overrides = dict(current["theme"].get("theme_overrides") or {})
+        if "color_preset_key" in data or "theme_overrides" in data:
+            if "color_preset_key" in data:
+                color_preset_key = _validate_color_preset(data["color_preset_key"])
+                if color_preset_key is not None:
+                    preset_tokens = catalog.PALETTES[color_preset_key]["tokens"]
+                    theme["background_color"] = preset_tokens["background"]
+                    theme["primary_color"] = preset_tokens["primary"]
+                    theme["accent_color"] = preset_tokens["accent"]
+                    theme["text_color"] = preset_tokens["text"]
+                    theme_overrides = {}
+            if "theme_overrides" in data:
+                theme_overrides = {**theme_overrides, **_validate_theme_overrides(data["theme_overrides"])}
+                color_preset_key = None
+        else:
+            core_changed = any(
+                field in data.get("theme", {}) and theme[field] != current["theme"][field]
+                for field in ("background_color", "primary_color", "accent_color", "text_color")
+            )
+            if core_changed:
+                color_preset_key = None
+                theme_overrides = catalog.derive_tokens(
+                    theme["background_color"], theme["primary_color"],
+                    theme["accent_color"], theme["text_color"],
+                )
+
+        # El texto ya no se pinta directo sobre `primary_color` en ningún
+        # lado del menú (ver `nav_chip_text` en `catalog.py`): tanto el chip
+        # de categoría activo como la portada sin imagen usan ese token
+        # aparte. Por eso el contraste se exige sobre el par que de verdad se
+        # dibuja junto — no sobre `text_color`/`primary_color`, que ya no
+        # coinciden necesariamente. Para quien nunca tocó paletas, ambos
+        # pares siguen siendo el mismo (`derive_tokens` copia uno del otro),
+        # así que la exigencia no cambia para nadie que ya pasaba hoy.
+        resolved_tokens = catalog.resolve_theme(
+            {
+                "background": theme["background_color"], "primary": theme["primary_color"],
+                "accent": theme["accent_color"], "text": theme["text_color"],
+            },
+            color_preset_key, theme_overrides,
+        )
+        if _contrast(resolved_tokens["nav_chip_text"], resolved_tokens["nav_chip_bg"]) < 4.5:
+            raise ValueError(_("El texto del filtro activo no tiene suficiente contraste con su fondo"))
+
         splash_config = _validate_splash(data.get("splash", {}), current.get("splash", DEFAULT_SPLASH))
 
         if not config:
@@ -248,7 +367,10 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         old_filename = config.cover_filename
         old_background_filename = config.background_filename
         old_splash_filename = config.splash_filename
-        config.template_key = template_key
+        config.template_key = layout_key
+        config.layout_key = layout_key
+        config.color_preset_key = color_preset_key
+        config.theme_overrides = theme_overrides
         for field in THEME_FIELDS:
             setattr(config, field, theme[field])
         config.splash_enabled = splash_config["enabled"]

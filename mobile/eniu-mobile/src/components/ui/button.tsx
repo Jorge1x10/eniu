@@ -17,11 +17,17 @@ export function Button({ children, onPress, loading, disabled, variant = 'primar
       onPress={() => { Haptics.selectionAsync(); onPress?.(); }}
       style={({ pressed }) => ({
         minHeight: 48, borderRadius: 14, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center',
-        paddingHorizontal: 18, backgroundColor, borderWidth: variant === 'secondary' ? 1 : 0, borderColor: theme.border,
+        paddingHorizontal: 14, backgroundColor, borderWidth: variant === 'secondary' ? 1 : 0, borderColor: theme.border,
         opacity: disabled || loading ? 0.55 : pressed ? 0.78 : 1, ...style,
       })}
     >
-      {loading ? <ActivityIndicator color={color} /> : <Text style={{ color, fontSize: 15, fontWeight: '800' }}>{children}</Text>}
+      {loading ? <ActivityIndicator color={color} /> : (
+        // `flexShrink` y `textAlign`: en una fila de dos botones, una etiqueta
+        // larga como "Guardar menú" llegaba a empujar el botón más allá de su
+        // mitad y quedaba descuadrado contra el de al lado. Ahora el texto cede
+        // y se centra en el espacio que le toca.
+        <Text style={{ color, fontSize: 15, fontWeight: '800', flexShrink: 1, textAlign: 'center' }}>{children}</Text>
+      )}
     </Pressable>
   );
 }

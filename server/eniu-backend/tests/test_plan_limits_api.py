@@ -7,6 +7,7 @@ from flask_jwt_extended import create_access_token
 from app import create_app
 from app.database.db import db
 from app.modules.billing.model import BillingSubscription
+from app.modules.billing import plans
 from app.modules.billing.services import apply_free_plan_state
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
@@ -266,7 +267,7 @@ class PlanLimitsApiTestCase(unittest.TestCase):
 
     # --- bajada de plan ------------------------------------------------------
 
-    def test_downgrade_unpublishes_everything_and_keeps_only_the_last_business(self):
+    def test_downgrade_keeps_only_the_last_business_and_one_menu_online(self):
         with self.app.app_context():
             owner = db.session.get(User, self.free_user_id)
             # Fecha explícita: el orden de creación es justo lo que se prueba.
@@ -276,6 +277,7 @@ class PlanLimitsApiTestCase(unittest.TestCase):
             newest_catalogue = Catalogue(
                 name="Menu nuevo", business_id=newest.id,
                 is_published=True, public_slug="menu-nuevo",
+                published_at=datetime(2030, 2, 1, tzinfo=timezone.utc),
             )
             old_catalogue = db.session.get(Catalogue, UUID(self.free_catalogue_id))
             old_catalogue.is_published = True
@@ -294,12 +296,59 @@ class PlanLimitsApiTestCase(unittest.TestCase):
             catalogues = Catalogue.query.filter(
                 Catalogue.business_id.in_([business.id for business in businesses])
             ).all()
-            self.assertTrue(all(not catalogue.is_published for catalogue in catalogues))
-            # El slug sobrevive: republicar recupera la misma URL y el QR impreso sigue sirviendo.
+            publicados = [c for c in catalogues if c.is_published]
+            # El plan gratuito incluye un menú en línea, así que la bajada deja
+            # exactamente uno: el último publicado del negocio que queda activo.
+            # Dejarlo en cero rompería el QR que ya está pegado en la mesa.
+            self.assertEqual([c.public_slug for c in publicados], ["menu-nuevo"])
+            # El slug sobrevive incluso en los que se despublican: republicar
+            # recupera la misma URL y el QR impreso sigue sirviendo.
             self.assertEqual(
                 {catalogue.public_slug for catalogue in catalogues},
                 {"menu-viejo", "menu-nuevo"},
             )
+
+    def test_downgrade_leaves_nothing_online_when_nothing_was_published(self):
+        with self.app.app_context():
+            owner = db.session.get(User, self.free_user_id)
+            catalogue = db.session.get(Catalogue, UUID(self.free_catalogue_id))
+            catalogue.is_published = False
+            db.session.commit()
+
+            apply_free_plan_state(owner)
+            db.session.commit()
+
+            # Sin nada publicado no hay QR en circulación que proteger, así que
+            # la bajada no publica nada por su cuenta.
+            catalogues = Catalogue.query.filter_by(business_id=catalogue.business_id).all()
+            self.assertTrue(all(not c.is_published for c in catalogues))
+
+    def test_downgrade_downgrades_the_menu_it_keeps_online(self):
+        with self.app.app_context():
+            owner = db.session.get(User, self.free_user_id)
+            catalogue = db.session.get(Catalogue, UUID(self.free_catalogue_id))
+            catalogue.is_published = True
+            catalogue.public_slug = "sigue-en-linea"
+            db.session.add(CatalogueTemplate(
+                catalogue_id=catalogue.id,
+                template_key="luxury",
+                font_key="playfair",
+                show_cover=True,
+                splash_enabled=True,
+            ))
+            db.session.commit()
+
+            apply_free_plan_state(owner)
+            db.session.commit()
+
+            # Sigue publicado, pero con lo que el gratuito sí incluye: el menú
+            # no se cae, y aun así deja de tener las funciones de pago.
+            self.assertTrue(db.session.get(Catalogue, catalogue.id).is_published)
+            config = CatalogueTemplate.query.filter_by(catalogue_id=catalogue.id).first()
+            self.assertEqual(config.template_key, plans.DEFAULT_LAYOUT_KEY)
+            self.assertEqual(config.font_key, plans.DEFAULT_FONT_KEY)
+            self.assertFalse(config.show_cover)
+            self.assertFalse(config.splash_enabled)
 
     def test_downgrade_turns_off_the_features_the_free_plan_lacks(self):
         with self.app.app_context():

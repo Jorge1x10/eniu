@@ -6,13 +6,12 @@ import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated'
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { CatalogueCard } from '@/components/catalogue-card';
 import { Button } from '@/components/ui/button';
-import { Divider } from '@/components/ui/divider';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
 import { PlusIcon } from '@/components/ui/icons';
 import { PlanNotice } from '@/components/ui/plan-notice';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
-import { useEniuTheme } from '@/constants/eniu-theme';
+import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useScreenTopPadding } from '@/constants/layout';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
@@ -55,11 +54,9 @@ export default function MenusScreen() {
         <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>{t("Menús")}</Text>
         <Text style={{ color: theme.muted, lineHeight: 20 }}>{t("Administra los menús que compartes con tus clientes.")}</Text>
       </View>
-      <Divider />
       <BusinessSwitcher />
-      <Divider />
       {!selectedBusiness ? <EmptyState title={t("Primero crea un negocio")} description={t("Ve a Inicio para crear el negocio que contendrá tus menús.")} /> : <>
-        {creating ? <View style={{ padding: 18, gap: 14, borderRadius: 20, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}><Text style={{ color: theme.text, fontSize: 20, fontWeight: '900' }}>{t("Nuevo menú")}</Text><FormField label={t("Nombre")} value={name} onChangeText={setName} maxLength={64} placeholder={t("Menú principal")} /><FormField label={t("Descripción")} value={description} onChangeText={setDescription} multiline placeholder={t("Nuestro menú general")} /><Feedback message={error} /><View style={{ flexDirection: 'row', gap: 10 }}><Button style={{ flex: 1 }} onPress={create} loading={saving}>{t("Guardar menú")}</Button><Button style={{ flex: 1 }} variant="secondary" onPress={() => { setCreating(false); setError(''); }}>{t("Cancelar")}</Button></View></View> : null}
+        {creating ? <View style={{ padding: 18, gap: 14, ...cardStyle(theme) }}><Text style={{ color: theme.text, fontSize: 20, fontWeight: '900' }}>{t("Nuevo menú")}</Text><FormField label={t("Nombre")} value={name} onChangeText={setName} maxLength={64} placeholder={t("Menú principal")} /><FormField label={t("Descripción")} value={description} onChangeText={setDescription} multiline placeholder={t("Nuestro menú general")} /><Feedback message={error} /><View style={{ flexDirection: 'row', gap: 10 }}><Button style={{ flex: 1 }} onPress={create} loading={saving}>{t("Guardar menú")}</Button><Button style={{ flex: 1 }} variant="secondary" onPress={() => { setCreating(false); setError(''); }}>{t("Cancelar")}</Button></View></View> : null}
         {query.isLoading ? <LoadingState label={t("Cargando menús…")} /> : query.isError ? <ErrorState message={t("No pudimos cargar tus menús.")} error={query.error} onRetry={() => query.refetch()} /> : menus.length ? <View style={{ gap: 12 }}>
           {menus.map((menu, index) => <Animated.View key={menu.id} entering={FadeInDown.duration(300).delay(index * 70)} layout={LinearTransition.duration(200)}><CatalogueCard catalogue={menu} /></Animated.View>)}
           {atMenuLimit ? <PlanNotice message={t("Tu plan actual permite {{limit}} por negocio.", { limit: limits.max_catalogues_per_business === 1 ? t("un menú") : t("{{count}} menús", { count: limits.max_catalogues_per_business }) })} /> : null}

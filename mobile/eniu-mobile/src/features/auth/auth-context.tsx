@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { createContext, PropsWithChildren, use, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { forgetPurchases, identifyPurchases } from '@/features/billing/purchases';
 import { api } from '@/lib/api';
 import { sessionStore } from '@/lib/session-store';
 import type { User } from '@/types/models';
@@ -34,6 +35,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       try {
         const data = await api.get<{ user: User }>('auth/me');
         if (active) setUser(data.user);
+        // También al volver con una sesión ya guardada: reinstalar la app no
+        // debe dejar las compras sin dueño.
+        await identifyPurchases(data.user.id);
       } catch {
         await sessionStore.clear();
       } finally {
@@ -46,6 +50,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const startSession = useCallback(async (data: SessionResponse) => {
     await sessionStore.save(data.access_token, data.refresh_token);
     setUser(data.user);
+    // Las compras se atan al id de usuario del backend: es lo que permite que
+    // el webhook de RevenueCat sepa a quién activarle el plan.
+    await identifyPurchases(data.user.id);
   }, []);
 
   const login = useCallback(async (identifier: string, password: string) => {
@@ -75,6 +82,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const logout = useCallback(async () => {
     await sessionStore.clear();
     setUser(null);
+    // Antes de irse: si no, la compra quedaría atada a quien use el teléfono
+    // después.
+    await forgetPurchases();
     router.replace('/(auth)/login');
   }, []);
 
