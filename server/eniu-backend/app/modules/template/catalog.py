@@ -308,6 +308,24 @@ PALETTES = {
 # `currentColor` para que se adapten solos a cualquier paleta sin que este
 # catálogo tenga que saber de colores. La misma opacidad que ya controla el
 # fondo con imagen propia (`background_opacity`) sirve para atenuarlos.
+# Lo que conocía la versión 1.0.0 de la app, que sigue publicada mientras se
+# revisa la 2.0.
+#
+# Esa versión normaliza al leer: una plantilla o una tipografía que no está en
+# sus listas se convierte en su valor por omisión, y ese valor normalizado es el
+# que manda de vuelta al guardar. O sea que si alguien elige "Revista" desde la
+# web y luego toca guardar en la app vieja —aunque sólo mueva el interruptor de
+# bienvenida—, su menú volvería a `modern` sin que nadie lo pidiera.
+#
+# `services.update_template` usa estas listas para distinguir ese caso de una
+# elección de verdad. Se pueden borrar cuando la 1.0.0 deje de estar en uso.
+LEGACY_LAYOUT_KEYS = frozenset({
+    "modern", "minimal", "elegant", "bistro", "bold", "natural", "retro", "luxury",
+})
+LEGACY_FONT_KEYS = frozenset({"inter", "poppins", "montserrat", "playfair", "lora"})
+LEGACY_DEFAULT_LAYOUT_KEY = "modern"
+LEGACY_DEFAULT_FONT_KEY = "inter"
+
 BACKGROUNDS = {
     "paper": {
         "name": "Papel",

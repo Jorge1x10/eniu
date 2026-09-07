@@ -403,6 +403,57 @@ class TemplateApiTestCase(unittest.TestCase):
         with self.app.app_context():
             self.assertEqual(CatalogueTemplate.query.count(), 0)
 
+    def test_legacy_client_does_not_downgrade_a_layout_it_cannot_represent(self):
+        """La app 1.0.0 sigue publicada mientras se revisa la 2.0.
+
+        Normaliza al leer —una plantilla que no conoce se vuelve `modern`— y
+        manda esa normalización al guardar. Sin este freno, tocar cualquier
+        ajuste desde la app vieja borraría una plantilla elegida en la web.
+        """
+        self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"layout_key": "magazine", "theme": {"font_key": "pacifico"}},
+        )
+
+        # Un cliente viejo: manda `template_key`, nunca `layout_key`.
+        response = self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"template_key": "modern", "theme": {"font_key": "inter"}},
+        )
+        self.assertEqual(response.status_code, 200)
+        template = response.get_json()["template"]
+        self.assertEqual(template["layout_key"], "magazine")
+        self.assertEqual(template["theme"]["font_key"], "pacifico")
+
+    def test_legacy_client_can_still_change_between_layouts_it_knows(self):
+        """El freno no debe congelar a quien sí está eligiendo."""
+        self.client.patch(
+            self.url(), headers=self.headers(), json={"layout_key": "bistro"},
+        )
+        response = self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"template_key": "modern", "theme": {"font_key": "inter"}},
+        )
+        self.assertEqual(response.status_code, 200)
+        template = response.get_json()["template"]
+        self.assertEqual(template["layout_key"], "modern")
+        self.assertEqual(template["theme"]["font_key"], "inter")
+
+    def test_a_new_client_can_still_move_to_modern_from_a_new_layout(self):
+        """Mandar `layout_key` es señal de cliente nuevo: se respeta tal cual."""
+        self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"layout_key": "magazine", "theme": {"font_key": "pacifico"}},
+        )
+        response = self.client.patch(
+            self.url(), headers=self.headers(),
+            json={"layout_key": "modern", "theme": {"font_key": "inter"}},
+        )
+        self.assertEqual(response.status_code, 200)
+        template = response.get_json()["template"]
+        self.assertEqual(template["layout_key"], "modern")
+        self.assertEqual(template["theme"]["font_key"], "inter")
+
 
 if __name__ == "__main__":
     unittest.main()

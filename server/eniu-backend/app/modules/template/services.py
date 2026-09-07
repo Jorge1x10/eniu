@@ -274,9 +274,20 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         # `layout_key` es el campo nuevo; `template_key` se sigue aceptando
         # como su alias para que un cliente que no conozca el contrato nuevo
         # (app/web todavía no actualizados) siga guardando sin cambios.
+        legacy_client = "layout_key" not in data and "template_key" in data
         layout_key = data.get("layout_key", data.get("template_key", current["layout_key"]))
         if layout_key not in catalog.LAYOUTS:
             return {"message": _("La plantilla seleccionada no está permitida")}, 400
+        # Un cliente viejo que manda su valor por omisión sobre una plantilla que
+        # ni siquiera puede representar no está eligiendo nada: está devolviendo
+        # lo que normalizó al leer. Se conserva lo guardado (ver la nota de
+        # `LEGACY_LAYOUT_KEYS` en catalog.py).
+        if (
+            legacy_client
+            and layout_key == catalog.LEGACY_DEFAULT_LAYOUT_KEY
+            and current["layout_key"] not in catalog.LEGACY_LAYOUT_KEYS
+        ):
+            layout_key = current["layout_key"]
         blocked = ensure_template_allowed(
             owner_id,
             layout_key=data.get("layout_key", data.get("template_key")),
@@ -290,6 +301,14 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
         if blocked:
             return blocked
         theme = _validate_theme(data.get("theme", {}), current["theme"])
+        # Lo mismo que con la plantilla: la app 1.0.0 sólo conoce cinco
+        # tipografías y devuelve `inter` por cualquier otra.
+        if (
+            legacy_client
+            and theme["font_key"] == catalog.LEGACY_DEFAULT_FONT_KEY
+            and current["theme"]["font_key"] not in catalog.LEGACY_FONT_KEYS
+        ):
+            theme["font_key"] = current["theme"]["font_key"]
 
         # Color: el contrato nuevo (paleta y/o overrides sueltos) manda si
         # viene en el payload; si no, se cae al contrato viejo (4 colores
