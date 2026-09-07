@@ -4,7 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#FFE05A" />
-    <link rel="icon" type="image/png" href="/eniu-icon.png" />
+    <!-- El favicon se pide en cada página, así que su peso importa más que su
+         tamaño en pantalla: el que había era el icono de 1250 px y 96 KB, la
+         imagen más pesada del sitio. Estos salen del mismo original. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Las fuentes se piden desde aquí y no con un `@import` dentro del CSS.
+         Un import remoto encadena las peticiones —HTML, CSS, parsear, y sólo
+         entonces descubrir y conectar con Google Fonts— y esa cadena retrasa
+         el primer texto en pantalla. Declararlas aquí las arranca de una vez.
+         De DM Sans se usan 400, 600 y 700, y de Manrope sólo 700 y 800: los
+         demás pesos se descargaban sin que nada los usara. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Manrope:wght@700;800&display=swap"
+    />
     <meta name="description" content="Crea un menú digital atractivo, actualízalo al instante y compártelo con un código QR usando Eniu." />
     <title>Eniu — Tu menú, más simple y más tuyo</title>
     <link rel="canonical" href="https://eniu.app/" />

@@ -14,7 +14,7 @@ export function Brand() {
     <Link className="brand" href="home" aria-label={content.nav.brandLabel}>
       <picture>
         <source media="(prefers-color-scheme: dark)" srcSet="/eniu-wordmark-yellow.png" />
-        <img src="/eniu-wordmark-dark.png" alt="Eniu" />
+        <img src="/eniu-wordmark-dark.png" alt="Eniu" width="496" height="176" />
       </picture>
     </Link>
   )
