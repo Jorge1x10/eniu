@@ -29,6 +29,17 @@ export default {
     privacy: 'Aviso de privacidad — Eniu',
   },
 
+  // Lo que se lee bajo el título en Google y en la tarjeta de WhatsApp. Una
+  // por página porque el sitio se comparte por página: mandar el enlace de la
+  // guía y que aparezca la descripción de la portada pierde el clic.
+  descriptions: {
+    home: 'Crea un menú digital con código QR, actualízalo desde tu celular en segundos y compártelo en mesas y redes. Gratis para empezar, sin tarjeta.',
+    onboarding: 'De crear tu cuenta a compartir tu código QR: los seis pasos para publicar tu menú digital con Eniu en unos doce minutos, sin conocimientos técnicos.',
+    support: 'Cómo eliminar tu cuenta, recuperar tu contraseña, cancelar tu suscripción o reportar un menú. Contestamos todos los correos en uno o dos días hábiles.',
+    terms: 'Términos y condiciones del servicio de menús digitales Eniu: uso de la plataforma, contenido que publicas, planes y cancelación.',
+    privacy: 'Qué datos guarda Eniu, para qué los usa y cómo pedir que se eliminen. Aviso de privacidad del servicio de menús digitales.',
+  },
+
   nav: {
     brandLabel: 'Eniu, inicio',
     openMenu: 'Abrir menú',

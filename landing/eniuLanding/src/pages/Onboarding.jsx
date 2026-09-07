@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '../router.jsx'
 import { useLanguage } from '../languageContext.js'
-import { appUrl } from '../data/site.js'
+import AppCta from '../components/AppCta.jsx'
 
 /** Rellena la línea vertical de la guía conforme avanza el desplazamiento. */
 function useRailProgress() {
@@ -66,7 +66,7 @@ export default function Onboarding() {
           <h1>{onboarding.title[0]}<em>{onboarding.title[1]}</em></h1>
           <p className="hero-lead">{onboarding.lead}</p>
           <div className="hero-actions">
-            <a className="button primary" href={appUrl}>{onboarding.primaryCta}</a>
+            <AppCta className="button primary" place="guia-inicio">{onboarding.primaryCta}</AppCta>
             <Link className="text-link" href="#planes">{onboarding.secondaryCta}</Link>
           </div>
           <div className="ob-chips">
@@ -120,7 +120,7 @@ export default function Onboarding() {
         <p className="eyebrow light"><span /> {onboarding.finalEyebrow}</p>
         <h2>{onboarding.finalTitle[0]}<br /><em>{onboarding.finalTitle[1]}</em></h2>
         <p>{onboarding.finalLead}</p>
-        <a className="button yellow" href={appUrl}>{onboarding.finalCta}</a>
+        <AppCta className="button yellow" place="guia-cierre">{onboarding.finalCta}</AppCta>
         <span className="cta-orbit orbit-one" aria-hidden="true" /><span className="cta-orbit orbit-two" aria-hidden="true" />
       </section>
     </main>

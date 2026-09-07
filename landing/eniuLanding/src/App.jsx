@@ -4,7 +4,8 @@ import { RouterProvider } from './router.jsx'
 import { useRouter } from './routerContext.js'
 import { useLanguage } from './languageContext.js'
 import { useReveal } from './useReveal.js'
-import { LANGUAGE_CODES, contentFor, equivalentPath, pageKeyFromPath } from './content/index.js'
+import { equivalentPath, pageKeyFromPath } from './content/index.js'
+import { pageMeta } from './content/routes.js'
 import { SiteFooter, SiteHeader } from './components/Layout.jsx'
 import Home from './pages/Home.jsx'
 import Onboarding from './pages/Onboarding.jsx'
@@ -20,55 +21,82 @@ const pages = {
   terms: Terms,
 }
 
-/**
- * Mantiene al día lo que los buscadores leen de la página.
- *
- * `lang` en el `<html>` es lo que usan los lectores de pantalla para elegir
- * pronunciación, y las etiquetas `hreflang` son las que le dicen a Google que
- * `/` y `/en` son la misma página en dos idiomas y no contenido duplicado.
- * Sin ellas, servir ambos desde un mismo dominio sí penalizaría.
- */
-function useDocumentLanguage(pageKey, language, title) {
-  useEffect(() => {
-    document.title = title
-    document.documentElement.lang = language
-  }, [title, language])
+/** Crea la etiqueta si no existe y le pone el valor. */
+function upsert(selector, create, attribute, value) {
+  let element = document.head.querySelector(selector)
+  if (!element) {
+    element = create()
+    document.head.append(element)
+  }
+  element.setAttribute(attribute, value)
+  return element
+}
 
+function meta(kind, name, content) {
+  upsert(`meta[${kind}="${name}"]`, () => {
+    const element = document.createElement('meta')
+    element.setAttribute(kind, name)
+    return element
+  }, 'content', content)
+}
+
+/**
+ * Mantiene al día lo que los buscadores y las redes leen de la página.
+ *
+ * El HTML que sirve el build ya trae estas etiquetas con el valor correcto de
+ * cada ruta; esto las vuelve a poner al navegar dentro del sitio, donde no hay
+ * recarga y el `<head>` se quedaría con el de la página anterior.
+ *
+ * El canonical es el que más importa: mientras estuvo clavado a la portada,
+ * `/primeros-pasos` y todo el espejo en inglés se declaraban duplicados de la
+ * raíz, y un canonical que contradice al `hreflang` gana. Por eso `/en` no se
+ * indexaba.
+ */
+function useDocumentHead(pageKey, language) {
   useEffect(() => {
-    const links = LANGUAGE_CODES.map((code) => {
+    const page = pageMeta(pageKey, language)
+
+    document.title = page.title
+    document.documentElement.lang = page.language
+
+    meta('name', 'description', page.description)
+    upsert('link[rel="canonical"]', () => {
+      const link = document.createElement('link')
+      link.rel = 'canonical'
+      return link
+    }, 'href', page.canonical)
+
+    meta('property', 'og:url', page.canonical)
+    meta('property', 'og:title', page.title)
+    meta('property', 'og:description', page.description)
+    meta('property', 'og:locale', page.locale)
+    meta('name', 'twitter:title', page.title)
+    meta('name', 'twitter:description', page.description)
+
+    // Los `hreflang` se rehacen enteros en cada página: son pocos y así no hay
+    // que reconciliar los que sobran de la anterior.
+    const alternates = page.alternates.map(({ hreflang, href }) => {
       const link = document.createElement('link')
       link.rel = 'alternate'
-      link.hreflang = code
-      link.href = new URL(
-        contentFor(code).paths[pageKey] || contentFor(code).paths.home,
-        window.location.origin,
-      ).href
-      document.head.appendChild(link)
+      link.hreflang = hreflang
+      link.href = href
+      document.head.append(link)
       return link
     })
 
-    // `x-default` es lo que se sirve a quien no encaja en ningún idioma
-    // declarado; apunta al español, que es el original.
-    const fallback = document.createElement('link')
-    fallback.rel = 'alternate'
-    fallback.hreflang = 'x-default'
-    fallback.href = new URL(contentFor('es').paths[pageKey] || '/', window.location.origin).href
-    document.head.appendChild(fallback)
-    links.push(fallback)
-
-    return () => links.forEach((link) => link.remove())
-  }, [pageKey])
+    return () => alternates.forEach((link) => link.remove())
+  }, [pageKey, language])
 }
 
 function Site() {
   const { path, hash, key, navigate } = useRouter()
-  const { language, content } = useLanguage()
+  const { language } = useLanguage()
 
   const pageKey = pageKeyFromPath(path)
   const Page = pages[pageKey || 'home']
 
   useReveal(key)
-  useDocumentLanguage(pageKey || 'home', language, content.meta[pageKey || 'home'])
+  useDocumentHead(pageKey || 'home', language)
 
   // Una ruta desconocida cae a la portada, pero a la del idioma que pedía:
   // quien escribe mal una dirección en inglés no debería acabar en español.

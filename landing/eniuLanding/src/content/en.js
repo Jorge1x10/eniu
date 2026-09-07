@@ -33,6 +33,17 @@ export default {
     privacy: 'Privacy notice — Eniu',
   },
 
+  // What shows under the title in Google and in the WhatsApp card. One per
+  // page because the site gets shared page by page: sending the guide's link
+  // and seeing the home page's description loses the click.
+  descriptions: {
+    home: 'Build a digital menu with a QR code, update it from your phone in seconds and share it on tables and social media. Free to start, no card required.',
+    onboarding: 'From creating your account to sharing your QR code: the six steps to publish your digital menu with Eniu in about twelve minutes, no technical skills needed.',
+    support: 'How to delete your account, reset your password, cancel your subscription or report a menu. We answer every email within one or two business days.',
+    terms: 'Terms and conditions for the Eniu digital menu service: use of the platform, the content you publish, plans and cancellation.',
+    privacy: 'What data Eniu stores, what it is used for and how to request its deletion. Privacy notice for the digital menu service.',
+  },
+
   nav: {
     brandLabel: 'Eniu, home',
     openMenu: 'Open menu',

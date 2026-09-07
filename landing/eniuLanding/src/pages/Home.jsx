@@ -1,8 +1,8 @@
 import { Link } from '../router.jsx'
 import { useLanguage } from '../languageContext.js'
-import { appUrl } from '../data/site.js'
 import { SocialChips } from '../components/Layout.jsx'
 import MenuDemo from '../components/MenuDemo.jsx'
+import AppCta from '../components/AppCta.jsx'
 
 function TrustGroup({ items, hidden }) {
   return (
@@ -25,7 +25,7 @@ function PlanCard({ plan, badge, delay }) {
         {plan.features.map((item) => <li key={item}>{item}</li>)}
       </ul>
       <p className="plan-note">{plan.note}</p>
-      <a className={plan.featured ? 'button dark' : 'button outline'} href={appUrl}>{plan.cta}</a>
+      <AppCta className={plan.featured ? 'button dark' : 'button outline'} place={`plan-${plan.key}`}>{plan.cta}</AppCta>
     </article>
   )
 }
@@ -42,7 +42,7 @@ export default function Home() {
           <h1>{hero.title[0]}<em>{hero.title[1]}</em></h1>
           <p className="hero-lead">{hero.lead}</p>
           <div className="hero-actions">
-            <a className="button primary" href={appUrl}>{hero.primaryCta}</a>
+            <AppCta className="button primary" place="hero">{hero.primaryCta}</AppCta>
             <Link className="text-link" href="onboarding">{hero.secondaryCta}</Link>
           </div>
           <div className="hero-note"><strong>{hero.noteStrong}</strong> {hero.note}</div>
@@ -104,7 +104,7 @@ export default function Home() {
           <h2>{steps.title[0]}<em>{steps.title[1]}</em></h2>
           <p>{steps.lead}</p>
           <div className="steps-actions">
-            <a className="button yellow" href={appUrl}>{steps.primaryCta}</a>
+            <AppCta className="button yellow" place="pasos">{steps.primaryCta}</AppCta>
             <Link className="button ghost" href="onboarding">{steps.secondaryCta}</Link>
           </div>
         </div>
@@ -158,7 +158,7 @@ export default function Home() {
         <p className="eyebrow light"><span /> {finalCta.eyebrow}</p>
         <h2>{finalCta.title[0]}<br /><em>{finalCta.title[1]}</em></h2>
         <p>{finalCta.lead}</p>
-        <a className="button yellow" href={appUrl === '#empieza' ? '#inicio' : appUrl}>{finalCta.cta}</a>
+        <AppCta className="button yellow" place="cierre" fallback="#inicio">{finalCta.cta}</AppCta>
         <span className="cta-orbit orbit-one" aria-hidden="true" /><span className="cta-orbit orbit-two" aria-hidden="true" />
       </section>
     </main>

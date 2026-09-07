@@ -28,6 +28,21 @@ export default {
     if (pathname === '/') pathname = '/index.html'
 
     let encoded = FILES[pathname]
+
+    // Cada página tiene su propio HTML con sus etiquetas de cabecera, escrito
+    // por `scripts/prerender.mjs` como `<ruta>/index.html`. Hay que buscarlo
+    // antes de caer a la portada: si no, se sirve la cabecera de la raíz en
+    // todas las rutas y el prerenderizado no sirve de nada.
+    if (!encoded && !pathname.includes('.')) {
+      const withIndex = `${pathname.replace(/\/+$/, '')}/index.html`
+      if (FILES[withIndex]) {
+        pathname = withIndex
+        encoded = FILES[pathname]
+      }
+    }
+
+    // Una ruta desconocida sigue devolviendo la portada, que es lo que deja a
+    // la aplicación redirigir en el cliente.
     if (!encoded && !pathname.includes('.')) {
       pathname = '/index.html'
       encoded = FILES[pathname]

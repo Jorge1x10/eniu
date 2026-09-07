@@ -4,8 +4,9 @@ import { useRouter } from '../routerContext.js'
 import { useLanguage } from '../languageContext.js'
 import { useScrolled } from '../useReveal.js'
 import { equivalentPath, resolveHref } from '../content/index.js'
-import { appUrl, contactEmail, socialLinks } from '../data/site.js'
+import { contactEmail, socialLinks } from '../data/site.js'
 import { SocialIcon } from './Icons.jsx'
+import AppCta from './AppCta.jsx'
 
 export function Brand() {
   const content = useLanguage().content
@@ -70,7 +71,7 @@ export function SiteHeader() {
             </Link>
           ))}
           <LanguageSwitch onNavigate={close} />
-          <a className="nav-cta" href={appUrl} onClick={close}>{content.nav.cta}</a>
+          <AppCta className="nav-cta" place="barra" onClick={close}>{content.nav.cta}</AppCta>
         </nav>
       </header>
     </div>
@@ -121,7 +122,7 @@ export function SiteFooter() {
           <h4>{footer.contactTitle}</h4>
           <Link href="support">{footer.support}</Link>
           <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
-          <a href={appUrl}>{footer.createMenu}</a>
+          <AppCta place="pie">{footer.createMenu}</AppCta>
         </div>
       </div>
       <div className="footer-legal">

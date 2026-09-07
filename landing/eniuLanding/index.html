@@ -9,9 +9,13 @@
     <title>Eniu — Tu menú, más simple y más tuyo</title>
     <link rel="canonical" href="https://eniu.app/" />
 
-    <!-- Tarjeta al compartir. El sitio es una SPA con un solo index.html, así
-         que estas etiquetas describen la portada: los rastreadores de WhatsApp
-         y Facebook no ejecutan JavaScript y ven siempre esta versión. -->
+    <!-- Tarjeta al compartir. Los valores de aquí son los de la portada:
+         `scripts/prerender.mjs` los reescribe al construir para que cada
+         página se sirva con los suyos. Hace falta porque los rastreadores de
+         WhatsApp y Facebook no ejecutan JavaScript, así que sólo leen lo que
+         viene en el HTML. Si renombras una de estas etiquetas, el
+         prerenderizado falla en el build en lugar de publicar la cabecera
+         equivocada. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Eniu" />
     <meta property="og:locale" content="es_MX" />

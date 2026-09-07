@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from '../router.jsx'
+import AppCta from './AppCta.jsx'
 import { useLanguage } from '../languageContext.js'
-import { appUrl } from '../data/site.js'
 import {
   COLOR_FIELDS,
   DEMO_FONTS,
@@ -292,7 +292,7 @@ export default function MenuDemo() {
           </div>
         </div>
         <p className="demo-caption">{preview.caption}</p>
-        <a className="button primary" href={appUrl}>{preview.cta}</a>
+        <AppCta className="button primary" place="demo">{preview.cta}</AppCta>
       </div>
     </div>
   )
