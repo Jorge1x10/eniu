@@ -626,5 +626,8 @@
   "Encabeza el menú": "Leads the menu",
   "Además de la etiqueta, estos productos se repiten arriba del menú en una sección \"Promociones de hoy\".": "On top of the badge, these products are repeated at the top of the menu in a \"Today's promotions\" section.",
   "Bajar el precio": "Lower the price",
-  "Subir el precio": "Raise the price"
+  "Subir el precio": "Raise the price",
+  "Todavía no podemos mostrarte el precio. Vuelve a intentarlo en un momento.": "We can't show you the price yet. Please try again in a moment.",
+  "Ver detalle técnico": "Show technical details",
+  "Ocultar detalle técnico": "Hide technical details"
 }

@@ -118,6 +118,7 @@ export default function PaywallScreen() {
   const { plan, isFree } = usePlan();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [showDetail, setShowDetail] = useState(false);
 
   const offering = useQuery({
     queryKey: ['revenuecat-package'],
@@ -181,17 +182,29 @@ export default function PaywallScreen() {
    * esta pantalla puede hacer al respecto.
    */
   function renderOfferingProblem() {
-    // Cuando la llamada revienta, lo que dice la tienda es más útil que
-    // "revisa tu conexión": casi nunca es la red, es la configuración de
-    // RevenueCat o del producto en App Store Connect, y sin el texto original
-    // no hay forma de saber cuál de las dos.
+    // El texto del SDK es lo que de verdad dice qué está mal, pero viene en
+    // inglés y hablando de paneles que quien usa la app no administra. Va
+    // detrás de "Ver detalle técnico": arriba queda una frase que cualquiera
+    // entiende, y el detalle sigue a un toque para quien lo necesite.
     const detail = offering.error instanceof Error ? offering.error.message.trim() : '';
     const message = offering.isError
-      ? (detail || t("No pudimos cargar el precio. Revisa tu conexión."))
+      ? t("Todavía no podemos mostrarte el precio. Vuelve a intentarlo en un momento.")
       : t(PROBLEM_MESSAGE[offering.data?.problem ?? 'sin-ofertas']);
     return (
       <View style={{ ...cardStyle(theme, 18), backgroundColor: theme.surfaceAlt, padding: 18, gap: 12 }}>
         <Text style={{ color: theme.muted, fontSize: 13.5, lineHeight: 20 }}>{message}</Text>
+        {detail ? (
+          <>
+            <Pressable accessibilityRole="button" onPress={() => setShowDetail((previous) => !previous)} hitSlop={6}>
+              <Text style={{ color: theme.yellowPressed, fontSize: 12.5, fontWeight: '800' }}>
+                {showDetail ? t("Ocultar detalle técnico") : t("Ver detalle técnico")}
+              </Text>
+            </Pressable>
+            {showDetail ? (
+              <Text selectable style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17, opacity: 0.85 }}>{detail}</Text>
+            ) : null}
+          </>
+        ) : null}
         <Button variant="secondary" loading={offering.isFetching} onPress={() => offering.refetch()}>{t("Reintentar")}</Button>
       </View>
     );
