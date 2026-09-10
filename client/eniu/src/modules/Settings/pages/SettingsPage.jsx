@@ -10,11 +10,9 @@ import { getStoredTheme, saveTheme } from "../utils/theme";
 import { PRIVACY_URL } from "../../../constants/legal";
 import { useTranslation } from "react-i18next";
 
-import { currentLocale } from "../../../i18n/formats";
-import { currencyOptions, timezoneOptions } from "../../../i18n/regions";
-import { formatCurrency, formatDate } from "../../../i18n/formats";
+import { currentLocale, formatCurrency, formatDate } from "../../../i18n/formats";
+import { currencyOptions, preferredCurrency, timezoneOptions } from "../../../i18n/regions";
 import { useLanguage } from "../../../i18n/languageContext";
-import i18n from "../../../i18n";
 
 const LANGUAGE_OPTIONS = [
   { code: "es", label: "Español" },
@@ -87,15 +85,14 @@ export default function SettingsPage() {
 }
 
 /**
- * Importe del plan en la moneda que corresponde al idioma en curso.
+ * Importe del plan en la moneda del país desde el que se mira.
  *
  * Quién paga en qué moneda lo decide Stripe al cobrar, según dónde esté el
  * cliente. Aquí sólo se elige qué enseñar, y por eso la pantalla añade que el
  * cobro se hace en la moneda local cuando existe.
  */
 function formatPlanPrice(price) {
-  const preferred = i18n.language === "en" ? "usd" : "mxn";
-  const currency = price.currencies?.[preferred] !== undefined ? preferred : price.currency;
+  const currency = preferredCurrency(price.currencies, price.currency);
   return formatCurrency(price.currencies?.[currency] ?? price.amount, currency.toUpperCase());
 }
 

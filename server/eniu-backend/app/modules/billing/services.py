@@ -18,7 +18,7 @@ from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 from app.modules.template.model import CatalogueTemplate
 from app.modules.users.model import User
-from app.shared.i18n import _
+from app.shared.i18n import _, normalize_language
 
 
 OPEN_SUBSCRIPTION_STATUSES = {"active", "trialing", "past_due", "unpaid", "incomplete", "paused"}
@@ -153,6 +153,70 @@ def get_subscription(user_id):
     return {"plan": plan, "price": essential_price_payload()}, 200
 
 
+def _stripe_locale(user):
+    """Idioma en el que Stripe debe dibujar sus pantallas.
+
+    Stripe habla los mismos dos idiomas que Eniu, así que basta con pasarle el
+    de la cuenta. `auto` —el valor por omisión de Stripe— deja decidir al
+    navegador, que puede no ser el idioma que el usuario eligió a propósito.
+    """
+    return normalize_language(getattr(user, "language", None)) or "auto"
+
+
+def _tax_options():
+    """Cálculo automático de impuestos, si la cuenta de Stripe ya lo admite.
+
+    Vender una suscripción digital a un consumidor europeo obliga a cobrarle
+    el IVA de su país; en el Reino Unido, el suyo. Stripe Tax lo calcula a
+    partir de la dirección de facturación, pero exige estar activado en la
+    cuenta y tener registradas las jurisdicciones donde se declara: pedirlo
+    antes de eso hace que Checkout devuelva un error y nadie pueda pagar.
+
+    Por eso el interruptor vive en la configuración y no en el código. Ver
+    `STRIPE_CONFIGURATION.md`.
+    """
+    if not current_app.config.get("STRIPE_AUTOMATIC_TAX"):
+        # No es un detalle menor y no debe pasar inadvertido: cada cobro que
+        # sale por aquí va sin IVA.
+        current_app.logger.warning(
+            "Stripe automatic tax is off: checkouts are created without VAT. "
+            "See STRIPE_CONFIGURATION.md before selling in the EU or the UK."
+        )
+        return {}
+    return {"automatic_tax": {"enabled": True}}
+
+
+def _consent_options(user):
+    """Renuncia expresa al desistimiento, para quien compra desde Europa.
+
+    Un consumidor de la UE tiene catorce días para deshacer una compra a
+    distancia. En un servicio digital que empieza a usarse en el momento, ese
+    plazo sólo decae si el comprador acepta expresamente empezar ya y renuncia
+    a él: es la casilla que se marca antes de pagar, no una línea escondida en
+    los términos.
+
+    Stripe pide que haya una URL de términos configurada en el panel para
+    poder enseñarla, así que esto también se enciende desde la configuración.
+    """
+    if not current_app.config.get("STRIPE_TERMS_CONSENT"):
+        return {}
+    language = _stripe_locale(user)
+    return {
+        "consent_collection": {"terms_of_service": "required"},
+        "custom_text": {
+            "terms_of_service_acceptance": {
+                "message": _(
+                    "Acepto los términos de Eniu y pido que el servicio empiece "
+                    "de inmediato. Entiendo que, al empezar ya, pierdo el "
+                    "derecho de desistimiento de 14 días una vez que el "
+                    "servicio se haya prestado por completo.",
+                    language=None if language == "auto" else language,
+                )
+            }
+        },
+    }
+
+
 def create_checkout(user_id):
     if not _stripe_configured():
         return {"message": _("Stripe no está configurado")}, 503
@@ -186,6 +250,22 @@ def create_checkout(user_id):
             customer=record.stripe_customer_id,
             client_reference_id=str(user.id),
             line_items=[{"price": price.id, "quantity": 1}],
+            # La pantalla de pago en el idioma en que se está usando Eniu.
+            # Stripe habla los dos, así que no hace falta traducir nada.
+            locale=_stripe_locale(user),
+            # La dirección de facturación decide qué IVA toca. Se pide siempre,
+            # no sólo con Stripe Tax encendido: es también lo que hace falta
+            # para emitir una factura válida en Europa, y recogerla desde el
+            # principio evita tener que perseguirla después.
+            billing_address_collection="required",
+            # Sin esto Checkout no guarda en el cliente lo que acaba de
+            # recoger, y la renovación del mes siguiente vuelve a calcularse
+            # con la dirección vieja —o sin ninguna—.
+            customer_update={"address": "auto", "name": "auto"},
+            # Un restaurante europeo con NIF-IVA paga sin IVA por inversión del
+            # sujeto pasivo. Sin esta casilla no tiene dónde declararlo y se le
+            # cobra un impuesto que no le corresponde.
+            tax_id_collection={"enabled": True},
             subscription_data={
                 "billing_mode": {"type": "flexible"},
                 "metadata": {"eniu_user_id": str(user.id), "plan_key": "essential"},
@@ -194,6 +274,8 @@ def create_checkout(user_id):
             success_url=f"{frontend_url}/dashboard/settings?billing=success&session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{frontend_url}/dashboard/settings?billing=cancelled",
             integration_identifier=f"eniu_checkout_{suffix}",
+            **_tax_options(),
+            **_consent_options(user),
         )
         return {"url": session.url}, 201
     except RuntimeError as error:
@@ -219,6 +301,11 @@ def create_portal(user_id):
         _configure_stripe()
         session = stripe.billing_portal.Session.create(
             customer=user.billing_subscription.stripe_customer_id,
+            # El portal también en el idioma de la cuenta: es donde se cambia
+            # la dirección de facturación y el NIF-IVA, y equivocarse ahí sale
+            # caro. Qué puede editarse desde él se configura en el panel de
+            # Stripe, no aquí (ver `STRIPE_CONFIGURATION.md`).
+            locale=_stripe_locale(user),
             return_url=f"{current_app.config['FRONTEND_URL']}/dashboard/settings",
         )
         return {"url": session.url}, 201

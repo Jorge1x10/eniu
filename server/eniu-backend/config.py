@@ -104,6 +104,29 @@ class Config:
         "STRIPE_ESSENTIAL_LOOKUP_KEY",
         "eniu_essential_monthly",
     )
+    # Vender una suscripción digital a un consumidor de la UE o del Reino Unido
+    # obliga a cobrar el IVA de su país y a declararlo (OSS en la UE, HMRC en
+    # el Reino Unido). Stripe Tax lo calcula, pero sólo si está activado en la
+    # cuenta y con las jurisdicciones registradas: pedirlo aquí antes de eso
+    # hace que Checkout responda un error y nadie pueda pagar.
+    #
+    # Por eso viene apagado y se enciende cuando la cuenta esté lista. Ver
+    # STRIPE_CONFIGURATION.md. Mientras esté apagado se cobra sin IVA, que es
+    # correcto en México y una infracción en Europa.
+    STRIPE_AUTOMATIC_TAX = os.getenv("STRIPE_AUTOMATIC_TAX", "").lower() in {
+        "1", "true", "yes", "on"
+    }
+    # Un consumidor europeo tiene catorce días para desistir de una compra a
+    # distancia, salvo que renuncie a ese plazo a cambio de empezar a usar el
+    # servicio de inmediato. La renuncia tiene que ser expresa, y la casilla de
+    # Checkout es donde se recoge.
+    #
+    # Stripe exige una URL de términos configurada en el panel para poder
+    # mostrarla; sin ella la petición falla, así que esto también se enciende
+    # después de configurarlo.
+    STRIPE_TERMS_CONSENT = os.getenv("STRIPE_TERMS_CONSENT", "").lower() in {
+        "1", "true", "yes", "on"
+    }
     # RevenueCat: las compras dentro de la app (App Store / Google Play). El
     # secreto es el valor que se escribe en el panel de RevenueCat como cabecera
     # `Authorization` del webhook; sin él el endpoint responde 503 en vez de
