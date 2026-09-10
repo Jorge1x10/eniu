@@ -86,7 +86,6 @@
   "Cerrar menú": "Close menu",
   "Cerrar modal": "Close dialog",
   "Cerrar sesión": "Sign out",
-  "Ciudad de México": "Mexico City",
   "Clásico Eniu": "Classic Eniu",
   "Clásicos favoritos": "Favorite classics",
   "Color de acento": "Accent color",
@@ -144,7 +143,6 @@
   "Crear promoción": "Create promotion",
   "Código QR": "QR code",
   "Código QR de la URL pública del menú": "QR code for the menu's public link",
-  "Código de tres letras, por ejemplo MXN.": "A three-letter code, for example MXN.",
   "Códigos QR": "QR codes",
   "Datos diarios de visitas": "Daily visit data",
   "Debe tener al menos 8 caracteres": "Must be at least 8 characters",
@@ -177,7 +175,6 @@
   "Ej. Martes de tacos": "E.g. Taco Tuesday",
   "Ej. Menú principal": "e.g. Main menu",
   "Ej. Promo": "E.g. Promo",
-  "Ejemplo: America/Mexico_City": "For example: America/Mexico_City",
   "El cobro es recurrente mensual. Stripe procesa el pago y permite actualizar el método de pago o cancelar desde su portal seguro.": "Billing is monthly and recurring. Stripe processes the payment and lets you update your card or cancel from its secure portal.",
   "El correo es obligatorio": "Your email is required",
   "El correo no puede modificarse hasta contar con un proceso de verificación seguro.": "Your email can't be changed until we have a secure verification process.",
@@ -648,5 +645,9 @@
   "Últimos 7 días": "Last 7 days",
   "Últimos {{days}} días": "Last {{days}} days",
   "Promociones de hoy": "Today's promotions",
-  "Otros": "Other"
+  "Otros": "Other",
+  "Consultar": "Ask us",
+  "Hora del negocio ({{zone}})": "Business time ({{zone}})",
+  "En esta moneda ven los precios tus clientes.": "Your guests see prices in this currency.",
+  "Decide dónde empieza y termina el día en tus analíticas.": "It decides where the day starts and ends in your analytics."
 }

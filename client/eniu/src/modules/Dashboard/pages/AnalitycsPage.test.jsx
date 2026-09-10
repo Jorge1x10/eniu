@@ -5,10 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import AnalitycsPage from "./AnalitycsPage";
 
-const mocks = vi.hoisted(() => ({ getAnalytics: vi.fn(), allowAnalytics: true }));
+const mocks = vi.hoisted(() => ({ getAnalytics: vi.fn(), allowAnalytics: true, businesses: [] }));
 vi.mock("../services/analyticsService", () => ({ useAnalyticsService: () => mocks.getAnalytics }));
 // El plan se simula para no montar toda la sesión: la página sólo consulta si lo incluye.
 vi.mock("../../auth/hooks/usePlan", () => ({ usePlan: () => ({ limits: { allow_analytics: mocks.allowAnalytics } }) }));
+// La zona horaria del periodo sale del negocio, así que la página necesita la
+// lista; se simula por lo mismo que el plan.
+vi.mock("../../Business/services/useBusiness", () => ({ useBusiness: () => ({ businesses: mocks.businesses }) }));
 
 const metric = (value, previous = 0, change = "new", percentage = null) => ({ value, previous_value: previous, percentage_change: percentage, change_status: change });
 const data = {
@@ -22,7 +25,7 @@ const data = {
 function renderPage() { return render(<MemoryRouter initialEntries={["/dashboard/businesses/business-1/catalogues/catalogue-1/analytics"]}><Routes><Route path="/dashboard/businesses/:businessId/catalogues/:catalogueId/analytics" element={<AnalitycsPage />} /></Routes></MemoryRouter>); }
 
 describe("AnalitycsPage", () => {
-  beforeEach(() => { mocks.getAnalytics.mockReset(); mocks.allowAnalytics = true; });
+  beforeEach(() => { mocks.getAnalytics.mockReset(); mocks.allowAnalytics = true; mocks.businesses = [{ id: "business-1", timezone: "Europe/Madrid" }]; });
 
   it("bloquea las analíticas cuando el plan no las incluye y no consulta al backend", async () => {
     mocks.allowAnalytics = false; renderPage();
@@ -38,7 +41,9 @@ describe("AnalitycsPage", () => {
     expect(screen.getByText("Aumentó 20% respecto al periodo anterior")).toBeInTheDocument();
     expect(screen.getByText("Disminuyó 20% respecto al periodo anterior")).toBeInTheDocument();
     expect(screen.queryByText(/Infinity/)).not.toBeInTheDocument();
-    expect(mocks.getAnalytics.mock.calls[0][0]).toEqual(expect.objectContaining({ timezone: "America/Mexico_City" }));
+    // La zona es la del negocio, no una escrita a mano: un local de Madrid
+    // corta sus días a medianoche en Madrid.
+    await waitFor(() => expect(mocks.getAnalytics.mock.calls.at(-1)[0]).toEqual(expect.objectContaining({ timezone: "Europe/Madrid" })));
   });
 
   it("cambia presets y espera Aplicar periodo para fechas personalizadas", async () => {

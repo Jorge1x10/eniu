@@ -1,9 +1,31 @@
+import { createContext, useContext } from "react";
+
 import { formatCurrency } from "../../../i18n/formats";
-// Función y no constante: construirla al importar la ataba al idioma de
-// arranque, y el formato debe seguir al idioma en curso.
-export const menuCurrency = {
-  format: (value) => formatCurrency(value),
-};
+
+/**
+ * Moneda del negocio dueño del menú que se está dibujando.
+ *
+ * Va por contexto y no por prop porque el precio se pinta dentro de los
+ * componentes de producto de las trece plantillas, y ninguno recibe el
+ * negocio: pasárselo obligaría a atravesar cada layout con una prop que sólo
+ * usa la última hoja del árbol.
+ *
+ * El valor por omisión es el que tienen los negocios que nunca eligieron
+ * moneda, no una preferencia: un menú dibujado fuera del proveedor debe salir
+ * igual que antes de que existiera este contexto.
+ */
+export const MenuCurrencyContext = createContext("MXN");
+
+/**
+ * Formateador de precios del menú en curso.
+ *
+ * Se construye en cada render y no una vez al importar: el formato sigue al
+ * idioma de la interfaz, y congelarlo lo ataría al idioma de arranque.
+ */
+export function useMenuCurrency() {
+  const currency = useContext(MenuCurrencyContext);
+  return { format: (value) => formatCurrency(value, currency) };
+}
 
 export function resolveAssetUrl(url) {
   if (!url || url.startsWith("http") || url.startsWith("blob:")) return url;

@@ -629,5 +629,11 @@
   "Subir el precio": "Raise the price",
   "Todavía no podemos mostrarte el precio. Vuelve a intentarlo en un momento.": "We can't show you the price yet. Please try again in a moment.",
   "Ver detalle técnico": "Show technical details",
-  "Ocultar detalle técnico": "Hide technical details"
+  "Ocultar detalle técnico": "Hide technical details",
+  "Zona horaria": "Time zone",
+  "En esta moneda ven los precios tus clientes.": "Your guests see prices in this currency.",
+  "Decide dónde empieza y termina el día en tus analíticas.": "It decides where the day starts and ends in your analytics.",
+  "Buscar moneda": "Search currency",
+  "Buscar zona horaria": "Search time zone",
+  "Sin resultados": "No matches"
 }

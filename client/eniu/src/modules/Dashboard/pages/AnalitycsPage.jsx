@@ -3,13 +3,43 @@ import { BarChart3, CalendarDays, Clock3, MousePointerClick, RefreshCw, Star, Us
 import { useParams } from "react-router";
 import PlanBadge from "../../auth/components/PlanBadge";
 import { usePlan } from "../../auth/hooks/usePlan";
+import { useBusiness } from "../../Business/services/useBusiness";
 import { useAnalyticsService } from "../services/analyticsService";
 import { useTranslation } from "react-i18next";
 import i18n from "../../../i18n";
 
-const TIMEZONE = "America/Mexico_City";
-function isoDate(value) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`; }
-function presetRange(days) { const end = new Date(); const start = new Date(end); start.setDate(end.getDate() - days + 1); return { from: isoDate(start), to: isoDate(end), timezone: TIMEZONE }; }
+/** Zona del navegador, para el instante en que el negocio aún no ha cargado. */
+function browserTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+/**
+ * Hoy, en la zona horaria del negocio.
+ *
+ * El corte del día lo decide el restaurante, no el navegador de quien mira:
+ * "Hoy" para un local de Madrid empieza a medianoche en Madrid, aunque su
+ * dueño esté consultándolo desde México. `en-CA` escribe `AAAA-MM-DD`, que
+ * es el formato que espera la API.
+ */
+function todayIn(timezone) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  } catch {
+    return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  }
+}
+// Mediodía UTC y no medianoche: restar días desde las 00:00 puede caer en un
+// cambio de horario de verano y correr la fecha un día.
+function presetRange(days, timezone) {
+  const to = todayIn(timezone);
+  const start = new Date(`${to}T12:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - days + 1);
+  return { from: start.toISOString().slice(0, 10), to, timezone };
+}
 function comparisonText(metric) { if (!metric) return i18n.t("Sin comparación"); if (metric.change_status === "new") return i18n.t("Nuevo respecto al periodo anterior"); if (metric.change_status === "unchanged") return i18n.t("Sin cambios respecto al periodo anterior"); return i18n.t("{{sign}} {{percent}}% respecto al periodo anterior", { sign: metric.change_status === "increased" ? i18n.t("Aumentó") : i18n.t("Disminuyó"), percent: Math.abs(metric.percentage_change) }); }
 function MetricCard({ icon: Icon, title, value, detail, help }) { return <article className="rounded-2xl border border-[#E9DDB7] bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-[#666666]">{title}</p><p className="mt-2 text-3xl font-black">{value}</p></div><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FFE05A]"><Icon size={20} /></span></div>{detail && <p className="mt-3 text-xs text-[#555555]">{detail}</p>}{help && <p className="mt-2 text-xs text-[#777777]">{help}</p>}</article>; }
 function VisitsChart({ points }) {
@@ -21,16 +51,30 @@ export default function AnalitycsPage() {
 
   const { businessId, catalogueId } = useParams(); const getAnalytics = useAnalyticsService(businessId, catalogueId);
   const { limits } = usePlan();
-  const [filters, setFilters] = useState(() => presetRange(7)); const [draft, setDraft] = useState(() => presetRange(7)); const [data, setData] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [dateError, setDateError] = useState(""); const mountedRef = useRef(true);
+  const { businesses } = useBusiness();
+  const businessTimezone = businesses.find((item) => item.id === businessId)?.timezone || null;
+  // La zona del negocio llega un render después que la página, así que el
+  // periodo no se guarda ya resuelto: se guarda la intención —"los últimos 7
+  // días" o unas fechas concretas— y se resuelve al vuelo. Así, en cuanto se
+  // sabe cuál es la zona del negocio, el periodo ya está bien sin tener que
+  // corregirlo desde un efecto.
+  const [period, setPeriod] = useState({ kind: "preset", days: 7 });
+  const [chosenTimezone, setChosenTimezone] = useState(null);
+  const timezone = chosenTimezone || businessTimezone || browserTimezone();
+  const filters = useMemo(
+    () => (period.kind === "preset" ? presetRange(period.days, timezone) : { from: period.from, to: period.to, timezone }),
+    [period, timezone],
+  );
+  const [draft, setDraft] = useState(() => presetRange(7, browserTimezone())); const [data, setData] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [dateError, setDateError] = useState(""); const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
   const load = useCallback(async (signal) => { setLoading(true); setError(""); const response = await getAnalytics(filters, { signal }); if (response.aborted || !mountedRef.current) return; if (!response.ok) { setError(response.status === 403 ? t("No tienes permiso para consultar las analíticas de este menú.") : response.data?.message || t("No pudimos cargar las analíticas. Intenta nuevamente.")); setLoading(false); return; } setData(response.data); setLoading(false); }, [filters, getAnalytics]);
   useEffect(() => { if (!limits.allow_analytics) return undefined; const controller = new AbortController(); const task = window.setTimeout(() => load(controller.signal), 0); return () => { window.clearTimeout(task); controller.abort(); }; }, [limits.allow_analytics, load]);
-  const choosePreset = (days) => { const next = presetRange(days); setDraft(next); setFilters(next); setDateError(""); };
-  const applyCustom = () => { if (!draft.from || !draft.to || draft.from > draft.to) { setDateError(t("Selecciona un periodo de fechas válido.")); return; } const days = Math.round((new Date(`${draft.to}T00:00:00`) - new Date(`${draft.from}T00:00:00`)) / 86400000) + 1; if (days > 90) { setDateError(t("El periodo máximo es de 90 días.")); return; } setDateError(""); setFilters({ ...draft }); };
+  const choosePreset = (days) => { setPeriod({ kind: "preset", days }); setDraft(presetRange(days, timezone)); setDateError(""); };
+  const applyCustom = () => { if (!draft.from || !draft.to || draft.from > draft.to) { setDateError(t("Selecciona un periodo de fechas válido.")); return; } const days = Math.round((new Date(`${draft.to}T00:00:00`) - new Date(`${draft.from}T00:00:00`)) / 86400000) + 1; if (days > 90) { setDateError(t("El periodo máximo es de 90 días.")); return; } setDateError(""); setPeriod({ kind: "custom", from: draft.from, to: draft.to }); };
   const hasData = Boolean(data?.summary?.menu_views?.value); const summary = data?.summary; const maxCategory = useMemo(() => Math.max(1, ...(data?.top_categories || []).map((item) => item.selections)), [data]);
   if (!limits.allow_analytics) return <AnalyticsLocked />;
   return <section className="mx-auto w-full max-w-7xl space-y-6 pb-8 text-[#111111]"><header><p className="text-sm font-semibold text-[#8A7420]">{t("Rendimiento del menú")}</p><h1 className="mt-1 text-3xl font-black">{t("Analíticas")}</h1><p className="mt-2 text-sm text-[#666666]">{t("Estas métricas representan visitas e interés; no son ventas ni pedidos.")}</p></header>
-    <section aria-label={t("Filtros de analíticas")} className="rounded-2xl border border-[#E9DDB7] bg-white p-5"><div className="flex flex-wrap gap-2"><button type="button" onClick={() => choosePreset(1)} className="min-h-11 cursor-pointer rounded-xl border border-[#D9D9D9] px-4 font-semibold">{t("Hoy")}</button><button type="button" onClick={() => choosePreset(7)} className="min-h-11 cursor-pointer rounded-xl border border-[#D9D9D9] px-4 font-semibold">{t("Últimos 7 días")}</button><button type="button" onClick={() => choosePreset(30)} className="min-h-11 cursor-pointer rounded-xl border border-[#D9D9D9] px-4 font-semibold">{t("Últimos 30 días")}</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.4fr_auto]"><label className="text-sm font-semibold">{t("Desde")}<input type="date" value={draft.from} onChange={(event) => setDraft((current) => ({ ...current, from: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-xl border border-[#D9D9D9] px-3" /></label><label className="text-sm font-semibold">{t("Hasta")}<input type="date" value={draft.to} onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-xl border border-[#D9D9D9] px-3" /></label><label className="text-sm font-semibold">{t("Zona horaria")}<select value={draft.timezone} onChange={(event) => setDraft((current) => ({ ...current, timezone: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-xl border border-[#D9D9D9] px-3"><option value="America/Mexico_City">{t("Ciudad de México")}</option><option value="UTC">UTC</option></select></label><button type="button" onClick={applyCustom} className="min-h-11 cursor-pointer self-end rounded-xl bg-[#FFE05A] px-5 font-bold">{t("Aplicar periodo")}</button></div>{dateError && <p role="alert" className="mt-3 text-sm text-red-700">{dateError}</p>}</section>
+    <section aria-label={t("Filtros de analíticas")} className="rounded-2xl border border-[#E9DDB7] bg-white p-5"><div className="flex flex-wrap gap-2"><button type="button" onClick={() => choosePreset(1)} className="min-h-11 cursor-pointer rounded-xl border border-[#D9D9D9] px-4 font-semibold">{t("Hoy")}</button><button type="button" onClick={() => choosePreset(7)} className="min-h-11 cursor-pointer rounded-xl border border-[#D9D9D9] px-4 font-semibold">{t("Últimos 7 días")}</button><button type="button" onClick={() => choosePreset(30)} className="min-h-11 cursor-pointer rounded-xl border border-[#D9D9D9] px-4 font-semibold">{t("Últimos 30 días")}</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.4fr_auto]"><label className="text-sm font-semibold">{t("Desde")}<input type="date" value={draft.from} onChange={(event) => setDraft((current) => ({ ...current, from: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-xl border border-[#D9D9D9] px-3" /></label><label className="text-sm font-semibold">{t("Hasta")}<input type="date" value={draft.to} onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-xl border border-[#D9D9D9] px-3" /></label><label className="text-sm font-semibold">{t("Zona horaria")}<select value={timezone} onChange={(event) => setChosenTimezone(event.target.value)} className="mt-1 block min-h-11 w-full rounded-xl border border-[#D9D9D9] px-3"><option value={businessTimezone || browserTimezone()}>{t("Hora del negocio ({{zone}})", { zone: businessTimezone || browserTimezone() })}</option><option value="UTC">UTC</option></select></label><button type="button" onClick={applyCustom} className="min-h-11 cursor-pointer self-end rounded-xl bg-[#FFE05A] px-5 font-bold">{t("Aplicar periodo")}</button></div>{dateError && <p role="alert" className="mt-3 text-sm text-red-700">{dateError}</p>}</section>
     {loading && <div aria-live="polite" aria-label={t("Cargando analíticas")} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }, (_, index) => <div key={index} className="h-36 animate-pulse rounded-2xl bg-white" />)}</div>}
     {!loading && error && <div className="rounded-2xl border border-red-200 bg-white p-8 text-center"><p role="alert" className="font-semibold text-red-700">{error}</p><button type="button" onClick={() => load()} className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-semibold text-white"><RefreshCw size={17} /> {t("Reintentar")}</button></div>}
     {!loading && !error && data && <><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><MetricCard icon={BarChart3} title={t("Visitas al menú")} value={summary.menu_views.value} detail={comparisonText(summary.menu_views)} /><MetricCard icon={Users} title={t("Visitantes únicos aproximados")} value={summary.approximate_unique_visitors.value} detail={comparisonText(summary.approximate_unique_visitors)} help={t("Estimación anónima; no representa personas exactas.")} /><MetricCard icon={MousePointerClick} title={t("Interacciones con productos")} value={summary.product_interactions.value} detail={comparisonText(summary.product_interactions)} /><MetricCard icon={Star} title={t("Producto con mayor interés")} value={summary.top_product?.name || t("Sin datos")} detail={summary.top_product ? t("{{count}} interacciones", { count: summary.top_product.interactions }) : null} /><MetricCard icon={CalendarDays} title={t("Día con más actividad")} value={summary.busiest_day?.date || t("Sin datos")} detail={summary.busiest_day ? t("{{count}} visitas", { count: summary.busiest_day.views }) : null} /><MetricCard icon={Clock3} title={t("Hora con más actividad")} value={summary.busiest_hour?.label || t("Sin datos")} detail={summary.busiest_hour ? t("{{count}} visitas", { count: summary.busiest_hour.views }) : null} /></div>

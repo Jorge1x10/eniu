@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Building2, Languages, CreditCard, LogOut, Moon, ShieldCheck, Sun, UserRound } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 
@@ -9,6 +9,9 @@ import PasswordField from "../components/PasswordField";
 import { getStoredTheme, saveTheme } from "../utils/theme";
 import { PRIVACY_URL } from "../../../constants/legal";
 import { useTranslation } from "react-i18next";
+
+import { currentLocale } from "../../../i18n/formats";
+import { currencyOptions, timezoneOptions } from "../../../i18n/regions";
 import { formatCurrency, formatDate } from "../../../i18n/formats";
 import { useLanguage } from "../../../i18n/languageContext";
 import i18n from "../../../i18n";
@@ -275,6 +278,11 @@ function Field({ label, error, help, readOnly = false, ...props }) {
   return <div><label htmlFor={props.id} className="mb-2 block text-sm font-semibold text-[#2A2A2A]">{label}</label><input {...props} readOnly={readOnly} aria-invalid={Boolean(error)} aria-describedby={(error || help) ? descriptionId : undefined} className={`min-h-11 w-full rounded-xl border border-[#D9D9D9] px-4 py-3 outline-none transition focus:border-[#E8C93D] focus:ring-2 focus:ring-[#FFE05A]/50 ${readOnly ? "cursor-not-allowed bg-[#F3F3F3] text-[#777777]" : "bg-white"}`} />{(error || help) && <span id={descriptionId} role={error ? "alert" : undefined} className={`mt-1 block text-xs ${error ? "text-red-700" : "text-[#777777]"}`}>{error || help}</span>}</div>;
 }
 
+function SelectField({ label, help, options, ...props }) {
+  const descriptionId = `${props.id}-description`;
+  return <div><label htmlFor={props.id} className="mb-2 block text-sm font-semibold text-[#2A2A2A]">{label}</label><select {...props} aria-describedby={help ? descriptionId : undefined} className="min-h-11 w-full rounded-xl border border-[#D9D9D9] bg-white px-4 py-3 outline-none transition focus:border-[#E8C93D] focus:ring-2 focus:ring-[#FFE05A]/50">{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>{help && <span id={descriptionId} className="mt-1 block text-xs text-[#777777]">{help}</span>}</div>;
+}
+
 function Feedback({ error, success }) {
   if (error) return <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>;
   if (success) return <p role="status" className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">{success}</p>;
@@ -372,6 +380,11 @@ function BusinessSettings({ business, isLoading, updateBusiness }) {
   const { patch, loading } = useApi(business ? `businesses/${business.id}` : "");
   const [form, setForm] = useState(() => business ? { name: business.name || "", description: business.description || "", phone: business.phone || "", whatsapp: business.whatsapp || "", address: business.address || "", currency: business.currency || "MXN", timezone: business.timezone || "America/Mexico_City" } : null);
   const [error, setError] = useState(""); const [success, setSuccess] = useState("");
+  // Trescientas monedas y cuatrocientas zonas: construirlas en cada tecleo
+  // del formulario se nota, y no cambian mientras no cambie el idioma.
+  const locale = currentLocale();
+  const currencies = useMemo(() => currencyOptions(locale).map((item) => ({ value: item.code, label: item.label })), [locale]);
+  const timezones = useMemo(() => timezoneOptions().map((zone) => ({ value: zone, label: zone })), []);
 
   if (isLoading) return <Card title={t("Mi negocio")}><p className="text-[#666666]">{t("Cargando negocio seleccionado...")}</p></Card>;
   if (!business || !form) return <Card title={t("Mi negocio")} description={t("Selecciona o crea un negocio desde el selector del dashboard para configurar sus datos.")}><Link to="/dashboard" className="inline-flex min-h-11 items-center rounded-xl bg-[#FFE05A] px-5 font-bold text-[#111111]">{t("Ir al inicio")}</Link></Card>;
@@ -388,11 +401,11 @@ function BusinessSettings({ business, isLoading, updateBusiness }) {
 
   return <Card title={t("Mi negocio")} description={t("Editando la información esencial de {{name}}.", { name: business.name })}><form onSubmit={submit} className="grid gap-5 sm:grid-cols-2" noValidate>
     <Field id="business-name" name="name" label={t("Nombre del negocio")} maxLength={64} required value={form.name} onChange={update} />
-    <Field id="business-currency" name="currency" label={t("Moneda")} maxLength={3} required value={form.currency} onChange={update} help={t("Código de tres letras, por ejemplo MXN.")} />
+    <SelectField id="business-currency" name="currency" label={t("Moneda")} value={form.currency} onChange={update} options={currencies} help={t("En esta moneda ven los precios tus clientes.")} />
     <Field id="business-phone" name="phone" label={t("Teléfono")} type="tel" autoComplete="tel" maxLength={20} value={form.phone} onChange={update} />
     <Field id="business-whatsapp" name="whatsapp" label={t("WhatsApp")} type="tel" autoComplete="tel" maxLength={20} value={form.whatsapp} onChange={update} />
     <Field id="business-address" name="address" label={t("Dirección")} maxLength={500} value={form.address} onChange={update} />
-    <Field id="business-timezone" name="timezone" label={t("Zona horaria")} maxLength={64} required value={form.timezone} onChange={update} help={t("Ejemplo: America/Mexico_City")} />
+    <SelectField id="business-timezone" name="timezone" label={t("Zona horaria")} value={form.timezone} onChange={update} options={timezones} help={t("Decide dónde empieza y termina el día en tus analíticas.")} />
     <label className="block sm:col-span-2"><span className="mb-2 block text-sm font-semibold text-[#2A2A2A]">{t("Descripción")}</span><textarea id="business-description" name="description" rows={4} maxLength={2000} value={form.description} onChange={update} className="w-full resize-y rounded-xl border border-[#D9D9D9] bg-white px-4 py-3 outline-none focus:border-[#E8C93D] focus:ring-2 focus:ring-[#FFE05A]/50" /></label>
     <div className="space-y-4 sm:col-span-2"><Feedback error={error} success={success} /><PrimaryButton loading={loading}>{t("Guardar negocio")}</PrimaryButton></div>
   </form></Card>;

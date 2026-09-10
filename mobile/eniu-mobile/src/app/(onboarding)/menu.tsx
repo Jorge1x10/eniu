@@ -9,6 +9,7 @@ import { useOnboarding, type MenuChoice } from '@/features/onboarding/onboarding
 import { getStarterMenu } from '@/features/onboarding/starter-menus';
 import { useTranslation } from 'react-i18next';
 import { currentLocale } from '@/i18n/formats';
+import { deviceCurrency } from '@/lib/regions';
 
 export default function OnboardingMenuScreen() {
   const { t } = useTranslation();
@@ -19,7 +20,9 @@ export default function OnboardingMenuScreen() {
 
   if (!draft.businessName) return <Redirect href="/(onboarding)/business" />;
   const starter = getStarterMenu(draft.businessType);
-  const currency = new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: 'MXN' });
+  // La misma moneda con la que se dará de alta el negocio en el paso 3: la
+  // vista previa no debe prometer pesos a quien va a cobrar en euros.
+  const currency = new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: deviceCurrency() });
 
   // Igual que el paso 1: sólo se registra la elección, el alta ocurre en el paso 3.
   function choose(choice: MenuChoice) {

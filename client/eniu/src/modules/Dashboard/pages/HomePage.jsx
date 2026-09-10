@@ -26,7 +26,7 @@ export default function HomePage() {
   const { user } = useAuth();
   const { selectedBusiness, isLoadingBusinesses } = useBusiness();
   const businessId = selectedBusiness?.id || null;
-  const loadSummary = useDashboardSummaryService(businessId);
+  const loadSummary = useDashboardSummaryService(businessId, selectedBusiness?.timezone);
   const { create } = useCatalogueService(businessId);
   const navigate = useNavigate();
   const [rawData, setRawData] = useState(null);

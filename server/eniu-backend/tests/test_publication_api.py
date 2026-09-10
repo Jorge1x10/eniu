@@ -178,7 +178,7 @@ class PublicationApiTestCase(unittest.TestCase):
         self.assertFalse(FORBIDDEN_KEYS.intersection(set(all_keys(payload))))
         self.assertIsNone(UUID_PATTERN.search(json.dumps(payload)))
         menu = payload["menu"]
-        self.assertEqual(menu["business"], {"name": "La Pizzería Santa Anita", "description": "Pizzas"})
+        self.assertEqual(menu["business"], {"name": "La Pizzería Santa Anita", "description": "Pizzas", "currency": "MXN"})
         self.assertEqual(menu["template"]["key"], "minimal")
         self.assertEqual(menu["template"]["theme"]["background_opacity"], 0.35)
         background_url = menu["template"]["theme"]["background_image_url"]
