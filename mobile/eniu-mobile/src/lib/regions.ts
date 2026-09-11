@@ -23,7 +23,15 @@ const FALLBACK_TIMEZONES = [
   'Europe/Rome', 'Europe/Lisbon', 'UTC',
 ];
 
-export type Choice = { value: string; label: string };
+/**
+ * Una opción del selector.
+ *
+ * `hint` es el dato corto que nunca debe perderse aunque el nombre no quepa
+ * —el código de la moneda—, y por eso se dibuja aparte en vez de ir pegado al
+ * final del nombre: "marco convertible de Bosnia y Herzegovina (BAM)" no cabe
+ * en una línea de teléfono, y truncarlo se comería justo el código.
+ */
+export type Choice = { value: string; label: string; hint?: string };
 
 function supportedValues(key: 'currency' | 'timeZone', fallback: string[]): string[] {
   try {
@@ -50,7 +58,7 @@ export function currencyChoices(locale: string = currentLocale()): Choice[] {
     names = null;
   }
   return supportedValues('currency', FALLBACK_CURRENCIES)
-    .map((code) => ({ value: code, label: names ? `${names.of(code)} (${code})` : code }))
+    .map((code) => ({ value: code, label: names ? names.of(code) ?? code : code, hint: code }))
     .sort((a, b) => a.label.localeCompare(b.label, locale));
 }
 
