@@ -307,8 +307,17 @@ export function MenuPreview({ templateKey, theme, business, catalogue, categorie
         </View>
       )}
 
-      {/* La marca sólo va en el plan gratuito, igual que en el menú publicado. */}
-      {showEniuBadge ? <Text style={{ color: text, opacity: 0.55, fontSize: 9, textAlign: 'center', paddingVertical: 22, fontFamily }}>{t("Menú creado con ENIU")}</Text> : null}
+      {/* El aviso de alérgenos sale siempre, en todas las plantillas y todos
+          los planes: en la UE y el Reino Unido la información de alérgenos de
+          la comida no envasada es obligatoria, y la norma admite darla de viva
+          voz sólo si hay una indicación visible de que puede pedirse. Se
+          dibuja más legible que la firma por eso mismo. Ver `MenuFooter` en el
+          panel web, que es el mismo pie del menú publicado. */}
+      <View style={{ paddingVertical: 22, gap: 6 }}>
+        <Text style={{ color: text, opacity: 0.75, fontSize: 10.5, textAlign: 'center', fontFamily }}>{t("Consulta al personal sobre alérgenos.")}</Text>
+        {/* La marca sólo va en el plan gratuito, igual que en el menú publicado. */}
+        {showEniuBadge ? <Text style={{ color: text, opacity: 0.55, fontSize: 9, textAlign: 'center', fontFamily }}>{t("Menú creado con ENIU")}</Text> : null}
+      </View>
     </View>
   );
 }
