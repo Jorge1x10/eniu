@@ -94,11 +94,12 @@ export default function PrivacyEs() {
           almacenamos tu dirección IP ni tu nombre.
         </p>
         <p>
-          Para no contar diez veces a la misma persona, tu navegador guarda un identificador aleatorio
-          que caduca a los treinta días y que puedes borrar en cualquier momento vaciando los datos
-          del sitio. Ese identificador se transforma con HMAC-SHA256 antes de guardarse en nuestros
-          sistemas, de modo que no puede revertirse ni asociarse a una persona. Se explica aquí porque
-          guardar algo en tu dispositivo requiere decírtelo, aunque lo que guardemos no te identifique.
+          No guardamos nada en tu dispositivo: ni cookies, ni almacenamiento local, ni identificadores
+          que sobrevivan a la visita. Mientras la página está abierta se usa un identificador aleatorio
+          que vive sólo en la memoria del navegador y desaparece al cerrarla, y que se transforma con
+          HMAC-SHA256 antes de guardarse en nuestros sistemas. Por eso el menú no te pide permiso para
+          nada: no hay nada que permitir. Como contrapartida, si vuelves otro día no te reconocemos, y
+          la estadística cuenta visitas, no personas.
         </p>
       </Seccion>
 
@@ -206,8 +207,8 @@ export default function PrivacyEs() {
             concreto, porque no están asociadas a ninguna persona identificable.
           </li>
           <li>
-            <strong>El identificador de visitante</strong> que guarda el navegador del comensal caduca
-            a los treinta días.
+            <strong>En el dispositivo del comensal</strong> no queda nada que conservar: el
+            identificador de la visita vive en memoria y desaparece al cerrar la página.
           </li>
         </ul>
       </Seccion>

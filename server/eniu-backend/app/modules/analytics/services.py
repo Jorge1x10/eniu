@@ -177,6 +177,18 @@ def _percentage_change(value, previous):
 
 
 def _count_summary(catalogue_id, start, end):
+    """Totales del periodo.
+
+    `approximate_unique_visitors` ya no cuenta personas distintas: desde que la
+    medición dejó de guardar nada en el dispositivo del comensal —ver la nota
+    en `publicAnalytics.js`, es lo que evita tener que pedirle consentimiento—
+    cada visita estrena identificador, así que este número coincide con el de
+    visitas. Los paneles dejaron de enseñarlo por eso.
+
+    Se sigue devolviendo porque la app móvil 2.0.0, ya publicada, lo lee sin
+    comprobar que exista: quitarlo la rompería en los teléfonos que no se hayan
+    actualizado.
+    """
     base = AnalyticsEvent.query.filter(AnalyticsEvent.catalogue_id == catalogue_id, AnalyticsEvent.occurred_at >= start, AnalyticsEvent.occurred_at < end)
     views = base.filter(AnalyticsEvent.event_type == "menu_view").count()
     visitors = base.with_entities(func.count(distinct(AnalyticsEvent.visitor_hash))).filter(AnalyticsEvent.event_type == "menu_view").scalar() or 0

@@ -82,11 +82,12 @@ export default function PrivacyEn() {
           store your IP address or your name.
         </p>
         <p>
-          So that the same person is not counted ten times, your browser stores a random identifier that
-          expires after thirty days and that you can delete at any time by clearing the site data. That
-          identifier is transformed with HMAC-SHA256 before being stored in our systems, so it cannot be
-          reversed or linked back to a person. We explain it here because storing anything on your
-          device has to be disclosed, even when what we store does not identify you.
+          We store nothing on your device: no cookies, no local storage, no identifiers that outlive the
+          visit. While the page is open we use a random identifier that lives only in the browser's
+          memory and disappears when you close it, and that is transformed with HMAC-SHA256 before being
+          stored in our systems. That is why the menu does not ask you for permission for anything:
+          there is nothing to permit. The trade-off is that if you come back another day we do not
+          recognise you, and the statistics count visits, not people.
         </p>
       </Seccion>
 
@@ -192,8 +193,8 @@ export default function PrivacyEn() {
             they are not linked to any identifiable person.
           </li>
           <li>
-            <strong>The visitor identifier</strong> stored by the guest's browser expires after thirty
-            days.
+            <strong>On the guest's device</strong> there is nothing to keep: the visit identifier lives
+            in memory and disappears when the page is closed.
           </li>
         </ul>
       </Seccion>

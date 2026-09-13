@@ -16,7 +16,7 @@ vi.mock("../../Business/services/useBusiness", () => ({ useBusiness: () => ({ bu
 const metric = (value, previous = 0, change = "new", percentage = null) => ({ value, previous_value: previous, percentage_change: percentage, change_status: change });
 const data = {
   period: { from: "2026-08-01", to: "2026-08-07", timezone: "America/Mexico_City" }, comparison_period: { from: "2026-07-25", to: "2026-07-31" },
-  summary: { menu_views: metric(12, 10, "increased", 20), approximate_unique_visitors: metric(8, 10, "decreased", -20), product_interactions: metric(3, 0), top_product: { name: "Latte", interactions: 3 }, busiest_day: { date: "2026-08-07", views: 12 }, busiest_hour: { label: "8:00 p. m.", views: 6 } },
+  summary: { menu_views: metric(12, 10, "increased", 20), approximate_unique_visitors: metric(8, 10, "decreased", -20), product_interactions: metric(4, 5, "decreased", -20), top_product: { name: "Latte", interactions: 3 }, busiest_day: { date: "2026-08-07", views: 12 }, busiest_hour: { label: "8:00 p. m.", views: 6 } },
   visits_over_time: [{ date: "2026-08-06", views: 0, approximate_unique_visitors: 0 }, { date: "2026-08-07", views: 12, approximate_unique_visitors: 8 }],
   top_products: [{ name: "Latte", category_name: "Bebidas", interactions: 3, is_available: true }], top_categories: [{ name: "Bebidas", selections: 2, percentage: 100 }],
   devices: [{ key: "mobile", label: "Celular", views: 12, percentage: 100 }], sources: [{ key: "qr", label: "Código QR", views: 12, percentage: 100 }],

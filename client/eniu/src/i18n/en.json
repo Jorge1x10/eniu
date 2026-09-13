@@ -98,7 +98,6 @@
   "Columnas": "Sidebar",
   "Comienza a crear y administrar tus menús.": "Start creating and managing your menus.",
   "Comienza con la información principal.": "Start with the main details.",
-  "Comparación diaria de visitas y visitantes únicos aproximados.": "Daily comparison of visits and approximate unique visitors.",
   "Comparte este menú con tus clientes.": "Share this menu with your guests.",
   "Comparte tu menú": "Share your menu",
   "Completa únicamente la información que quieras mostrar.": "Fill in only what you want to show.",
@@ -240,7 +239,6 @@
   "Estas métricas representan visitas e interés; no son ventas ni pedidos.": "These numbers show visits and interest; they are not sales or orders.",
   "Este menú no está disponible.": "This menu isn't available.",
   "Este menú todavía no tiene categorías. Puedes crear el producto sin categoría y organizarlo después.": "This menu has no categories yet. You can create the product without one and organize it later.",
-  "Estimación anónima; no representa personas exactas.": "An anonymous estimate; it doesn't represent exact people.",
   "Etiqueta": "Label",
   "Evolución de visitas": "Visits over time",
   "Fecha": "Date",
@@ -363,7 +361,6 @@
   "Negocio activo": "Active business",
   "Negocio actual": "Current business",
   "Negocio seleccionado": "Selected business",
-  "Negro: visitas · Amarillo: visitantes aproximados": "Black: visits · Yellow: approximate visitors",
   "No disponible": "Unavailable",
   "No fue posible abrir Stripe.": "We couldn't open Stripe.",
   "No fue posible cambiar la contraseña.": "We couldn't change your password.",
@@ -595,7 +592,6 @@
   "Verificando sesión...": "Checking your session...",
   "Vie": "Fri",
   "Visible": "Visible",
-  "Visitantes únicos aproximados": "Approximate unique visitors",
   "Visitas": "Visits",
   "Visitas al menú": "Menu visits",
   "Vista previa": "Preview",
@@ -650,5 +646,7 @@
   "Hora del negocio ({{zone}})": "Business time ({{zone}})",
   "En esta moneda ven los precios tus clientes.": "Your guests see prices in this currency.",
   "Decide dónde empieza y termina el día en tus analíticas.": "It decides where the day starts and ends in your analytics.",
-  "Consulta al personal sobre alérgenos.": "Ask our staff about allergens."
+  "Consulta al personal sobre alérgenos.": "Ask our staff about allergens.",
+  "Visitas diarias al menú.": "Daily menu visits.",
+  "Cada punto es un día del periodo.": "Each point is a day in the period."
 }

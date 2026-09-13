@@ -2,45 +2,30 @@ import { useCallback, useEffect, useRef } from "react";
 
 import { sendAnalyticsEvents } from "../services/publicMenuService";
 
-const VISITOR_KEY = "eniu_analytics_visitor";
-const SESSION_KEY = "eniu_analytics_session";
-const VISITOR_TTL = 30 * 24 * 60 * 60 * 1000;
-const SESSION_TTL = 30 * 60 * 1000;
 const SOCIAL_HOSTS = ["facebook.com", "instagram.com", "tiktok.com", "x.com", "twitter.com", "linkedin.com"];
 
 function randomId() {
   return crypto.randomUUID().replaceAll("-", "_");
 }
 
-function readStorage(storage, key) {
-  try { return JSON.parse(storage.getItem(key)); } catch { return null; }
-}
-
-function writeStorage(storage, key, value) {
-  try { storage.setItem(key, JSON.stringify(value)); } catch { /* Storage may be disabled. */ }
-}
-
-export function getAnonymousVisitor(now = Date.now()) {
-  const current = readStorage(localStorage, VISITOR_KEY);
-  if (current?.id && current.expiresAt > now) return current.id;
-  const visitor = { id: randomId(), expiresAt: now + VISITOR_TTL };
-  writeStorage(localStorage, VISITOR_KEY, visitor);
-  return visitor.id;
-}
-
-export function getAnalyticsSession(now = Date.now()) {
-  let current = readStorage(sessionStorage, SESSION_KEY);
-  if (!current?.id || now - current.lastActivity >= SESSION_TTL) {
-    current = { id: randomId(), lastActivity: now, menuViews: {}, products: {} };
-  }
-  current.lastActivity = now;
-  writeStorage(sessionStorage, SESSION_KEY, current);
-  return current;
-}
-
-export function saveAnalyticsSession(session) {
-  session.lastActivity = Date.now();
-  writeStorage(sessionStorage, SESSION_KEY, session);
+/**
+ * La medición del menú público no toca el dispositivo del comensal.
+ *
+ * Antes se guardaba un identificador de visitante en `localStorage` durante
+ * treinta días y el estado de la sesión en `sessionStorage`. Guardar o leer
+ * algo en el equipo de quien navega exige su consentimiento previo en la Unión
+ * Europea y el Reino Unido —lo pide el artículo 5.3 de la directiva de
+ * privacidad electrónica, y da igual que lo guardado no identifique a nadie—,
+ * y la única forma de recogerlo sería un banner delante de la carta del
+ * restaurante: lo primero que vería quien escanea el QR en la mesa.
+ *
+ * Así que no se guarda nada. La sesión vive en memoria mientras la página está
+ * abierta y desaparece al cerrarla, que es justo lo que la norma no considera
+ * almacenamiento. El precio es que no se reconoce a quien vuelve otro día;
+ * a cambio el menú no necesita pedir permiso en ningún país.
+ */
+export function createAnalyticsSession() {
+  return { id: randomId(), menuViews: {}, products: {} };
 }
 
 export function classifyDevice(width = window.innerWidth) {
@@ -126,11 +111,14 @@ export function usePublicAnalytics(publicSlug, rootRef, enabled, sourceSearch = 
     if (!enabled) return undefined;
     const source = classifySource(sourceSearch);
     if (source === "dashboard") return undefined;
-    const session = getAnalyticsSession();
-    contextRef.current = { visitorId: getAnonymousVisitor(), session, source, device: classifyDevice() };
+    const session = createAnalyticsSession();
+    // El mismo identificador para la visita y para el visitante: sin nada
+    // guardado en el dispositivo no hay forma de reconocer a quien vuelve, y
+    // fingir lo contrario con dos identificadores distintos sólo serviría para
+    // que el panel enseñara dos números iguales con nombres diferentes.
+    contextRef.current = { visitorId: session.id, session, source, device: classifyDevice() };
     if (!session.menuViews[publicSlug]) {
       session.menuViews[publicSlug] = true;
-      saveAnalyticsSession(session);
       enqueue("menu_view");
     }
     const productCleanup = observeProductCards(rootRef.current, (key) => {
@@ -138,7 +126,6 @@ export function usePublicAnalytics(publicSlug, rootRef, enabled, sourceSearch = 
       const viewed = session.products[publicSlug] || [];
       if (viewed.includes(key)) return;
       session.products[publicSlug] = [...viewed, key];
-      saveAnalyticsSession(session);
       enqueue("product_view", "product", key);
     });
     const onVisibility = () => { if (document.visibilityState === "hidden") flush(true); };
