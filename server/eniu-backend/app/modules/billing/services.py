@@ -172,15 +172,16 @@ def _tax_options():
     cuenta y tener registradas las jurisdicciones donde se declara: pedirlo
     antes de eso hace que Checkout devuelva un error y nadie pueda pagar.
 
-    Por eso el interruptor vive en la configuración y no en el código. Ver
-    `STRIPE_CONFIGURATION.md`.
+    Por eso el interruptor vive en la configuración y no en el código: se
+    enciende el día que la cuenta de Stripe esté lista, sin desplegar.
     """
     if not current_app.config.get("STRIPE_AUTOMATIC_TAX"):
         # No es un detalle menor y no debe pasar inadvertido: cada cobro que
         # sale por aquí va sin IVA.
         current_app.logger.warning(
             "Stripe automatic tax is off: checkouts are created without VAT. "
-            "See STRIPE_CONFIGURATION.md before selling in the EU or the UK."
+            "Set STRIPE_AUTOMATIC_TAX once Stripe Tax is configured, before "
+            "selling in the EU or the UK."
         )
         return {}
     return {"automatic_tax": {"enabled": True}}
@@ -303,8 +304,8 @@ def create_portal(user_id):
             customer=user.billing_subscription.stripe_customer_id,
             # El portal también en el idioma de la cuenta: es donde se cambia
             # la dirección de facturación y el NIF-IVA, y equivocarse ahí sale
-            # caro. Qué puede editarse desde él se configura en el panel de
-            # Stripe, no aquí (ver `STRIPE_CONFIGURATION.md`).
+            # caro. Qué puede editarse desde él se configura en Billing >
+            # Customer Portal, en el panel de Stripe, no aquí.
             locale=_stripe_locale(user),
             return_url=f"{current_app.config['FRONTEND_URL']}/dashboard/settings",
         )

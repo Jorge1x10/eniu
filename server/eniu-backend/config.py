@@ -110,9 +110,12 @@ class Config:
     # cuenta y con las jurisdicciones registradas: pedirlo aquí antes de eso
     # hace que Checkout responda un error y nadie pueda pagar.
     #
-    # Por eso viene apagado y se enciende cuando la cuenta esté lista. Ver
-    # STRIPE_CONFIGURATION.md. Mientras esté apagado se cobra sin IVA, que es
-    # correcto en México y una infracción en Europa.
+    # Por eso viene apagado y se enciende cuando la cuenta esté lista: Tax
+    # activado, las jurisdicciones donde se declara dadas de alta, y el precio
+    # del plan marcado con el código de impuesto de servicio digital.
+    #
+    # Mientras esté apagado se cobra sin IVA, que es correcto en México y una
+    # infracción en Europa.
     STRIPE_AUTOMATIC_TAX = os.getenv("STRIPE_AUTOMATIC_TAX", "").lower() in {
         "1", "true", "yes", "on"
     }
@@ -121,9 +124,9 @@ class Config:
     # servicio de inmediato. La renuncia tiene que ser expresa, y la casilla de
     # Checkout es donde se recoge.
     #
-    # Stripe exige una URL de términos configurada en el panel para poder
-    # mostrarla; sin ella la petición falla, así que esto también se enciende
-    # después de configurarlo.
+    # Stripe exige una URL de términos configurada en Settings > Public
+    # details para poder mostrarla; sin ella la petición falla, así que esto
+    # también se enciende después de configurarlo.
     STRIPE_TERMS_CONSENT = os.getenv("STRIPE_TERMS_CONSENT", "").lower() in {
         "1", "true", "yes", "on"
     }
