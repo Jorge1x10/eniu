@@ -51,17 +51,33 @@ export function Availability({ available }) {
 }
 
 /**
- * Marca de Eniu al pie del menú público.
+ * Pie del menú público: el aviso de alérgenos y, según el plan, la marca.
  *
- * Sólo aparece en el plan gratuito. El valor por defecto es `false` a
- * propósito: si algún día una plantilla nueva olvidara pasar la bandera, es
- * preferible perder la marca que mostrársela a alguien que pagó por quitarla.
+ * El aviso sale siempre, en las trece plantillas y en todos los planes. No es
+ * decoración: en la Unión Europea y el Reino Unido la información sobre
+ * alérgenos de la comida no envasada es obligatoria, y la norma admite darla
+ * de viva voz sólo si existe una indicación visible de que puede pedirse
+ * —esta— y el local la tiene documentada por escrito. Por eso se dibuja algo
+ * más grande y menos apagada que la marca: un aviso que hay que buscar con
+ * lupa no cumple el requisito de ser accesible.
+ *
+ * No sustituye a declarar los alérgenos plato por plato, que es hacia donde
+ * debería ir el producto; es el mínimo que deja de ser un problema.
+ *
+ * La marca de Eniu, en cambio, sólo aparece en el plan gratuito. `show` vale
+ * `false` por defecto a propósito: si algún día una plantilla nueva olvidara
+ * pasar la bandera, es preferible perder la marca que mostrársela a alguien
+ * que pagó por quitarla.
  */
 export function MenuFooter({ show = false }) {
   const { t } = useTranslation();
 
-  if (!show) return null;
-  return <footer className="py-7 text-center text-[10px] opacity-60">{t("Menú creado con ENIU")}</footer>;
+  return (
+    <footer className="space-y-1.5 py-7 text-center">
+      <p className="text-[11px] opacity-75">{t("Consulta al personal sobre alérgenos.")}</p>
+      {show && <p className="text-[10px] opacity-60">{t("Menú creado con ENIU")}</p>}
+    </footer>
+  );
 }
 
 export function EmptyMenu() {

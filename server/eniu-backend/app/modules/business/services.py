@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from app.modules.billing.guards import ensure_can_create_business
 from app.modules.business.model import Business
 from flask import current_app
@@ -12,6 +14,43 @@ from app.shared.i18n import _
 ALLOWED_PHOTO_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 ALLOWED_PHOTO_MIMETYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_PHOTO_BYTES = 5 * 1024 * 1024
+
+DEFAULT_CURRENCY = "MXN"
+DEFAULT_TIMEZONE = "America/Mexico_City"
+
+
+def _clean_currency(value):
+    """Normaliza un código de moneda, o devuelve None si no lo es.
+
+    ISO 4217 son tres letras y se escriben en mayúsculas. No se valida contra
+    una lista cerrada a propósito: la lista cambia (monedas que nacen, países
+    que redenominan) y quedarse corto le impediría publicar precios a un
+    negocio cuya moneda es perfectamente real. Quien elige de la lista del
+    cliente nunca llega aquí con algo raro; esto sólo ataja lo imposible.
+    """
+    if not value:
+        return None
+    code = value.strip().upper()
+    return code if len(code) == 3 and code.isalpha() else None
+
+
+def _clean_timezone(value):
+    """Comprueba que la zona horaria existe en la base de datos IANA.
+
+    Sin esto se puede guardar cualquier cadena de hasta 64 caracteres, y el
+    error no sale al guardar sino después: las analíticas resuelven la zona
+    para cortar los días y responden 400 con el panel entero ya cargado.
+    """
+    if not value:
+        return None
+    name = value.strip()
+    if name == "UTC":
+        return name
+    try:
+        ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        return None
+    return name
 
 
 def _photo_size(photo):
@@ -57,9 +96,23 @@ def create_business(owner_id, data):
             "message": _("Ya tienes un negocio con ese nombre")
         }, 409
 
+    # La moneda y la zona horaria llegan del alta: el cliente las propone a
+    # partir del dispositivo y el usuario las confirma. Sin ellas el negocio
+    # nacería en pesos mexicanos y en el huso de Ciudad de México, que es
+    # correcto donde nació Eniu y falso en todos los demás sitios.
+    currency = _clean_currency(data.get("currency"))
+    if data.get("currency") and not currency:
+        return {"message": _("La moneda debe tener un código de 3 letras")}, 400
+
+    timezone_name = _clean_timezone(data.get("timezone"))
+    if data.get("timezone") and not timezone_name:
+        return {"message": _("La zona horaria no es válida")}, 400
+
     business = Business(
         name = name,
-        owner_id = UUID(owner_id)
+        owner_id = UUID(owner_id),
+        currency = currency or DEFAULT_CURRENCY,
+        timezone = timezone_name or DEFAULT_TIMEZONE,
     )
     try:
         db.session.add(business)
@@ -173,14 +226,18 @@ def update_business(owner_id, business_id, data, photo=None):
         for field, max_length in field_lengths.items():
             value, was_sent = _optional_text(data, field, max_length)
             if was_sent:
-                if field == "timezone" and not value:
-                    return {"message": _("La zona horaria es obligatoria")}, 400
+                if field == "timezone":
+                    if not value:
+                        return {"message": _("La zona horaria es obligatoria")}, 400
+                    value = _clean_timezone(value)
+                    if not value:
+                        return {"message": _("La zona horaria no es válida")}, 400
                 setattr(business, field, value)
 
-        currency, has_currency = _optional_text(data, "currency", 3)
+        raw_currency, has_currency = _optional_text(data, "currency", 3)
         if has_currency:
-            currency = currency.upper() if currency else "MXN"
-            if len(currency) != 3 or not currency.isalpha():
+            currency = _clean_currency(raw_currency) if raw_currency else DEFAULT_CURRENCY
+            if not currency:
                 return {"message": _("La moneda debe tener un código de 3 letras")}, 400
             business.currency = currency
 

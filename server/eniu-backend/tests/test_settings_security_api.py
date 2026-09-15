@@ -14,6 +14,7 @@ from app.extensions import bcrypt
 from app.modules.auth.model import PasswordResetToken
 from app.modules.business.model import Business
 from app.modules.users.model import User
+from tests.plan_helpers import grant_plan
 from tests.token_helpers import tamper_signature
 
 
@@ -139,6 +140,67 @@ class SettingsSecurityApiTestCase(unittest.TestCase):
             f"/api/businesses/{self.business_id}",
             headers=self.headers(self.owner_token),
             json={"owner_id": self.outsider_id},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_business_accepts_any_real_currency_and_time_zone(self):
+        """Un negocio fuera de México necesita su moneda y su huso.
+
+        Los valores por omisión —MXN y America/Mexico_City— sólo son
+        correctos donde nació Eniu: sin poder cambiarlos, un restaurante en
+        Madrid publica precios en pesos y ve sus analíticas cortadas siete
+        horas antes de que empiece su día.
+        """
+        response = self.client.patch(
+            f"/api/businesses/{self.business_id}",
+            headers=self.headers(self.owner_token),
+            json={"currency": "eur", "timezone": "Europe/Madrid"},
+        )
+        self.assertEqual(response.status_code, 200)
+        business = response.get_json()["business"]
+        self.assertEqual(business["currency"], "EUR")
+        self.assertEqual(business["timezone"], "Europe/Madrid")
+
+    def test_business_rejects_a_time_zone_that_does_not_exist(self):
+        """Se valida al guardar, no al consultar.
+
+        Sin esta comprobación la cadena se guarda tal cual y el error aparece
+        mucho después, cuando las analíticas intentan resolver la zona para
+        cortar los días y responden 400 con el panel ya cargado.
+        """
+        response = self.client.patch(
+            f"/api/businesses/{self.business_id}",
+            headers=self.headers(self.owner_token),
+            json={"timezone": "Europa/Madrid"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+        response = self.client.patch(
+            f"/api/businesses/{self.business_id}",
+            headers=self.headers(self.owner_token),
+            json={"currency": "euros"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_new_business_keeps_the_currency_and_time_zone_it_was_created_with(self):
+        """El alta propone moneda y huso; sin esto todo negocio nace mexicano."""
+        # El plan gratuito sólo admite un negocio y `setUp` ya creó uno.
+        with self.app.app_context():
+            grant_plan(UUID(self.owner_id))
+        response = self.client.post(
+            "/api/businesses",
+            headers=self.headers(self.owner_token),
+            json={"name": "Trattoria Roma", "currency": "eur", "timezone": "Europe/Rome"},
+        )
+        self.assertEqual(response.status_code, 201)
+        business = response.get_json()["business"]
+        self.assertEqual(business["currency"], "EUR")
+        self.assertEqual(business["timezone"], "Europe/Rome")
+
+        response = self.client.post(
+            "/api/businesses",
+            headers=self.headers(self.owner_token),
+            json={"name": "Sin huso", "timezone": "Marte/Olympus"},
         )
         self.assertEqual(response.status_code, 400)
 

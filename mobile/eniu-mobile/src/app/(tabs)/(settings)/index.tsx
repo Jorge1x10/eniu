@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import Constants from 'expo-constants';
@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { BusinessPhotoField } from '@/components/business-photo';
 import { BusinessSwitcher } from '@/components/business-switcher';
 import { Button } from '@/components/ui/button';
+import { ChoiceField } from '@/components/ui/choice-field';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
@@ -14,9 +15,12 @@ import { PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '@/constants/legal';
 import { useScreenTopPadding } from '@/constants/layout';
 import { useAuth } from '@/features/auth/auth-context';
 import { useBusiness } from '@/features/business/business-context';
+import { currentLocale } from '@/i18n/formats';
 import { useLanguage } from '@/i18n/language-context';
 import { getMilestoneNotificationsEnabled, setMilestoneNotificationsEnabled } from '@/features/milestones/milestone-store';
 import { api } from '@/lib/api';
+import { deviceTimezone } from '@/lib/analytics-range';
+import { currencyChoices, timezoneChoices } from '@/lib/regions';
 import type { Business, User } from '@/types/models';
 import { useTranslation } from 'react-i18next';
 
@@ -48,7 +52,7 @@ export default function SettingsScreen() {
   const { selectedBusiness, updateBusiness } = useBusiness();
   const { language, changeLanguage, isSaving: isSavingLanguage } = useLanguage();
   const [profile, setProfile] = useState({ name: user?.name || '', username: user?.username || '', phone_number: user?.phone_number || '' });
-  const [business, setBusiness] = useState(() => selectedBusiness ? { name: selectedBusiness.name, description: selectedBusiness.description || '', phone: selectedBusiness.phone || '', whatsapp: selectedBusiness.whatsapp || '', address: selectedBusiness.address || '', currency: selectedBusiness.currency || 'MXN' } : null);
+  const [business, setBusiness] = useState(() => selectedBusiness ? { name: selectedBusiness.name, description: selectedBusiness.description || '', phone: selectedBusiness.phone || '', whatsapp: selectedBusiness.whatsapp || '', address: selectedBusiness.address || '', currency: selectedBusiness.currency || 'MXN', timezone: selectedBusiness.timezone || deviceTimezone() } : null);
   const [saving, setSaving] = useState<'profile' | 'business' | null>(null); const [error, setError] = useState(''); const [success, setSuccess] = useState('');
   const [milestoneNotifications, setMilestoneNotifications] = useState(true);
   const [deleteValue, setDeleteValue] = useState(''); const [deleting, setDeleting] = useState(false);
@@ -58,9 +62,14 @@ export default function SettingsScreen() {
   const canDelete = hasPassword ? deleteValue.length > 0 : deleteValue.trim().toUpperCase() === 'ELIMINAR';
   const updateProfile = (key: keyof typeof profile) => (value: string) => setProfile((current) => ({ ...current, [key]: value }));
   const updateBusinessField = (key: keyof NonNullable<typeof business>) => (value: string) => setBusiness((current) => current ? ({ ...current, [key]: value }) : current);
+  // Ciento sesenta monedas y cuatrocientas zonas: construirlas en cada
+  // pulsación del formulario se nota, y sólo cambian con el idioma.
+  const locale = currentLocale();
+  const currencies = useMemo(() => currencyChoices(locale), [locale]);
+  const timezones = useMemo(() => timezoneChoices(), []);
 
   useEffect(() => {
-    const task = setTimeout(() => setBusiness(selectedBusiness ? { name: selectedBusiness.name, description: selectedBusiness.description || '', phone: selectedBusiness.phone || '', whatsapp: selectedBusiness.whatsapp || '', address: selectedBusiness.address || '', currency: selectedBusiness.currency || 'MXN' } : null), 0);
+    const task = setTimeout(() => setBusiness(selectedBusiness ? { name: selectedBusiness.name, description: selectedBusiness.description || '', phone: selectedBusiness.phone || '', whatsapp: selectedBusiness.whatsapp || '', address: selectedBusiness.address || '', currency: selectedBusiness.currency || 'MXN', timezone: selectedBusiness.timezone || deviceTimezone() } : null), 0);
     return () => clearTimeout(task);
   }, [selectedBusiness]);
   useEffect(() => { getMilestoneNotificationsEnabled().then(setMilestoneNotifications); }, []);
@@ -128,7 +137,7 @@ export default function SettingsScreen() {
       <View style={{ gap: 11 }}>
         <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Mi negocio")}</Text>
         <BusinessSwitcher />
-        {business ? <View style={{ padding: 18, gap: 14, ...cardStyle(theme) }}><BusinessPhotoField onError={setError} /><FormField label={t("Nombre")} value={business.name} onChangeText={updateBusinessField('name')} /><FormField label={t("Descripción")} value={business.description} onChangeText={updateBusinessField('description')} multiline /><FormField label={t("Teléfono")} value={business.phone} onChangeText={updateBusinessField('phone')} keyboardType="phone-pad" /><FormField label={t("WhatsApp")} value={business.whatsapp} onChangeText={updateBusinessField('whatsapp')} keyboardType="phone-pad" /><FormField label={t("Dirección")} value={business.address} onChangeText={updateBusinessField('address')} /><FormField label={t("Moneda")} value={business.currency} onChangeText={updateBusinessField('currency')} autoCapitalize="characters" maxLength={3} /><Button loading={saving === 'business'} onPress={saveBusiness}>{t("Guardar negocio")}</Button></View> : <Text style={{ color: theme.muted }}>{t("Crea un negocio desde Inicio para configurarlo.")}</Text>}
+        {business ? <View style={{ padding: 18, gap: 14, ...cardStyle(theme) }}><BusinessPhotoField onError={setError} /><FormField label={t("Nombre")} value={business.name} onChangeText={updateBusinessField('name')} /><FormField label={t("Descripción")} value={business.description} onChangeText={updateBusinessField('description')} multiline /><FormField label={t("Teléfono")} value={business.phone} onChangeText={updateBusinessField('phone')} keyboardType="phone-pad" /><FormField label={t("WhatsApp")} value={business.whatsapp} onChangeText={updateBusinessField('whatsapp')} keyboardType="phone-pad" /><FormField label={t("Dirección")} value={business.address} onChangeText={updateBusinessField('address')} /><ChoiceField label={t("Moneda")} hint={t("En esta moneda ven los precios tus clientes.")} value={business.currency} options={currencies} searchLabel={t("Buscar moneda")} onChange={updateBusinessField('currency')} /><ChoiceField label={t("Zona horaria")} hint={t("Decide dónde empieza y termina el día en tus analíticas.")} value={business.timezone} options={timezones} searchLabel={t("Buscar zona horaria")} onChange={updateBusinessField('timezone')} /><Button loading={saving === 'business'} onPress={saveBusiness}>{t("Guardar negocio")}</Button></View> : <Text style={{ color: theme.muted }}>{t("Crea un negocio desde Inicio para configurarlo.")}</Text>}
       </View>
 
       <Section label={t("Aplicación")}>

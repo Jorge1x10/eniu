@@ -12,7 +12,9 @@ import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys } from '@/features/catalogues/catalogue-api';
 import { useOnboarding } from '@/features/onboarding/onboarding-context';
 import { getStarterMenu } from '@/features/onboarding/starter-menus';
+import { deviceTimezone } from '@/lib/analytics-range';
 import { ApiError, api } from '@/lib/api';
+import { deviceCurrency } from '@/lib/regions';
 import type { Business, Catalogue, Category, Product } from '@/types/models';
 import { useTranslation } from 'react-i18next';
 
@@ -67,7 +69,14 @@ export default function OnboardingReadyScreen() {
       setStep(0);
       let createdBusiness = businessRef.current;
       if (!createdBusiness) {
-        createdBusiness = (await api.post<{ business: Business }>('businesses', { name: draft.businessName })).business;
+        // Moneda y zona salen del teléfono: sin esto todo negocio nace en
+        // pesos mexicanos y en el huso de Ciudad de México, que sólo acierta
+        // donde nació Eniu. Ambas se cambian después en Ajustes.
+        createdBusiness = (await api.post<{ business: Business }>('businesses', {
+          name: draft.businessName,
+          currency: deviceCurrency(),
+          timezone: deviceTimezone(),
+        })).business;
         businessRef.current = createdBusiness;
         addBusiness(createdBusiness);
       }

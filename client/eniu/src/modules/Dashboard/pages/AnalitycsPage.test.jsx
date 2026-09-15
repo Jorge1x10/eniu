@@ -5,15 +5,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import AnalitycsPage from "./AnalitycsPage";
 
-const mocks = vi.hoisted(() => ({ getAnalytics: vi.fn(), allowAnalytics: true }));
+const mocks = vi.hoisted(() => ({ getAnalytics: vi.fn(), allowAnalytics: true, businesses: [] }));
 vi.mock("../services/analyticsService", () => ({ useAnalyticsService: () => mocks.getAnalytics }));
 // El plan se simula para no montar toda la sesión: la página sólo consulta si lo incluye.
 vi.mock("../../auth/hooks/usePlan", () => ({ usePlan: () => ({ limits: { allow_analytics: mocks.allowAnalytics } }) }));
+// La zona horaria del periodo sale del negocio, así que la página necesita la
+// lista; se simula por lo mismo que el plan.
+vi.mock("../../Business/services/useBusiness", () => ({ useBusiness: () => ({ businesses: mocks.businesses }) }));
 
 const metric = (value, previous = 0, change = "new", percentage = null) => ({ value, previous_value: previous, percentage_change: percentage, change_status: change });
 const data = {
   period: { from: "2026-08-01", to: "2026-08-07", timezone: "America/Mexico_City" }, comparison_period: { from: "2026-07-25", to: "2026-07-31" },
-  summary: { menu_views: metric(12, 10, "increased", 20), approximate_unique_visitors: metric(8, 10, "decreased", -20), product_interactions: metric(3, 0), top_product: { name: "Latte", interactions: 3 }, busiest_day: { date: "2026-08-07", views: 12 }, busiest_hour: { label: "8:00 p. m.", views: 6 } },
+  summary: { menu_views: metric(12, 10, "increased", 20), approximate_unique_visitors: metric(8, 10, "decreased", -20), product_interactions: metric(4, 5, "decreased", -20), top_product: { name: "Latte", interactions: 3 }, busiest_day: { date: "2026-08-07", views: 12 }, busiest_hour: { label: "8:00 p. m.", views: 6 } },
   visits_over_time: [{ date: "2026-08-06", views: 0, approximate_unique_visitors: 0 }, { date: "2026-08-07", views: 12, approximate_unique_visitors: 8 }],
   top_products: [{ name: "Latte", category_name: "Bebidas", interactions: 3, is_available: true }], top_categories: [{ name: "Bebidas", selections: 2, percentage: 100 }],
   devices: [{ key: "mobile", label: "Celular", views: 12, percentage: 100 }], sources: [{ key: "qr", label: "Código QR", views: 12, percentage: 100 }],
@@ -22,7 +25,7 @@ const data = {
 function renderPage() { return render(<MemoryRouter initialEntries={["/dashboard/businesses/business-1/catalogues/catalogue-1/analytics"]}><Routes><Route path="/dashboard/businesses/:businessId/catalogues/:catalogueId/analytics" element={<AnalitycsPage />} /></Routes></MemoryRouter>); }
 
 describe("AnalitycsPage", () => {
-  beforeEach(() => { mocks.getAnalytics.mockReset(); mocks.allowAnalytics = true; });
+  beforeEach(() => { mocks.getAnalytics.mockReset(); mocks.allowAnalytics = true; mocks.businesses = [{ id: "business-1", timezone: "Europe/Madrid" }]; });
 
   it("bloquea las analíticas cuando el plan no las incluye y no consulta al backend", async () => {
     mocks.allowAnalytics = false; renderPage();
@@ -38,7 +41,9 @@ describe("AnalitycsPage", () => {
     expect(screen.getByText("Aumentó 20% respecto al periodo anterior")).toBeInTheDocument();
     expect(screen.getByText("Disminuyó 20% respecto al periodo anterior")).toBeInTheDocument();
     expect(screen.queryByText(/Infinity/)).not.toBeInTheDocument();
-    expect(mocks.getAnalytics.mock.calls[0][0]).toEqual(expect.objectContaining({ timezone: "America/Mexico_City" }));
+    // La zona es la del negocio, no una escrita a mano: un local de Madrid
+    // corta sus días a medianoche en Madrid.
+    await waitFor(() => expect(mocks.getAnalytics.mock.calls.at(-1)[0]).toEqual(expect.objectContaining({ timezone: "Europe/Madrid" })));
   });
 
   it("cambia presets y espera Aplicar periodo para fechas personalizadas", async () => {

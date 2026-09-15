@@ -75,10 +75,74 @@ class BillingApiTestCase(unittest.TestCase):
         self.assertRegex(payload["integration_identifier"], r"^eniu_checkout_[a-z]{8}$")
         # Sin esta bandera el cliente no tiene dónde escribir un código promocional.
         self.assertTrue(payload["allow_promotion_codes"])
+        # La dirección decide qué IVA toca, y guardarla en el cliente es lo que
+        # hace que la renovación del mes siguiente se calcule igual de bien.
+        self.assertEqual(payload["billing_address_collection"], "required")
+        self.assertEqual(payload["customer_update"], {"address": "auto", "name": "auto"})
+        # Un negocio europeo con NIF-IVA paga por inversión del sujeto pasivo.
+        self.assertEqual(payload["tax_id_collection"], {"enabled": True})
+        self.assertEqual(payload["locale"], "es")
 
         with self.app.app_context():
             record = BillingSubscription.query.one()
             self.assertEqual(record.stripe_customer_id, "cus_eniu")
+
+    def _checkout_payload(self):
+        """Argumentos con los que se llamó a Stripe al crear la sesión de pago."""
+        price = SimpleNamespace(id="price_essential", recurring=SimpleNamespace(interval="month"))
+        with patch("app.modules.billing.services.stripe.Customer.create", return_value=SimpleNamespace(id="cus_eniu")), patch(
+            "app.modules.billing.services.stripe.Price.list",
+            return_value=SimpleNamespace(data=[price]),
+        ), patch(
+            "app.modules.billing.services.stripe.checkout.Session.create",
+            return_value=SimpleNamespace(url="https://checkout.stripe.test/session"),
+        ) as checkout_create:
+            response = self.client.post("/api/billing/checkout", headers=self.headers, json={})
+        self.assertEqual(response.status_code, 201)
+        return checkout_create.call_args.kwargs
+
+    def test_automatic_tax_only_travels_when_the_account_can_calculate_it(self):
+        """Stripe Tax se pide desde la configuración, no siempre.
+
+        Pedirlo con la cuenta sin activar hace que Checkout devuelva un error
+        y nadie pueda pagar; no pedirlo cuando toca significa cobrarle a un
+        consumidor europeo sin el IVA de su país.
+        """
+        self.assertNotIn("automatic_tax", self._checkout_payload())
+
+        with patch.dict(self.app.config, {"STRIPE_AUTOMATIC_TAX": True}):
+            self.assertEqual(self._checkout_payload()["automatic_tax"], {"enabled": True})
+
+    def test_withdrawal_waiver_is_asked_for_explicitly_when_enabled(self):
+        """La renuncia al desistimiento se marca, no se da por leída.
+
+        El consumidor europeo conserva catorce días para deshacer una compra a
+        distancia salvo que acepte expresamente empezar de inmediato. Stripe
+        exige una URL de términos configurada para poder enseñar la casilla,
+        así que esto viaja sólo cuando la cuenta está lista.
+        """
+        self.assertNotIn("consent_collection", self._checkout_payload())
+
+        with patch.dict(self.app.config, {"STRIPE_TERMS_CONSENT": True}):
+            payload = self._checkout_payload()
+        self.assertEqual(payload["consent_collection"], {"terms_of_service": "required"})
+        message = payload["custom_text"]["terms_of_service_acceptance"]["message"]
+        self.assertIn("desistimiento", message)
+        # Stripe rechaza cualquier texto más largo que esto.
+        self.assertLessEqual(len(message), 1200)
+
+    def test_the_payment_screen_follows_the_language_of_the_account(self):
+        """Quien puso Eniu en inglés no debe acabar pagando en español."""
+        with self.app.app_context():
+            user = db.session.get(User, UUID(self.user_id))
+            user.language = "en"
+            db.session.commit()
+
+        payload = self._checkout_payload()
+        self.assertEqual(payload["locale"], "en")
+        with patch.dict(self.app.config, {"STRIPE_TERMS_CONSENT": True}):
+            message = self._checkout_payload()["custom_text"]["terms_of_service_acceptance"]["message"]
+        self.assertIn("withdrawal", message)
 
     def test_active_subscription_cannot_create_duplicate_checkout(self):
         with self.app.app_context():
@@ -104,7 +168,13 @@ class BillingApiTestCase(unittest.TestCase):
         ) as portal_create:
             response = self.client.post("/api/billing/portal", headers=self.headers, json={})
         self.assertEqual(response.status_code, 201)
-        portal_create.assert_called_once_with(customer="cus_owner", return_url="http://frontend.test/dashboard/settings")
+        # El portal es donde se corrige la dirección de facturación y el
+        # NIF-IVA, así que sale en el idioma de la cuenta.
+        portal_create.assert_called_once_with(
+            customer="cus_owner",
+            locale="es",
+            return_url="http://frontend.test/dashboard/settings",
+        )
 
     def test_signed_webhook_syncs_subscription_and_is_idempotent(self):
         event = {

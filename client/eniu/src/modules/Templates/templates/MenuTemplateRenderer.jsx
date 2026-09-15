@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Availability, CategoryNavigation, EmptyMenu, MenuCover, MenuFooter, PromoBadge } from "../components/MenuShared";
 import MenuBackground from "../components/MenuBackground";
 import { FONT_REGISTRY } from "../utils/themeDefaults";
-import { buildSections, mainProductImage, menuCurrency } from "./menuData";
+import { MenuCurrencyContext, buildSections, mainProductImage, useMenuCurrency } from "./menuData";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -44,6 +44,23 @@ const ADDITIONAL_VARIANTS = {
   retro: { header: "text-center uppercase tracking-wider", card: "rounded-xl border-2 border-dashed", grid: "grid grid-cols-2 gap-3", eyebrow: "Clásicos favoritos" },
   luxury: { header: "text-center font-serif", card: "border-y border-current/30", grid: "space-y-5", eyebrow: "Una experiencia especial" },
 };
+
+/**
+ * Precio de un producto, en la moneda del negocio y el idioma de quien lee.
+ *
+ * Uno solo para las trece plantillas: antes cada una repetía la misma
+ * expresión y todas caían al formateador sin moneda, así que un menú de
+ * Madrid o de Chicago salía en pesos mexicanos.
+ *
+ * Devuelve texto y no un elemento a propósito: se pinta dentro del `<strong>`,
+ * `<span>` o `<p>` que ya tiene cada plantilla, y meter un nodo extra movería
+ * el HTML congelado en `visualRegression.test.jsx`.
+ */
+function Price({ product }) {
+  const { t } = useTranslation();
+  const currency = useMenuCurrency();
+  return product.price === null ? t("Consultar") : currency.format(Number(product.price));
+}
 
 function MenuShell({ theme, family, children }) {
   const family_font = family === "elegant" ? undefined : FONT_REGISTRY[theme.font_key]?.family || FONT_REGISTRY.inter.family;
@@ -113,7 +130,7 @@ function ModernProductCard({ product, theme, tokens }) {
         <div className="flex items-start justify-between gap-2"><h3 className="text-sm font-extrabold leading-tight">{product.name}</h3><Availability available={product.is_available} /></div>
         {product.promo_label && <div className="mt-1"><PromoBadge label={product.promo_label} /></div>}
         {product.description && <p className="mt-1 line-clamp-2 text-xs opacity-65">{product.description}</p>}
-        <p className="mt-3 font-black" style={{ color: tokens.price }}>{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</p>
+        <p className="mt-3 font-black" style={{ color: tokens.price }}><Price product={product} /></p>
       </div>
     </article>
   );
@@ -145,7 +162,7 @@ function MinimalProductRow({ product, theme, tokens }) {
     <article data-analytics-product-key={product.tracking_key || undefined} className={`flex gap-3 border-b border-current/15 py-4 ${product.is_available ? "" : "opacity-60"}`}>
       {theme.show_product_images && image && <img src={image} alt={t("Imagen de {{name}}", { name: product.name })} className="h-16 w-16 shrink-0 rounded-lg object-cover" />}
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-3"><h3 className="font-semibold">{product.name}</h3><strong className="shrink-0 text-sm" style={{ color: tokens.price }}>{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</strong></div>
+        <div className="flex items-start justify-between gap-3"><h3 className="font-semibold">{product.name}</h3><strong className="shrink-0 text-sm" style={{ color: tokens.price }}><Price product={product} /></strong></div>
         {product.description && <p className="mt-1 text-xs leading-5 opacity-60">{product.description}</p>}
         <div className="mt-1 flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div>
       </div>
@@ -179,7 +196,7 @@ function ElegantProductCard({ product, theme, tokens }) {
       {theme.show_product_images && image && <img src={image} alt={t("Imagen de {{name}}", { name: product.name })} className="mb-4 h-40 w-full object-cover" />}
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1"><h3 className="text-lg italic">{product.name}</h3>{product.description && <p className="mt-2 text-xs leading-5 opacity-65">{product.description}</p>}<div className="mt-2 flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div></div>
-        <strong className="shrink-0 border-b pb-1 text-sm" style={{ borderColor: "var(--menu-accent)", color: tokens.price }}>{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</strong>
+        <strong className="shrink-0 border-b pb-1 text-sm" style={{ borderColor: "var(--menu-accent)", color: tokens.price }}><Price product={product} /></strong>
       </div>
     </article>
   );
@@ -213,7 +230,7 @@ function AdditionalProductCard({ product, theme, tokens, className, variant }) {
   return (
     <article data-analytics-product-key={product.tracking_key || undefined} className={`overflow-hidden p-3 ${className} ${product.is_available ? "" : "opacity-60"}`} style={{ borderColor: "var(--menu-accent)", backgroundColor: `${tokens.surface}E8` }}>
       {theme.show_product_images && image && <img src={image} alt={t("Imagen de {{name}}", { name: product.name })} className={`mb-3 w-full object-cover ${variant === "luxury" ? "h-36" : "h-24"}`} />}
-      <div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold">{product.name}</h3>{product.description && <p className="mt-1 text-xs leading-5 opacity-65">{product.description}</p>}<div className="flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div></div><strong className="shrink-0 text-sm" style={{ color: tokens.price }}>{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</strong></div>
+      <div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold">{product.name}</h3>{product.description && <p className="mt-1 text-xs leading-5 opacity-65">{product.description}</p>}<div className="flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div></div><strong className="shrink-0 text-sm" style={{ color: tokens.price }}><Price product={product} /></strong></div>
     </article>
   );
 }
@@ -259,7 +276,7 @@ function ChalkboardProductCard({ product, tokens }) {
           <div className="flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div>
         </div>
         <span className="shrink-0 rounded-full border-2 border-dashed px-3 py-1 text-sm font-black italic" style={{ borderColor: "var(--menu-accent)", color: tokens.price }}>
-          {product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}
+          <Price product={product} />
         </span>
       </div>
     </article>
@@ -307,7 +324,7 @@ function MagazineProductCard({ product, theme, tokens, featured }) {
         <div className="flex items-start justify-between gap-2"><h3 className={`font-black leading-tight ${featured ? "text-xl" : "text-sm"}`}>{product.name}</h3><Availability available={product.is_available} /></div>
         {product.promo_label && <div className="mt-1"><PromoBadge label={product.promo_label} /></div>}
         {product.description && <p className={`mt-1 opacity-65 ${featured ? "text-sm" : "line-clamp-2 text-xs"}`}>{product.description}</p>}
-        <p className="mt-3 font-black" style={{ color: tokens.price }}>{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</p>
+        <p className="mt-3 font-black" style={{ color: tokens.price }}><Price product={product} /></p>
       </div>
     </article>
   );
@@ -343,7 +360,7 @@ function SidebarProductRow({ product, theme, tokens }) {
     <article data-analytics-product-key={product.tracking_key || undefined} className={`flex gap-3 border-b border-current/15 py-3 ${product.is_available ? "" : "opacity-60"}`}>
       {theme.show_product_images && image && <img src={image} alt={t("Imagen de {{name}}", { name: product.name })} className="h-14 w-14 shrink-0 rounded-lg object-cover" />}
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-3"><h3 className="text-sm font-semibold">{product.name}</h3><strong className="shrink-0 text-sm" style={{ color: tokens.price }}>{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</strong></div>
+        <div className="flex items-start justify-between gap-3"><h3 className="text-sm font-semibold">{product.name}</h3><strong className="shrink-0 text-sm" style={{ color: tokens.price }}><Price product={product} /></strong></div>
         {product.description && <p className="mt-1 text-xs leading-5 opacity-60">{product.description}</p>}
         <div className="mt-1 flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div>
       </div>
@@ -391,7 +408,7 @@ function ReceiptProductRow({ product, tokens }) {
       <span className="shrink-0">{product.name}</span>
       <PromoBadge label={product.promo_label} />
       <span aria-hidden="true" className="min-w-0 flex-1 border-b border-dotted border-current/40" />
-      <span className="shrink-0 font-bold" style={{ color: tokens.price }}>{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</span>
+      <span className="shrink-0 font-bold" style={{ color: tokens.price }}><Price product={product} /></span>
       <Availability available={product.is_available} />
     </li>
   );
@@ -426,7 +443,7 @@ function StoryProductCard({ product, theme, tokens }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-lg italic">{product.name}</h3>
-          <strong className="shrink-0 border px-2 py-0.5 text-sm" style={{ borderColor: "var(--menu-accent)", color: tokens.price }}>{product.price === null ? "Consultar" : menuCurrency.format(Number(product.price))}</strong>
+          <strong className="shrink-0 border px-2 py-0.5 text-sm" style={{ borderColor: "var(--menu-accent)", color: tokens.price }}><Price product={product} /></strong>
         </div>
         {product.description && <p className="mt-2 text-sm italic leading-6 opacity-70">{product.description}</p>}
         <div className="mt-2 flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div>
@@ -469,7 +486,13 @@ const LAYOUT_COMPONENTS = {
 
 export default function MenuTemplateRenderer({ layoutKey, ...props }) {
   const family = LAYOUT_FAMILY[layoutKey] || "modern";
-  if (family === "additional") return <AdditionalLayout {...props} variant={layoutKey} />;
-  const Layout = LAYOUT_COMPONENTS[family] || ModernLayout;
-  return <Layout {...props} />;
+  const Layout = family === "additional" ? AdditionalLayout : (LAYOUT_COMPONENTS[family] || ModernLayout);
+  const layoutProps = family === "additional" ? { ...props, variant: layoutKey } : props;
+  // La moneda entra por aquí, en la raíz: es el único punto por el que pasan
+  // las trece plantillas, y ninguna de ellas tiene que enterarse.
+  return (
+    <MenuCurrencyContext.Provider value={props.business?.currency || "MXN"}>
+      <Layout {...layoutProps} />
+    </MenuCurrencyContext.Provider>
+  );
 }

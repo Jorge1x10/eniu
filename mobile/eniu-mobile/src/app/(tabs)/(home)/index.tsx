@@ -22,17 +22,12 @@ import { useBusinessesTodayViews } from '@/features/business/business-views';
 import { catalogueKeys, listCatalogues } from '@/features/catalogues/catalogue-api';
 import { useProductQuickActions } from '@/features/catalogues/product-quick-actions';
 import { getLastCelebratedMilestone, getMilestoneNotificationsEnabled, nextUncelebratedMilestone, setLastCelebratedMilestone } from '@/features/milestones/milestone-store';
+import { analyticsRange } from '@/lib/analytics-range';
 import { api } from '@/lib/api';
 import { defaultPictureUrl } from '@/lib/product-image';
 import type { Analytics, Product } from '@/types/models';
 import { useTranslation } from 'react-i18next';
 import { currentLocale } from '@/i18n/formats';
-
-function dateRange() {
-  const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 29);
-  const format = (value: Date) => value.toISOString().slice(0, 10);
-  return `from=${format(from)}&to=${format(to)}&timezone=America%2FMexico_City`;
-}
 
 function HeroStat({ value, label }: { value: string | number; label: string }) {
   return (
@@ -94,7 +89,7 @@ export default function HomeScreen() {
   const businessSummaries = useBusinessesTodayViews(businesses, limits.allow_analytics);
   const catalogues = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
   const selectedCatalogue = catalogues.data?.catalogues[0];
-  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, selectedCatalogue?.id, 30], queryFn: () => api.get<Analytics>(`businesses/${selectedBusiness!.id}/catalogues/${selectedCatalogue!.id}/analytics?${dateRange()}`), enabled: Boolean(selectedBusiness && selectedCatalogue) });
+  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, selectedCatalogue?.id, 30, selectedBusiness?.timezone], queryFn: () => api.get<Analytics>(`businesses/${selectedBusiness!.id}/catalogues/${selectedCatalogue!.id}/analytics?${analyticsRange(30, selectedBusiness!.timezone)}`), enabled: Boolean(selectedBusiness && selectedCatalogue) });
   const productsKey = ['products', selectedBusiness?.id, selectedCatalogue?.id] as const;
   const products = useQuery({ queryKey: productsKey, queryFn: () => api.get<{ products: Product[] }>(`businesses/${selectedBusiness?.id}/catalogues/${selectedCatalogue?.id}/products`), enabled: Boolean(selectedBusiness && selectedCatalogue) });
   const publicationKey = ['publication', selectedBusiness?.id, selectedCatalogue?.id] as const;

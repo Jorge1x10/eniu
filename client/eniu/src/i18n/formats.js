@@ -1,12 +1,31 @@
 import i18n from "./index";
 
-// Fechas y cantidades se escriben distinto en cada idioma —"5 sept" frente a
-// "Sep 5", el punto o la coma decimal—, así que el formato tiene que seguir al
-// idioma de la interfaz y no quedarse en el del país donde nació Eniu.
-const LOCALES = { es: "es-MX", en: "en-US" };
+// Sólo el último recurso: la región de la que salió Eniu y la de su primer
+// mercado en inglés. Lo primero que se intenta es la que declara el navegador.
+const FALLBACK_LOCALES = { es: "es-MX", en: "en-US" };
 
+/**
+ * Locale con el que se escriben fechas y cantidades.
+ *
+ * El idioma lo elige el usuario; la región la pone su navegador. Los dos
+ * hacen falta y no son lo mismo: el mismo importe en euros es "68,00 €" en
+ * `es-ES` y "EUR 68.00" en `es-MX`, y la misma fecha es "5/9" o "9/5" según
+ * de qué lado del Atlántico se lea. Atar la región al idioma —como se hacía
+ * antes— dejaba a todo hispanohablante escribiendo como en México y a todo
+ * angloparlante como en Estados Unidos.
+ *
+ * Se busca entre los idiomas del navegador el primero que hable el idioma
+ * elegido: así alguien en Madrid con la app en español obtiene `es-ES`, y
+ * quien la puso en inglés desde España obtiene `en-GB` o `en-IE` si su
+ * navegador los declara. Si no declara ninguno, se cae a la tabla de arriba.
+ */
 export function currentLocale() {
-  return LOCALES[i18n.language] || LOCALES.es;
+  const language = i18n.language;
+  const declared = typeof navigator === "undefined" ? [] : navigator.languages || [navigator.language];
+  for (const tag of declared) {
+    if (typeof tag === "string" && tag.toLowerCase().split("-")[0] === language) return tag;
+  }
+  return FALLBACK_LOCALES[language] || FALLBACK_LOCALES.es;
 }
 
 /**

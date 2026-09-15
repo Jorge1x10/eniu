@@ -13,15 +13,10 @@ import { HeroScreen } from '@/components/hero-screen';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, deleteCatalogue, getCatalogue } from '@/features/catalogues/catalogue-api';
+import { analyticsRange } from '@/lib/analytics-range';
 import { ApiError, api } from '@/lib/api';
 import type { Analytics, Catalogue, Category, Product } from '@/types/models';
 import { useTranslation } from 'react-i18next';
-
-function monthRange() {
-  const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 29);
-  const format = (value: Date) => value.toISOString().slice(0, 10);
-  return `from=${format(from)}&to=${format(to)}&timezone=America%2FMexico_City`;
-}
 
 // Mismas tarjetas que el panel web: bloque de identidad arriba y la acción bajo
 // una línea divisoria, a todo el ancho de la pantalla.
@@ -46,7 +41,7 @@ export default function CatalogueDetailScreen() {
   const products = useQuery({ queryKey: ['products', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ products: Product[] }>(`${base}/products`), enabled: Boolean(selectedBusiness && catalogueId) });
   const categories = useQuery({ queryKey: ['categories', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ categories: Category[] }>(`${base}/categories`), enabled: Boolean(selectedBusiness && catalogueId) });
   const counts: Record<string, number | undefined> = { products: products.data?.products.length, categories: categories.data?.categories.length };
-  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, catalogueId, 30], queryFn: () => api.get<Analytics>(`${base}/analytics?${monthRange()}`), enabled: Boolean(selectedBusiness && catalogueId) });
+  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, catalogueId, 30, selectedBusiness?.timezone], queryFn: () => api.get<Analytics>(`${base}/analytics?${analyticsRange(30, selectedBusiness!.timezone)}`), enabled: Boolean(selectedBusiness && catalogueId) });
   const [deleting, setDeleting] = useState(false);
   const insets = useSafeAreaInsets();
   const safeTop = Math.max(insets.top, 12);

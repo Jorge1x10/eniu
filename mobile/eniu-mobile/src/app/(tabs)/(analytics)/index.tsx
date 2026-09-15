@@ -10,6 +10,7 @@ import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, listCatalogues } from '@/features/catalogues/catalogue-api';
+import { analyticsRange } from '@/lib/analytics-range';
 import { api } from '@/lib/api';
 import type { Analytics } from '@/types/models';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +20,6 @@ import { currentLocale } from '@/i18n/formats';
 const SOURCE_LABELS: Record<string, string> = { qr: 'Código QR en mesa', whatsapp: 'Enlace en WhatsApp', direct: 'Directo', social: 'Redes sociales', web: 'Sitio web' };
 const SOURCE_COLORS = ['#FFE05A', '#F1DE9B', '#E0D4B4', '#D9D9D9'];
 
-function queryRange() { const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 29); return `from=${from.toISOString().slice(0, 10)}&to=${to.toISOString().slice(0, 10)}&timezone=America%2FMexico_City`; }
 function shortDate(value: string) { const date = new Date(`${value}T00:00:00`); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short' }); }
 
 function SectionLabel({ children }: { children: string }) {
@@ -37,7 +37,7 @@ export default function AnalyticsScreen() {
   const { limits } = usePlan();
   const menus = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
   const selected = menus.data?.catalogues[0];
-  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, selected?.id, 30], queryFn: () => api.get<Analytics>(`businesses/${selectedBusiness!.id}/catalogues/${selected!.id}/analytics?${queryRange()}`), enabled: Boolean(selectedBusiness && selected) && limits.allow_analytics });
+  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, selected?.id, 30, selectedBusiness?.timezone], queryFn: () => api.get<Analytics>(`businesses/${selectedBusiness!.id}/catalogues/${selected!.id}/analytics?${analyticsRange(30, selectedBusiness!.timezone)}`), enabled: Boolean(selectedBusiness && selected) && limits.allow_analytics });
   const points = analytics.data?.visits_over_time ?? [];
   const total = points.reduce((sum, point) => sum + Number(point.views || 0), 0);
   const busiest = points.reduce((best, point) => Number(point.views || 0) > Number(best?.views || 0) ? point : best, points[0]);

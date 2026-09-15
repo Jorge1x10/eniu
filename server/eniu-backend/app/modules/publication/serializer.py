@@ -156,6 +156,10 @@ def serialize_public_menu(catalogue):
         "business": {
             "name": catalogue.business.name,
             "description": catalogue.business.description,
+            # Sin esto el comensal ve todos los precios en pesos mexicanos:
+            # el cliente no tiene de dónde sacar la moneda del negocio y cae
+            # al valor por omisión, que sólo es correcto en México.
+            "currency": catalogue.business.currency,
         },
         "catalogue": {
             "name": catalogue.name,

@@ -161,6 +161,13 @@ _EN = {
     "{field} supera el máximo de {max} caracteres": (
         "{field} is longer than the {max} character limit"
     ),
+    "Acepto los términos de Eniu y pido que el servicio empiece de inmediato. "
+    "Entiendo que, al empezar ya, pierdo el derecho de desistimiento de 14 "
+    "días una vez que el servicio se haya prestado por completo.": (
+        "I accept Eniu's terms and ask for the service to start immediately. "
+        "I understand that by starting now I lose the 14-day right of "
+        "withdrawal once the service has been fully performed."
+    ),
     "La moneda debe tener un código de 3 letras": (
         "The currency must be a 3-letter code"
     ),
