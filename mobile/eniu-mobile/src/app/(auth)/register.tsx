@@ -23,10 +23,11 @@ const COPY = [
 ] as const;
 
 function Progress({ step }: { step: number }) {
+  const { t } = useTranslation();
   const theme = useEniuTheme();
   return (
     <View style={{ gap: 8 }}>
-      <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2 }}>PASO {step} DE {TOTAL_STEPS}</Text>
+      <Text style={{ color: theme.accentText, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Paso {{step}} de {{total}}", { step, total: TOTAL_STEPS })}</Text>
       <View style={{ flexDirection: 'row', gap: 6 }}>
         {Array.from({ length: TOTAL_STEPS }, (_, index) => (
           <View key={index} style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: index < step ? theme.yellow : theme.border }} />
@@ -103,7 +104,7 @@ export default function RegisterScreen() {
   const copy = COPY[step - 1];
 
   return (
-    <AuthShell title={copy.title} subtitle={copy.subtitle}>
+    <AuthShell title={t(copy.title)} subtitle={t(copy.subtitle)}>
       <Progress step={step} />
       <Feedback message={error} />
 

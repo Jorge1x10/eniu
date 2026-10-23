@@ -120,9 +120,9 @@ export function ProductImagePicker({ existing, picked, defaultKey, onChangeExist
             onPress={add}
             style={({ pressed }) => ({ width: 92, height: 92, borderRadius: 16, borderCurve: 'continuous', borderWidth: 1.5, borderStyle: 'dashed', borderColor: theme.yellowPressed, alignItems: 'center', justifyContent: 'center', gap: 6, opacity: disabled || working ? 0.5 : pressed ? 0.7 : 1 })}
           >
-            {working ? <ActivityIndicator color={theme.yellowPressed} /> : <>
-              <ImageIcon color={theme.yellowPressed} size={22} />
-              <Text style={{ color: theme.yellowPressed, fontSize: 11, fontWeight: '800' }}>{t("Agregar")}</Text>
+            {working ? <ActivityIndicator color={theme.accentText} /> : <>
+              <ImageIcon color={theme.accentText} size={22} />
+              <Text style={{ color: theme.accentText, fontSize: 11, fontWeight: '800' }}>{t("Agregar")}</Text>
             </>}
           </Pressable>
         ) : null}

@@ -47,7 +47,7 @@ export default function OnboardingBusinessScreen() {
       <ScrollView contentInsetAdjustmentBehavior="never" keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, gap: 28, flexGrow: 1 }}>
         <View style={{ gap: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ color: theme.yellowPressed, fontWeight: '700', fontSize: 14 }}>{t("Paso 1 de 3")}</Text>
+            <Text style={{ color: theme.accentText, fontWeight: '700', fontSize: 14 }}>{t("Paso 1 de 3")}</Text>
             <Pressable onPress={skip}><Text style={{ color: theme.muted, fontWeight: '700', fontSize: 14 }}>{t("Saltar")}</Text></Pressable>
           </View>
           <View style={{ flexDirection: 'row', gap: 5 }}>

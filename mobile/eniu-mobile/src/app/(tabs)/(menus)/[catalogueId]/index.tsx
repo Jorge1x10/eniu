@@ -19,10 +19,12 @@ import type { Analytics, Catalogue, Category, Product } from '@/types/models';
 import { useTranslation } from 'react-i18next';
 
 // Mismas tarjetas que el panel web: bloque de identidad arriba y la acción bajo
-// una línea divisoria, a todo el ancho de la pantalla.
+// una línea divisoria, a todo el ancho de la pantalla. Los textos se guardan en
+// español como clave y se traducen al pintar: con `t()` aquí arriba quedarían
+// congelados en el idioma con el que arrancó la app.
 const actions = [
-  { route: 'products', title: 'Productos', description: 'Crea productos con o sin categoría.', action: 'Administrar productos', Icon: TagIcon, unit: ['producto', 'productos'] },
-  { route: 'categories', title: 'Categorías', description: 'Organiza los productos de este menú.', action: 'Administrar categorías', Icon: GridIcon, unit: ['categoría', 'categorías'] },
+  { route: 'products', title: 'Productos', description: 'Crea productos con o sin categoría.', action: 'Administrar productos', Icon: TagIcon, unit: ['1 producto', '{{count}} productos'] },
+  { route: 'categories', title: 'Categorías', description: 'Organiza los productos de este menú.', action: 'Administrar categorías', Icon: GridIcon, unit: ['1 categoría', '{{count}} categorías'] },
   { route: 'template', title: 'Diseño y plantilla', description: 'Elige el diseño y personaliza la identidad del menú.', action: 'Personalizar plantilla', Icon: PaletteIcon },
   { route: 'promotions', title: 'Promociones', description: 'Resalta productos en días específicos.', action: 'Administrar promociones', Icon: StarIcon },
   { route: 'publication', title: 'Publicar y compartir', description: 'Publica y comparte este menú con tus clientes.', action: 'Administrar publicación', Icon: LinkIcon },
@@ -125,7 +127,7 @@ export default function CatalogueDetailScreen() {
             </View>
           </View>
           <View style={{ gap: 8 }}>
-            <View style={{ minHeight: 24, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : 'rgba(255,255,255,0.12)', paddingHorizontal: 10 }}><Text style={{ color: catalogue.is_published ? theme.onYellow : '#C7C1B4', fontSize: 9.5, fontWeight: '800', letterSpacing: 1 }}>{catalogue.is_published ? 'PUBLICADO' : 'BORRADOR'}</Text></View>
+            <View style={{ minHeight: 24, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : 'rgba(255,255,255,0.12)', paddingHorizontal: 10 }}><Text style={{ color: catalogue.is_published ? theme.onYellow : '#C7C1B4', fontSize: 9.5, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>{catalogue.is_published ? t("Publicado") : t("Borrador")}</Text></View>
             <Text selectable style={{ color: '#FFFDF5', fontSize: 30, lineHeight: 33, fontWeight: '900' }}>{catalogue.name}</Text>
             <Text style={{ color: theme.heroMuted, fontSize: 12.5, lineHeight: 19 }}>{metaLine}</Text>
           </View>
@@ -137,8 +139,8 @@ export default function CatalogueDetailScreen() {
           const unit = 'unit' in action ? action.unit : null;
           const published = action.route === 'publication' ? catalogue.is_published : null;
           const status = unit
-            ? { label: count == null ? '—' : `${count} ${count === 1 ? unit[0] : unit[1]}`, on: Boolean(count) }
-            : published == null ? null : { label: published ? 'Publicado' : t("Sin publicar"), on: published };
+            ? { label: count == null ? '—' : count === 1 ? t(unit[0]) : t(unit[1], { count }), on: Boolean(count) }
+            : published == null ? null : { label: published ? t("Publicado") : t("Sin publicar"), on: published };
           return (
             <Animated.View key={action.route} entering={FadeInDown.duration(300).delay(index * 70)}>
             <Link href={{ pathname: `/(tabs)/(menus)/[catalogueId]/${action.route}`, params: { catalogueId } }} asChild>
@@ -146,13 +148,13 @@ export default function CatalogueDetailScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }}>
                   <View style={{ width: 46, height: 46, borderRadius: 14, borderCurve: 'continuous', backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><action.Icon color={theme.onYellow} size={22} /></View>
                   <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                    <Text style={{ color: theme.text, fontSize: 16, fontWeight: '900' }}>{action.title}</Text>
-                    <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{action.description}</Text>
+                    <Text style={{ color: theme.text, fontSize: 16, fontWeight: '900' }}>{t(action.title)}</Text>
+                    <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{t(action.description)}</Text>
                   </View>
                 </View>
                 <Divider />
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={{ color: theme.yellowPressed, fontSize: 13, fontWeight: '800' }}>{action.action}</Text>
+                  <Text style={{ color: theme.accentText, fontSize: 13, fontWeight: '800' }}>{t(action.action)}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     {status ? <>
                       <View style={{ width: 6, height: 6, borderRadius: 99, backgroundColor: status.on ? theme.success : theme.muted }} />
@@ -171,14 +173,14 @@ export default function CatalogueDetailScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t("Eliminar el menú {{name}}", { name: catalogue.name })}
-            accessibilityHint="Mantén pulsado para eliminar este menú"
+            accessibilityHint={t("Mantén pulsado para eliminar este menú")}
             onLongPress={confirmDelete}
             delayLongPress={600}
             disabled={deleting}
             style={({ pressed }) => ({ ...cardStyle(theme, 16), minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, opacity: deleting ? 0.6 : pressed ? 0.75 : 1 })}
           >
             {deleting ? <ActivityIndicator color={theme.danger} /> : <TrashIcon color={theme.danger} size={15} />}
-            <Text style={{ color: theme.danger, fontSize: 14, fontWeight: '800' }}>{deleting ? 'Eliminando…' : t("Eliminar menú")}</Text>
+            <Text style={{ color: theme.danger, fontSize: 14, fontWeight: '800' }}>{deleting ? t("Eliminando…") : t("Eliminar menú")}</Text>
           </Pressable>
           <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 16, textAlign: 'center' }}>
             {t("Mantén pulsado para eliminarlo. Se borran también sus productos y categorías.")}

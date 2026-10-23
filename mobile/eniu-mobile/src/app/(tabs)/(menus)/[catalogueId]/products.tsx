@@ -45,13 +45,13 @@ function ProductRow({ product, currency, theme, businessId, catalogueId, onEdit,
             {extra > 0 ? <View style={{ position: 'absolute', right: 3, bottom: 3, minWidth: 20, paddingHorizontal: 5, height: 17, borderRadius: 999, backgroundColor: 'rgba(17,17,17,0.7)', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>+{extra}</Text></View> : null}
           </View>
         ) : (
-          <View style={{ width: 52, height: 52, borderRadius: 15, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><ImageIcon color={theme.yellowPressed} size={19} /></View>
+          <View style={{ width: 52, height: 52, borderRadius: 15, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><ImageIcon color={theme.accentText} size={19} /></View>
         )}
         <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
           <Text numberOfLines={1} style={{ color: product.is_available ? theme.text : theme.muted, fontSize: 15, fontWeight: '700' }}>{product.name}</Text>
-          <Text numberOfLines={1} style={{ color: uri ? theme.muted : theme.yellowPressed, fontSize: 11.5, fontWeight: uri ? '400' : '600' }}>{uri ? (product.description || t("Sin descripción")) : t("Súbele una foto y se ve 3× más")}</Text>
+          <Text numberOfLines={1} style={{ color: uri ? theme.muted : theme.accentText, fontSize: 11.5, fontWeight: uri ? '400' : '600' }}>{uri ? (product.description || t("Sin descripción")) : t("Súbele una foto y se ve 3× más")}</Text>
         </View>
-        <Text selectable style={{ color: product.is_available ? theme.text : theme.muted, fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'], flexShrink: 0 }}>{product.price == null ? 'S/P' : currency.format(Number(product.price))}</Text>
+        <Text selectable style={{ color: product.is_available ? theme.text : theme.muted, fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'], flexShrink: 0 }}>{product.price == null ? t("S/P") : currency.format(Number(product.price))}</Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Pressable onPress={() => toggleAvailable(product)} style={({ pressed }) => ({ minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 11, backgroundColor: product.is_available ? 'rgba(22,128,58,0.1)' : 'rgba(198,40,40,0.1)', opacity: pressed ? 0.75 : 1 })}>
@@ -138,10 +138,14 @@ export default function ProductsScreen() {
 
   async function save() {
     if (!name.trim()) { setError(t("Escribe el nombre del producto.")); return; }
-    if (price && !/^\d+(?:\.\d{1,2})?$/.test(price)) { setError(t("Usa un precio válido con máximo dos decimales.")); return; }
+    // En España y en casi toda Europa el decimal se escribe con coma ("12,50"),
+    // y en esos idiomas el teclado decimal sólo ofrece la coma. La API espera un
+    // punto: se traduce aquí en vez de rechazar un precio bien escrito.
+    const normalizedPrice = price.trim().replace(',', '.');
+    if (normalizedPrice && !/^\d+(?:\.\d{1,2})?$/.test(normalizedPrice)) { setError(t("Usa un precio válido con máximo dos decimales.")); return; }
     if (existingPictures.length + pickedPictures.length > MAX_PICTURES) { setError(t("Puedes agregar máximo {{limit}} imágenes.", { limit: MAX_PICTURES })); return; }
     setSaving(true); setError('');
-    const fields = { name: name.trim(), description: description.trim(), price: price || null, category_id: categoryId, is_available: available };
+    const fields = { name: name.trim(), description: description.trim(), price: normalizedPrice || null, category_id: categoryId, is_available: available };
     // Sólo se envía multipart cuando hay fotos nuevas o se quitó/reordenó alguna;
     // así una edición de texto sigue siendo un JSON simple.
     const removedPicture = editing ? existingPictures.length !== (editing.pictures?.length ?? 0) : false;
@@ -218,7 +222,7 @@ export default function ProductsScreen() {
           <Text style={{ color: theme.text, fontSize: 19, fontWeight: '900' }}>{editing ? t("Editar producto") : t("Nuevo producto")}</Text>
           <FormField label={t("Nombre")} value={name} onChangeText={setName} maxLength={64} placeholder={t("Hamburguesa clásica")} />
           <FormField label={t("Descripción")} value={description} onChangeText={setDescription} multiline placeholder={t("Ingredientes y detalles")} />
-          <FormField label={t("Precio")} value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholder="129.00" />
+          <FormField label={t("Precio")} value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholder={new Intl.NumberFormat(currentLocale(), { minimumFractionDigits: 2, useGrouping: false }).format(129)} />
           <CategorySelector categories={categories} value={categoryId} onChange={setCategoryId} theme={theme} />
           <ProductImagePicker existing={existingPictures} picked={pickedPictures} defaultKey={defaultKey} onChangeExisting={setExistingPictures} onChangePicked={setPickedPictures} onChangeDefault={setDefaultKey} onError={setError} disabled={saving} />
           <View style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text style={{ color: theme.text, fontWeight: '700' }}>{t("Disponible")}</Text><Switch value={available} onValueChange={setAvailable} trackColor={{ true: theme.yellowPressed }} /></View>
@@ -230,7 +234,7 @@ export default function ProductsScreen() {
       {products.length ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Marca lo agotado desde la lista. Toca «Editar» para el precio y el resto, mantén presionado para eliminar.")}</Text> : null}
       {query.isLoading ? <LoadingState /> : query.isError ? <ErrorState message={t("No pudimos cargar los productos.")} error={query.error} onRetry={() => query.refetch()} /> : products.length ? <View style={{ gap: 18 }}>
         {groups.map((group) => <View key={group.id} style={{ gap: 10 }}>
-          <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{group.name}</Text>
+          <Text style={{ color: theme.accentText, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{group.name}</Text>
           <View style={{ gap: 10 }}>{group.items.map((product, index) => <Animated.View key={product.id} entering={FadeInDown.duration(280).delay(index * 50)} layout={LinearTransition.duration(200)}><ProductRow product={product} currency={currency} theme={theme} businessId={selectedBusiness?.id} catalogueId={catalogueId} onEdit={() => startEdit(product)} onLongPress={() => remove(product)} /></Animated.View>)}</View>
         </View>)}
       </View> : <EmptyState title={t("Sin productos")} description={t("Agrega el primer producto de este menú.")} action={t("Crear producto")} onAction={() => startEdit()} />}

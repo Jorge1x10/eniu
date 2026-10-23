@@ -21,6 +21,13 @@ export const eniuLight = {
   muted: '#7A736A',
   border: 'rgba(17,17,17,0.07)',
   field: '#FFFFFF',
+  /**
+   * Texto e iconos de acento: enlaces, etiquetas de sección, "Paso 1 de 3".
+   * `yellowPressed` se usaba para esto y sobre la crema daba 1.5:1, ilegible;
+   * este dorado oscuro llega a 5.1:1 incluso sobre `surfaceAlt`. El amarillo
+   * sigue siendo para fondos, bordes y rellenos, no para letras.
+   */
+  accentText: '#76601A',
   success: '#16803A',
   danger: '#C62828',
   /** Bloque oscuro de cabecera: contra la crema es el plano más contrastado. */
@@ -71,6 +78,8 @@ export const eniuDark = {
   /** Filo apenas visible en vez del gris duro de antes (#555555). */
   border: 'rgba(251,247,236,0.10)',
   field: '#141210',
+  /** Sobre el fondo oscuro el amarillo se lee de sobra (8.4:1 en `hero`). */
+  accentText: '#E8C93D',
   success: '#3DBF6B',
   danger: '#F0736B',
   hero: '#332C21',

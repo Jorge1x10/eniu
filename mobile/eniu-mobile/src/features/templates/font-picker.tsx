@@ -100,7 +100,7 @@ export function FontPicker({ fonts, value, onChange, isLocked }: {
                       {font.name}
                     </Text>
                     {locked ? <LockIcon color={theme.muted} size={13} /> : null}
-                    {on ? <CheckIcon color={theme.yellowPressed} size={15} /> : null}
+                    {on ? <CheckIcon color={theme.accentText} size={15} /> : null}
                   </Pressable>
                 );
               })}

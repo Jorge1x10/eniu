@@ -81,7 +81,7 @@ export function ImageField({ title, emptyText, source, quality, onPicked, onRemo
         <Image source={source} style={{ width: '100%', height }} contentFit="cover" transition={150} />
       ) : (
         <View style={{ height: height - 40, alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: theme.surfaceAlt }}>
-          <ImageIcon color={theme.yellowPressed} size={24} />
+          <ImageIcon color={theme.accentText} size={24} />
           <Text style={{ color: theme.muted, fontSize: 12.5 }}>{emptyText}</Text>
         </View>
       )}

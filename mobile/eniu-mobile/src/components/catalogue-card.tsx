@@ -22,14 +22,14 @@ export function CatalogueCard({ catalogue }: { catalogue: Catalogue }) {
           <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <Text numberOfLines={1} style={{ flex: 1, color: theme.text, fontSize: 17, fontWeight: '900' }}>{catalogue.name}</Text>
-              <View style={{ borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : theme.surfaceAlt, paddingHorizontal: 9, paddingVertical: 4 }}><Text style={{ color: catalogue.is_published ? '#111111' : theme.muted, fontSize: 10, fontWeight: '800', letterSpacing: 0.3 }}>{catalogue.is_published ? 'PUBLICADO' : 'BORRADOR'}</Text></View>
+              <View style={{ borderRadius: 999, backgroundColor: catalogue.is_published ? theme.yellow : theme.surfaceAlt, paddingHorizontal: 9, paddingVertical: 4 }}><Text style={{ color: catalogue.is_published ? '#111111' : theme.muted, fontSize: 10, fontWeight: '800', letterSpacing: 0.3, textTransform: 'uppercase' }}>{catalogue.is_published ? t("Publicado") : t("Borrador")}</Text></View>
             </View>
             <Text numberOfLines={2} style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{catalogue.description || t("Sin descripción")}</Text>
           </View>
         </View>
         <Divider />
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 16, paddingVertical: 12 }}>
-          <Text style={{ color: theme.yellowPressed, fontSize: 13, fontWeight: '800' }}>{t("Administrar menú")}</Text>
+          <Text style={{ color: theme.accentText, fontSize: 13, fontWeight: '800' }}>{t("Administrar menú")}</Text>
           <View style={{ width: 30, height: 30, borderRadius: 999, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center' }}><ChevronRightIcon color="#111111" size={12} /></View>
         </View>
       </Pressable>

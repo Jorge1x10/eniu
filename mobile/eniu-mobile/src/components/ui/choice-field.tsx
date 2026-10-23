@@ -89,7 +89,7 @@ export function ChoiceField({ label, hint, value, options, searchLabel, onChange
         style={({ pressed }) => ({ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 15, borderRadius: 13, borderCurve: 'continuous', borderWidth: 1, borderColor: theme.border, backgroundColor: theme.field, opacity: pressed ? 0.75 : 1 })}
       >
         <Text numberOfLines={1} style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}>{selected ? [selected.label, selected.hint].filter(Boolean).join(' · ') : value}</Text>
-        <Text style={{ color: theme.yellowPressed, fontSize: 12.5, fontWeight: '800' }}>{t("Cambiar")}</Text>
+        <Text style={{ color: theme.accentText, fontSize: 12.5, fontWeight: '800' }}>{t("Cambiar")}</Text>
       </Pressable>
       {hint ? <Text style={{ color: theme.muted, fontSize: 11.5 }}>{hint}</Text> : null}
 

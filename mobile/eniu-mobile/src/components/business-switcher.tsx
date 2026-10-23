@@ -101,7 +101,7 @@ export function BusinessSwitcher({ variant = 'light' }: { variant?: 'light' | 'd
                 style={({ pressed }) => ({ padding: 14, borderRadius: 18, borderCurve: 'continuous', borderWidth: 1.5, borderStyle: 'dashed', borderColor: canCreate ? theme.yellowPressed : theme.border, flexDirection: 'row', alignItems: 'center', gap: 13, opacity: !canCreate ? 0.5 : pressed ? 0.7 : 1 })}
               >
                 <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: theme.surfaceAlt, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {canCreate ? <PlusIcon color={theme.yellowPressed} size={16} /> : <LockIcon color={theme.muted} size={14} />}
+                  {canCreate ? <PlusIcon color={theme.accentText} size={16} /> : <LockIcon color={theme.muted} size={14} />}
                 </View>
                 <Text style={{ color: canCreate ? theme.text : theme.muted, fontSize: 14.5, fontWeight: '800' }}>{t("Agregar negocio")}</Text>
               </Pressable>

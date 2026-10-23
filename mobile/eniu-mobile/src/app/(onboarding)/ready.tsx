@@ -162,7 +162,7 @@ export default function OnboardingReadyScreen() {
       ) : !publicUrl ? (
         <Animated.View entering={FadeIn.duration(240)} style={{ gap: 16, paddingVertical: 28, alignItems: 'center' }}>
           <ActivityIndicator color={theme.yellow} size="large" />
-          <Text style={{ color: '#C7C7C7', fontSize: 13.5, fontWeight: '600' }}>{STEP_LABELS[step]}</Text>
+          <Text style={{ color: '#C7C7C7', fontSize: 13.5, fontWeight: '600' }}>{t(STEP_LABELS[step])}</Text>
           <View style={{ flexDirection: 'row', gap: 6 }}>{STEP_LABELS.map((label, index) => (
             <View key={label} style={{ width: index === step ? 22 : 7, height: 7, borderRadius: 99, backgroundColor: index <= step ? theme.yellow : '#555555' }} />
           ))}</View>

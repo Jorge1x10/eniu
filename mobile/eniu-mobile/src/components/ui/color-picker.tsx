@@ -71,7 +71,7 @@ export function ColorField({ label, hint, value, original, error, onChange }: { 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>{label}</Text>
         {original && normalizeHex(value) !== normalizeHex(original) ? (
-          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => onChange(original)}><Text style={{ color: theme.yellowPressed, fontSize: 12, fontWeight: '700' }}>{t("Restaurar")}</Text></Pressable>
+          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => onChange(original)}><Text style={{ color: theme.accentText, fontSize: 12, fontWeight: '700' }}>{t("Restaurar")}</Text></Pressable>
         ) : null}
       </View>
       <Pressable
@@ -85,7 +85,7 @@ export function ColorField({ label, hint, value, original, error, onChange }: { 
           <Text style={{ color: theme.text, fontSize: 14.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{value.toUpperCase()}</Text>
           {hint ? <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 11.5, marginTop: 1 }}>{hint}</Text> : null}
         </View>
-        <Text style={{ color: theme.yellowPressed, fontSize: 12.5, fontWeight: '800' }}>{t("Cambiar")}</Text>
+        <Text style={{ color: theme.accentText, fontSize: 12.5, fontWeight: '800' }}>{t("Cambiar")}</Text>
       </Pressable>
       {error ? <Text style={{ color: theme.danger, fontSize: 12 }}>{error}</Text> : null}
 

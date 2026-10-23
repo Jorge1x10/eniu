@@ -70,7 +70,7 @@ function QuickProductRow({ product, currency, businessId, catalogueId }: { produ
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         <Pressable accessibilityRole="button" accessibilityLabel={t("Bajar el precio")} onPress={() => bumpPrice(product, -1)} style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 10, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}><MinusIcon color={theme.text} size={12} /></Pressable>
-        <Text style={{ minWidth: 52, textAlign: 'center', color: theme.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{product.price == null ? 'S/P' : currency.format(Number(product.price))}</Text>
+        <Text style={{ minWidth: 52, textAlign: 'center', color: theme.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{product.price == null ? t("S/P") : currency.format(Number(product.price))}</Text>
         <Pressable accessibilityRole="button" accessibilityLabel={t("Subir el precio")} onPress={() => bumpPrice(product, 1)} style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 10, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}><PlusIcon color={theme.onYellow} size={12} /></Pressable>
       </View>
     </View>
@@ -186,13 +186,13 @@ export default function HomeScreen() {
           </HeroHeader>
 
           <View style={{ paddingHorizontal: inset, paddingTop: 22, gap: 22 }}>
-            {showDemoBadge ? <View style={{ borderRadius: 16, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}><View style={{ minHeight: 24, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 999, backgroundColor: theme.yellow, paddingHorizontal: 9 }}><Text style={{ color: '#111111', fontSize: 10, fontWeight: '800', letterSpacing: 0.6 }}>EJEMPLO</Text></View><Text style={{ flex: 1, color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Todavía no tienes visitas reales. Esto es cómo se verá tu panel cuando tus clientes empiecen a escanear.")}</Text></View> : null}
+            {showDemoBadge ? <View style={{ borderRadius: 16, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}><View style={{ minHeight: 24, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 999, backgroundColor: theme.yellow, paddingHorizontal: 9 }}><Text style={{ color: '#111111', fontSize: 10, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' }}>{t("Ejemplo")}</Text></View><Text style={{ flex: 1, color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Todavía no tienes visitas reales. Esto es cómo se verá tu panel cuando tus clientes empiecen a escanear.")}</Text></View> : null}
 
             {selectedCatalogue && products.data?.products.length ? (
               <View style={{ gap: 11 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
                   <Text style={{ color: theme.muted, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.3, textTransform: 'uppercase' }}>{t("Cambio rápido")}</Text>
-                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/products', params: { catalogueId: selectedCatalogue.id } })}><Text style={{ color: theme.yellowPressed, fontSize: 11.5, fontWeight: '800' }}>{t("Ver los {{count}}", { count: products.data.products.length })}</Text></Pressable>
+                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/products', params: { catalogueId: selectedCatalogue.id } })}><Text style={{ color: theme.accentText, fontSize: 11.5, fontWeight: '800' }}>{t("Ver los {{count}}", { count: products.data.products.length })}</Text></Pressable>
                 </View>
                 <View style={{ ...cardStyle(theme), overflow: 'hidden' }}>
                   {products.data.products.slice(0, 3).map((product) => <QuickProductRow key={product.id} product={product} currency={currency} businessId={selectedBusiness.id} catalogueId={selectedCatalogue.id} />)}

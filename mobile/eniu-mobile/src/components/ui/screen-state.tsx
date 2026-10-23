@@ -11,7 +11,7 @@ export function LoadingState({ label }: { label?: string }) {
   const text = label ?? t("Cargando…");
 
   const theme = useEniuTheme();
-  return <View style={{ padding: 40, alignItems: 'center', gap: 12 }}><ActivityIndicator color={theme.yellowPressed} /><Text style={{ color: theme.muted }}>{text}</Text></View>;
+  return <View style={{ padding: 40, alignItems: 'center', gap: 12 }}><ActivityIndicator color={theme.accentText} /><Text style={{ color: theme.muted }}>{text}</Text></View>;
 }
 
 export function EmptyState({ title, description, action, onAction }: { title: string; description: string; action?: string; onAction?: () => void }) {

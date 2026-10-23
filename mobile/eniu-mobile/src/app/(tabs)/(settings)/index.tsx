@@ -35,7 +35,7 @@ function LinkRow({ label, url }: { label: string; url: string }) {
 
 function Section({ label, children }: React.PropsWithChildren<{ label: string }>) {
   const theme = useEniuTheme();
-  return <View style={{ gap: 11 }}><Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{label}</Text><View style={{ padding: 18, gap: 14, ...cardStyle(theme) }}>{children}</View></View>;
+  return <View style={{ gap: 11 }}><Text style={{ color: theme.accentText, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{label}</Text><View style={{ padding: 18, gap: 14, ...cardStyle(theme) }}>{children}</View></View>;
 }
 
 const LANGUAGE_OPTIONS = [
@@ -59,7 +59,9 @@ export default function SettingsScreen() {
   // Con contraseña se pide la contraseña; quien entró con Google o Apple no
   // tiene ninguna, y exigírsela lo dejaría sin poder borrar su cuenta.
   const hasPassword = Boolean(user?.auth_methods?.password);
-  const canDelete = hasPassword ? deleteValue.length > 0 : deleteValue.trim().toUpperCase() === 'ELIMINAR';
+  // En inglés se pide "DELETE"; la API acepta las dos palabras, así que aquí
+  // también, por si el idioma cambió entre que se leyó la etiqueta y se escribió.
+  const canDelete = hasPassword ? deleteValue.length > 0 : ['ELIMINAR', 'DELETE'].includes(deleteValue.trim().toUpperCase());
   const updateProfile = (key: keyof typeof profile) => (value: string) => setProfile((current) => ({ ...current, [key]: value }));
   const updateBusinessField = (key: keyof NonNullable<typeof business>) => (value: string) => setBusiness((current) => current ? ({ ...current, [key]: value }) : current);
   // Ciento sesenta monedas y cuatrocientas zonas: construirlas en cada
@@ -135,7 +137,7 @@ export default function SettingsScreen() {
       <Section label={t("Mi perfil")}><FormField label={t("Nombre visible")} value={profile.name} onChangeText={updateProfile('name')} /><FormField label={t("Nombre de usuario")} value={profile.username} onChangeText={updateProfile('username')} autoCapitalize="none" /><FormField label={t("Teléfono")} value={profile.phone_number} onChangeText={updateProfile('phone_number')} keyboardType="phone-pad" /><FormField label={t("Correo electrónico")} value={user?.email || ''} editable={false} /><Button loading={saving === 'profile'} onPress={saveProfile}>{t("Guardar perfil")}</Button></Section>
 
       <View style={{ gap: 11 }}>
-        <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Mi negocio")}</Text>
+        <Text style={{ color: theme.accentText, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Mi negocio")}</Text>
         <BusinessSwitcher />
         {business ? <View style={{ padding: 18, gap: 14, ...cardStyle(theme) }}><BusinessPhotoField onError={setError} /><FormField label={t("Nombre")} value={business.name} onChangeText={updateBusinessField('name')} /><FormField label={t("Descripción")} value={business.description} onChangeText={updateBusinessField('description')} multiline /><FormField label={t("Teléfono")} value={business.phone} onChangeText={updateBusinessField('phone')} keyboardType="phone-pad" /><FormField label={t("WhatsApp")} value={business.whatsapp} onChangeText={updateBusinessField('whatsapp')} keyboardType="phone-pad" /><FormField label={t("Dirección")} value={business.address} onChangeText={updateBusinessField('address')} /><ChoiceField label={t("Moneda")} hint={t("En esta moneda ven los precios tus clientes.")} value={business.currency} options={currencies} searchLabel={t("Buscar moneda")} onChange={updateBusinessField('currency')} /><ChoiceField label={t("Zona horaria")} hint={t("Decide dónde empieza y termina el día en tus analíticas.")} value={business.timezone} options={timezones} searchLabel={t("Buscar zona horaria")} onChange={updateBusinessField('timezone')} /><Button loading={saving === 'business'} onPress={saveBusiness}>{t("Guardar negocio")}</Button></View> : <Text style={{ color: theme.muted }}>{t("Crea un negocio desde Inicio para configurarlo.")}</Text>}
       </View>
@@ -183,7 +185,7 @@ export default function SettingsScreen() {
         <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{t("Se eliminan tus negocios, menús, productos y fotos, y tus menús publicados dejan de estar disponibles. Si tienes una suscripción activa se cancela antes de borrar nada. No se puede deshacer.")}</Text>
         {hasPassword
           ? <FormField label={t("Confirma con tu contraseña")} value={deleteValue} onChangeText={setDeleteValue} secureTextEntry autoComplete="current-password" placeholder={t("Tu contraseña")} />
-          : <FormField label={t("Escribe ELIMINAR para confirmar")} value={deleteValue} onChangeText={setDeleteValue} autoCapitalize="characters" placeholder="ELIMINAR" />}
+          : <FormField label={t("Escribe ELIMINAR para confirmar")} value={deleteValue} onChangeText={setDeleteValue} autoCapitalize="characters" placeholder={t("ELIMINAR")} />}
         <Button variant="danger" loading={deleting} disabled={!canDelete} onPress={confirmDelete}>{t("Eliminar mi cuenta")}</Button>
       </Section>
     </ScrollView>

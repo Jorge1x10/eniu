@@ -73,7 +73,7 @@ export default function PublicationScreen() {
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, borderCurve: 'continuous', padding: 16 }}><QRCode value={`${publication.public_url}?src=qr`} size={196} color="#111111" backgroundColor="#FFFFFF" /></View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 38, paddingHorizontal: 14, borderRadius: 99, backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border }}>
               <Text selectable numberOfLines={1} style={{ color: theme.muted, fontSize: 12.5, fontWeight: '600', maxWidth: 220 }}>{publication.public_url.replace(/^https?:\/\//, '')}</Text>
-              <QrIcon color={theme.yellowPressed} size={13} />
+              <QrIcon color={theme.accentText} size={13} />
             </View>
           </View>
 

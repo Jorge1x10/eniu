@@ -38,7 +38,7 @@ const NOT_TEXT =
 // Palabras del español que delatan texto de interfaz. Se exige una de ellas o
 // un acento, para no marcar identificadores en inglés que no son visibles.
 const SPANISH =
-  /[áéíóúñ¿¡Á-Ú]|\b(el|la|los|las|un|una|de|que|tu|tus|su|para|con|sin|ya|no|se|y|o|al|del|más|menos|este|esta|estos|cada|todo|todos|puedes|debe|hay|son|es|está|tiene|crea|crear|editar|guardar|eliminar|cancelar|agregar|nombre|correo|precio|menú|menu|negocio|producto|categoría|plan|cuenta|sesión|imagen|foto|perfil|seguridad|alta|media|ligera|equilibrada)\b/i;
+  /[áéíóúñ¿¡Á-Ú]|\b(el|la|los|las|un|una|de|que|tu|tus|su|para|con|sin|ya|no|se|y|o|al|del|más|menos|este|esta|estos|cada|todo|todos|puedes|debe|hay|son|es|está|tiene|crea|crear|editar|guardar|eliminar|cancelar|agregar|nombre|correo|precio|menú|menu|negocio|producto|productos|categoría|plan|cuenta|sesión|imagen|foto|perfil|seguridad|alta|media|ligera|equilibrada|publicado|publicada|borrador|ejemplo|paso|vistas|disponible|agotado|eliminando|guardando|cargando)\b/i;
 
 function walkFiles(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -64,7 +64,10 @@ function looksLikeUiText(value) {
   if (text.length < 3 || text.length > 400) return false;
   if (!/[a-zA-ZáéíóúñÁÉÍÓÚÑ]/.test(text)) return false;
   if (NOT_TEXT.test(text)) return false;
-  if (/^[#./]|^https?:|^[a-z0-9_]+$|^[A-Z0-9_]+$/.test(text)) return false;
+  // Las constantes van en SCREAMING_SNAKE_CASE. Una palabra suelta en
+  // mayúsculas no es una constante: "PUBLICADO" o "EJEMPLO" se colaron así,
+  // escritas en mayúsculas a mano en vez de con `textTransform`.
+  if (/^[#./]|^https?:|^[a-z0-9_]+$|^[A-Z0-9]+(_[A-Z0-9]+)+$/.test(text)) return false;
   // Identificadores camelCase o rutas de módulo.
   if (/^[a-z]+([A-Z][a-z]*)+$/.test(text)) return false;
   return SPANISH.test(text);

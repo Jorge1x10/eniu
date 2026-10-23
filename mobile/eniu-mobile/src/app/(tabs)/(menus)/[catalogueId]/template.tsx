@@ -279,7 +279,7 @@ export default function TemplateScreen() {
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: appTheme.background }} contentContainerStyle={{ padding: 18, paddingBottom: 120, gap: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          {dirty ? <Text style={{ color: appTheme.yellowPressed, fontSize: 12.5, fontWeight: '800' }}>{t("Cambios sin guardar")}</Text> : <Text style={{ color: appTheme.muted, fontSize: 12.5 }}>{t("Todo guardado")}</Text>}
+          {dirty ? <Text style={{ color: appTheme.accentText, fontSize: 12.5, fontWeight: '800' }}>{t("Cambios sin guardar")}</Text> : <Text style={{ color: appTheme.muted, fontSize: 12.5 }}>{t("Todo guardado")}</Text>}
         </View>
         <Button variant="secondary" disabled={!dirty || saving} onPress={discard} style={{ paddingHorizontal: 14 }}>{t("Descartar")}</Button>
         <Button loading={saving} disabled={!dirty} onPress={save} style={{ paddingHorizontal: 18 }}>{t("Guardar")}</Button>
@@ -291,7 +291,7 @@ export default function TemplateScreen() {
         <View style={{ alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <EyeIcon color={appTheme.text} size={17} />
           <Text style={{ color: appTheme.text, fontSize: 16.5, fontWeight: '900', flex: 1 }}>{t("Vista previa")}</Text>
-          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setExpanded(true)}><Text style={{ color: appTheme.yellowPressed, fontSize: 13, fontWeight: '800' }}>{t("Ampliar")}</Text></Pressable>
+          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setExpanded(true)}><Text style={{ color: appTheme.accentText, fontSize: 13, fontWeight: '800' }}>{t("Ampliar")}</Text></Pressable>
         </View>
         <View style={{ width: 296, borderRadius: 34, borderCurve: 'continuous', borderWidth: 8, borderColor: '#111111', backgroundColor: '#111111', overflow: 'hidden' }}>
           <View style={{ height: 452, overflow: 'hidden' }}><MenuPreview {...preview} /></View>

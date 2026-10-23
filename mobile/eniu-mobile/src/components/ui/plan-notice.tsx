@@ -33,7 +33,7 @@ export function PlanNotice({ message }: { message: string }) {
           hitSlop={6}
           style={({ pressed }) => ({ alignSelf: 'flex-start', opacity: pressed ? 0.7 : 1 })}
         >
-          <Text style={{ color: theme.yellowPressed, fontSize: 12.5, fontWeight: '800' }}>{t("Ver planes")}</Text>
+          <Text style={{ color: theme.accentText, fontSize: 12.5, fontWeight: '800' }}>{t("Ver planes")}</Text>
         </Pressable>
       ) : null}
     </View>

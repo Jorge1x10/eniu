@@ -60,7 +60,7 @@ export default function CategoriesScreen() {
           <Pressable key={category.id} onPress={() => startEdit(category)} onLongPress={() => remove(category)} style={({ pressed }) => ({ ...cardStyle(theme, 20), backgroundColor: empty ? theme.surfaceAlt : theme.surface, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, opacity: pressed ? 0.72 : 1 })}>
             <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
               <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>{category.name}</Text>
-              {empty ? <Text style={{ color: theme.yellowPressed, fontSize: 12, fontWeight: '600' }}>{t("Vacía — no se muestra a tus clientes")}</Text> : <Text style={{ color: theme.muted, fontSize: 12 }}>{prices.length ? t("desde {{price}}", { price: currency.format(Math.min(...prices)) }) : t("Sin precios todavía")}</Text>}
+              {empty ? <Text style={{ color: theme.accentText, fontSize: 12, fontWeight: '600' }}>{t("Vacía — no se muestra a tus clientes")}</Text> : <Text style={{ color: theme.muted, fontSize: 12 }}>{prices.length ? t("desde {{price}}", { price: currency.format(Math.min(...prices)) }) : t("Sin precios todavía")}</Text>}
             </View>
             <Text style={{ color: theme.text, fontSize: 17, fontWeight: '900', fontVariant: ['tabular-nums'], flexShrink: 0 }}>{items.length}</Text>
           </Pressable>

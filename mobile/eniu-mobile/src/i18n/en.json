@@ -636,5 +636,13 @@
   "Buscar moneda": "Search currency",
   "Buscar zona horaria": "Search time zone",
   "Sin resultados": "No matches",
-  "Consulta al personal sobre alérgenos.": "Ask our staff about allergens."
+  "Consulta al personal sobre alérgenos.": "Ask our staff about allergens.",
+  "Productos": "Products",
+  "Publicado": "Published",
+  "Ejemplo": "Sample",
+  "Eliminando…": "Deleting…",
+  "Mantén pulsado para eliminar este menú": "Press and hold to delete this menu",
+  "S/P": "No price",
+  "Paso {{step}} de {{total}}": "Step {{step}} of {{total}}",
+  "ELIMINAR": "DELETE"
 }

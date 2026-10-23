@@ -196,7 +196,7 @@ export default function PaywallScreen() {
         {detail ? (
           <>
             <Pressable accessibilityRole="button" onPress={() => setShowDetail((previous) => !previous)} hitSlop={6}>
-              <Text style={{ color: theme.yellowPressed, fontSize: 12.5, fontWeight: '800' }}>
+              <Text style={{ color: theme.accentText, fontSize: 12.5, fontWeight: '800' }}>
                 {showDetail ? t("Ocultar detalle técnico") : t("Ver detalle técnico")}
               </Text>
             </Pressable>
@@ -249,7 +249,7 @@ export default function PaywallScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 16, paddingVertical: 13, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: theme.border }}
               >
                 <View style={{ width: 34, height: 34, borderRadius: 11, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surfaceAlt }}>
-                  <Icon color={theme.yellowPressed} size={17} />
+                  <Icon color={theme.accentText} size={17} />
                 </View>
                 <Text style={{ color: theme.text, fontSize: 14.5, lineHeight: 20, flex: 1 }}>{t(label)}</Text>
               </View>
@@ -313,7 +313,7 @@ export default function PaywallScreen() {
         ) : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
           <Pressable accessibilityRole="button" disabled={busy || !purchasesAvailable()} onPress={restorePurchases} hitSlop={8}>
-            <Text style={{ color: theme.yellowPressed, fontSize: 13, fontWeight: '800', opacity: purchasesAvailable() ? 1 : 0.5 }}>{t("Restaurar compras")}</Text>
+            <Text style={{ color: theme.accentText, fontSize: 13, fontWeight: '800', opacity: purchasesAvailable() ? 1 : 0.5 }}>{t("Restaurar compras")}</Text>
           </Pressable>
           <Pressable accessibilityRole="link" onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)} hitSlop={8}>
             <Text style={{ color: theme.muted, fontSize: 12, textDecorationLine: 'underline' }}>{t("Términos de uso")}</Text>

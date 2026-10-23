@@ -12,7 +12,7 @@ export function FullScreenLoader({ label }: { label?: string }) {
   const theme = useEniuTheme();
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, backgroundColor: theme.background }}>
-      <ActivityIndicator size="large" color={theme.yellowPressed} />
+      <ActivityIndicator size="large" color={theme.accentText} />
       <Text selectable style={{ color: theme.muted, fontWeight: '600' }}>{text}</Text>
     </View>
   );
