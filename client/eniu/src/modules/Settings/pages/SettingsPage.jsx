@@ -301,7 +301,9 @@ function DeleteAccountCard({ user, onLogout }) {
 
   // Con contraseña se pide la contraseña; quien entró con Google o Apple no
   // tiene ninguna, y exigírsela lo dejaría sin poder borrar su cuenta.
-  const ready = hasPassword ? value.length > 0 : value.trim().toUpperCase() === "ELIMINAR";
+  // En inglés se pide "DELETE"; la API acepta las dos palabras, así que aquí
+  // también, por si el idioma cambió entre que se leyó la etiqueta y se escribió.
+  const ready = hasPassword ? value.length > 0 : ["ELIMINAR", "DELETE"].includes(value.trim().toUpperCase());
 
   async function submit(event) {
     event.preventDefault();

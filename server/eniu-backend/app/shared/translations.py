@@ -133,6 +133,7 @@ _EN = {
     "El identificador del usuario no es válido": "That user identifier is not valid",
     "El idioma no es válido": "That language is not valid",
     "Escribe {word} para confirmar": "Type {word} to confirm",
+    "ELIMINAR": "DELETE",
     "Tu cuenta y todos sus datos se eliminaron correctamente": (
         "Your account and all of its data were deleted"
     ),

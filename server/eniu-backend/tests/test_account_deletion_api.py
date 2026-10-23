@@ -123,6 +123,22 @@ class AccountDeletionApiTestCase(unittest.TestCase):
         with self.app.app_context():
             self.assertIsNone(db.session.get(User, UUID(self.social_id)))
 
+    def test_an_account_without_password_also_confirms_with_the_english_word(self):
+        # En inglés la pantalla pide "DELETE"; antes sólo valía "ELIMINAR" y
+        # quien usaba la app en inglés no tenía forma de borrar su cuenta.
+        allowed = self.delete(self.social_token, confirmation="delete")
+        self.assertEqual(allowed.status_code, 200)
+        with self.app.app_context():
+            self.assertIsNone(db.session.get(User, UUID(self.social_id)))
+
+    def test_the_confirmation_hint_names_the_word_in_english(self):
+        with self.app.app_context():
+            db.session.get(User, UUID(self.social_id)).language = "en"
+            db.session.commit()
+        response = self.delete(self.social_token, confirmation="borrar")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["message"], "Type DELETE to confirm")
+
     def test_the_subscription_is_cancelled_before_the_account_disappears(self):
         with self.app.app_context():
             db.session.add(BillingSubscription(

@@ -93,7 +93,11 @@ def update_current_user(user_id, data):
         current_app.logger.exception(error)
         return {"message": _("No fue posible actualizar el perfil")}, 500
 
+# La palabra se le pide en su idioma ("DELETE" en inglés), pero se aceptan las
+# dos: el idioma de la app y el de la API pueden no coincidir en ese momento, y
+# borrar la cuenta no puede depender de cuál ganó.
 CONFIRMATION_WORD = "ELIMINAR"
+CONFIRMATION_WORDS = {"ELIMINAR", "DELETE"}
 
 
 def _stored_files(user):
@@ -144,8 +148,8 @@ def delete_current_user(user_id, password=None, confirmation=None):
     if user.password:
         if not isinstance(password, str) or not bcrypt.check_password_hash(user.password, password):
             return {"message": _("La contraseña no es correcta")}, 403
-    elif not isinstance(confirmation, str) or confirmation.strip().upper() != CONFIRMATION_WORD:
-        return {"message": _("Escribe {word} para confirmar", word=CONFIRMATION_WORD)}, 400
+    elif not isinstance(confirmation, str) or confirmation.strip().upper() not in CONFIRMATION_WORDS:
+        return {"message": _("Escribe {word} para confirmar", word=_(CONFIRMATION_WORD))}, 400
 
     # Se consulta antes de borrar: después la fila ya no existe y no habría
     # forma de saber que quedó un cobro vivo en la tienda.
