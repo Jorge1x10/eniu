@@ -9,6 +9,10 @@ import ImageQualitySelector from "./ImageQualitySelector";
 import { useTranslation } from "react-i18next";
 
 const PRICE_PATTERN = /^\d+(?:\.\d{1,2})?$/;
+// En España y en casi toda Europa el decimal se escribe con coma ("12,50"), y
+// el teclado numérico del teléfono sólo ofrece ese separador. La API espera un
+// punto, así que la coma se traduce aquí en vez de rechazar el precio.
+const normalizePrice = (value) => value.trim().replace(",", ".");
 
 function resolveImageUrl(url) {
   if (!url || url.startsWith("http") || url.startsWith("blob:")) return url;
@@ -68,7 +72,7 @@ export default function ProductFormModal({
   function validate() {
     const next = {};
     const name = form.name.trim();
-    const price = form.price.trim();
+    const price = normalizePrice(form.price);
     if (!name) next.name = t("Escribe el nombre del producto.");
     else if (name.length > 64) next.name = t("El nombre no puede superar 64 caracteres.");
     if (price && (!PRICE_PATTERN.test(price) || Number(price) > 99999999.99)) {
@@ -127,7 +131,7 @@ export default function ProductFormModal({
     const normalized = {
       name: form.name.trim(),
       description: form.description.trim(),
-      price: form.price.trim() || null,
+      price: normalizePrice(form.price) || null,
       category_id: form.categoryId || null,
     };
     let payload = isEditing ? {} : normalized;
