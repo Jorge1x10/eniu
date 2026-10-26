@@ -1,0 +1,101 @@
+{
+  "account": { "name": "Lucía Ramírez" },
+  "business": {
+    "name": "Casa Nopal",
+    "description": "Cocina de barrio con sazón de casa.",
+    "currency": "MXN",
+    "timezone": "America/Mexico_City",
+    "address": "Av. Álvaro Obregón 120, Roma Norte, CDMX",
+    "phone": "+52 55 1234 5678",
+    "photo": "auto",
+    "logo": { "background": "#1F3D2B", "foreground": "#F6E7C1" }
+  },
+  "menus": [
+    {
+      "name": "Menú principal",
+      "description": "Tacos, antojitos y postres de la casa.",
+      "publish": true,
+      "template": {
+        "layout": "modern",
+        "palette": "classic",
+        "font": "manrope",
+        "show_cover": true,
+        "show_product_images": true,
+        "cover": "auto"
+      },
+      "categories": [
+        {
+          "name": "Tacos",
+          "products": [
+            { "name": "Tacos de birria", "description": "Tres tacos con consomé, cebolla y cilantro.", "price": 145, "popularity": 10 },
+            { "name": "Tacos al pastor", "description": "Con piña asada, cebolla y salsa verde.", "price": 120, "popularity": 7 },
+            { "name": "Quesabirria", "description": "Tortilla dorada con queso y birria de res.", "price": 160, "popularity": 6 },
+            { "name": "Tacos de canasta", "description": "Papa, chicharrón y frijol, para compartir.", "price": 85, "popularity": 3 }
+          ]
+        },
+        {
+          "name": "Antojitos",
+          "products": [
+            { "name": "Guacamole con totopos", "description": "Aguacate, serrano, cilantro y limón.", "price": 95, "popularity": 6 },
+            { "name": "Enchiladas verdes", "description": "Pollo, crema y queso fresco.", "price": 135, "popularity": 5 },
+            { "name": "Chilaquiles rojos", "description": "Con huevo estrellado y frijoles.", "price": 120, "popularity": 4 },
+            { "name": "Sopa de tortilla", "description": "Caldo de jitomate, pasilla y aguacate.", "price": 110, "popularity": 4 }
+          ]
+        },
+        {
+          "name": "Postres",
+          "products": [
+            { "name": "Flan de vainilla", "description": "La receta de la abuela, con caramelo.", "price": 75, "popularity": 4 },
+            { "name": "Pastel tres leches", "description": "Esponjoso, con frutos rojos.", "price": 85, "popularity": 3 }
+          ]
+        },
+        {
+          "name": "Bebidas",
+          "products": [
+            { "name": "Agua de jamaica", "description": "Natural, endulzada con piloncillo.", "price": 45, "popularity": 5 },
+            { "name": "Agua de horchata", "description": "Arroz, canela y vainilla.", "price": 45, "popularity": 4 },
+            { "name": "Café de olla", "description": "Con canela y piloncillo.", "price": 45, "popularity": 3 },
+            { "name": "Cerveza artesanal", "description": "Lager local de temporada.", "price": 85, "popularity": 3, "available": false }
+          ]
+        }
+      ],
+      "promotions": [
+        { "name": "2x1 en tacos", "badge": "2x1", "days": "all", "products": ["Tacos de birria", "Tacos al pastor"] },
+        { "name": "Hora feliz", "badge": "Hora feliz", "days": [3, 4], "categories": ["Bebidas"] }
+      ],
+      "stats": { "days": 60, "daily_views": 38, "growth": 0.65, "returning": 0.3, "seed": 7 }
+    },
+    {
+      "name": "Desayunos",
+      "description": "De 8 a 12 h, todos los días.",
+      "publish": true,
+      "template": {
+        "layout": "elegant",
+        "palette": "vineyard",
+        "font": "playfair",
+        "show_cover": true,
+        "show_product_images": true,
+        "cover": "auto"
+      },
+      "categories": [
+        {
+          "name": "Platos",
+          "products": [
+            { "name": "Chilaquiles verdes", "description": "Con pollo, crema y queso.", "price": 125, "popularity": 8 },
+            { "name": "Enchiladas de mole", "description": "Mole poblano y ajonjolí.", "price": 140, "popularity": 5 },
+            { "name": "Molletes", "description": "Bolillo, frijoles, queso gratinado y pico de gallo.", "price": 90, "popularity": 4 }
+          ]
+        },
+        {
+          "name": "Para acompañar",
+          "products": [
+            { "name": "Café de olla", "description": "Con canela y piloncillo.", "price": 45, "popularity": 6 },
+            { "name": "Jugo de naranja", "description": "Recién exprimido.", "price": 50, "popularity": 4 },
+            { "name": "Pan de elote", "description": "Hecho en casa, tibio.", "price": 55, "popularity": 3 }
+          ]
+        }
+      ],
+      "stats": { "days": 60, "daily_views": 16, "growth": 0.4, "seed": 11 }
+    }
+  ]
+}
