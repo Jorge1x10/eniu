@@ -13,7 +13,7 @@ la base de datos, porque la API pública de eventos únicamente acepta los
 ```
 tools/eniu-studio/
 ├── studio.py            punto de entrada: python tools/eniu-studio/studio.py --help
-├── demos/casa-nopal.json demo completa (negocio, 2 menús, 20 productos, promociones, analíticas)
+├── demos/               demos listas: casa-nopal.json (CDMX, MXN) y lantern-yard.json (Londres, GBP, en inglés)
 ├── eniu_studio/         código (cliente de la API, generador de tráfico, fotos, entorno local)
 ├── tests/               pruebas sin servidor ni base de datos
 └── .studio/             estado local, ignorado por git (base de datos, fotos, sesiones, cuenta demo)
@@ -186,7 +186,9 @@ creíble:
 
 - picos de comida (13 a 15 h) y de cena (19 a 21 h) en la zona horaria del
   negocio, y viernes y sábados más llenos;
-- crecimiento a lo largo del periodo, con ruido diario;
+- crecimiento a lo largo del periodo, con ruido diario, y hoy siempre por
+  encima de ayer (el inicio de la app compara las vistas de hoy contra las de
+  ayer, y un lunes perdería contra el domingo);
 - clientes habituales, así que hay menos visitantes únicos que visitas;
 - popularidad desigual de productos y categorías;
 - un 84 % de visitas desde el móvil y más o menos la mitad entrando por QR.
@@ -241,13 +243,26 @@ esa cuenta tenga un menú bonito y analíticas llenas:
    python tools/eniu-studio/studio.py --env prod plan set pro --yes
    ```
 
-4. Crea el contenido y siembra las analíticas:
+4. Crea el contenido y siembra las analíticas. Cada archivo es un negocio,
+   y la cuenta puede tener varios:
 
    ```bash
    python tools/eniu-studio/studio.py --env prod demo apply tools/eniu-studio/demos/casa-nopal.json --with-stats --yes
+   python tools/eniu-studio/studio.py --env prod demo apply tools/eniu-studio/demos/lantern-yard.json --with-stats --yes
    ```
 
    Sin `--with-stats` sólo se usa la API y no hace falta `DATABASE_URL`.
+
+   Siembra justo antes de las capturas. La siembra llena hasta el final del
+   día siguiente, en la zona de cada negocio, así que aguanta aunque Londres
+   cambie de día mientras corre el workflow. Si capturas más tarde, los días
+   nuevos salen vacíos y las comparaciones bajan. Volver a correr los mismos
+   comandos sólo reemplaza lo sembrado.
+
+   El workflow elige el negocio según el idioma: Casa Nopal en las capturas
+   en español y en el App Preview, y Lantern Yard en las capturas en inglés
+   (`mobile/eniu-mobile/.maestro/subflows/select-business.yaml`). Si cambias
+   los nombres de las demos, cámbialos también ahí.
 
 5. Corre el workflow desde GitHub (Actions → App Store Screenshots → Run
    workflow) o con `gh workflow run appstore-screenshots.yml`.
@@ -271,6 +286,10 @@ preséntalas como ejemplo del producto, no como resultados de un cliente real.
   base, por si la URL es de otro entorno. Además, el menú siempre se resuelve
   con la sesión de la API, así que sólo se siembran menús de la cuenta con la
   que iniciaste sesión.
+- Las analíticas de cada menú se guardan en una sola transacción (con `COPY`
+  en Postgres): si el comando se corta, no queda nada a medias. Si otra
+  conexión tiene la tabla bloqueada más de 20 s, se detiene con un aviso en
+  vez de quedarse esperando.
 - Borrar menús, categorías, productos o promociones pide `--yes`.
 
 ## Pruebas

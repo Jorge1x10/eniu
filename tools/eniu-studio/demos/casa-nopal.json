@@ -1,5 +1,5 @@
 {
-  "account": { "name": "Lucía Ramírez" },
+  "account": { "name": "Lucía Ramírez", "language": "es" },
   "business": {
     "name": "Casa Nopal",
     "description": "Cocina de barrio con sazón de casa.",
@@ -64,38 +64,6 @@
         { "name": "Hora feliz", "badge": "Hora feliz", "days": [3, 4], "categories": ["Bebidas"] }
       ],
       "stats": { "days": 60, "daily_views": 38, "growth": 0.65, "returning": 0.3, "seed": 7 }
-    },
-    {
-      "name": "Desayunos",
-      "description": "De 8 a 12 h, todos los días.",
-      "publish": true,
-      "template": {
-        "layout": "elegant",
-        "palette": "vineyard",
-        "font": "playfair",
-        "show_cover": true,
-        "show_product_images": true,
-        "cover": "auto"
-      },
-      "categories": [
-        {
-          "name": "Platos",
-          "products": [
-            { "name": "Chilaquiles verdes", "description": "Con pollo, crema y queso.", "price": 125, "popularity": 8 },
-            { "name": "Enchiladas de mole", "description": "Mole poblano y ajonjolí.", "price": 140, "popularity": 5 },
-            { "name": "Molletes", "description": "Bolillo, frijoles, queso gratinado y pico de gallo.", "price": 90, "popularity": 4 }
-          ]
-        },
-        {
-          "name": "Para acompañar",
-          "products": [
-            { "name": "Café de olla", "description": "Con canela y piloncillo.", "price": 45, "popularity": 6 },
-            { "name": "Jugo de naranja", "description": "Recién exprimido.", "price": 50, "popularity": 4 },
-            { "name": "Pan de elote", "description": "Hecho en casa, tibio.", "price": 55, "popularity": 3 }
-          ]
-        }
-      ],
-      "stats": { "days": 60, "daily_views": 16, "growth": 0.4, "seed": 11 }
     }
   ]
 }

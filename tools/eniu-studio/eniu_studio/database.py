@@ -5,9 +5,18 @@ o la tienda, y escribir/borrar eventos de analíticas con fecha pasada (la API
 pública sólo acepta eventos de los últimos 7 días, a propósito).
 """
 
+import csv
+import io
 import uuid
 
 from .traffic import SEED_PREFIX
+
+LOCK_TIMEOUT = "20s"
+# Lo que se copia de cada evento; `created_at` y `updated_at` los pone la base.
+EVENT_COLUMNS = (
+    "id", "catalogue_id", "event_type", "occurred_at", "visitor_hash", "session_hash",
+    "target_type", "target_key", "source", "device_type", "dedup_key",
+)
 
 
 def create_schema(app):
@@ -78,7 +87,10 @@ def set_plan(app, email, plan_key, status="active"):
 
 def write_events(app, catalogue_id, events, replace="seeded", chunk=2000):
     """Inserta eventos de analíticas. `replace`: "seeded" borra antes sólo lo
-    sembrado por el estudio, "all" borra todos los eventos del menú, None no borra."""
+    sembrado por el estudio, "all" borra todos los eventos del menú, None no borra.
+
+    Va todo en una transacción: si falla o se cancela a medias, el menú se
+    queda como estaba."""
     from sqlalchemy import insert
 
     from app.database.db import db
@@ -87,11 +99,40 @@ def write_events(app, catalogue_id, events, replace="seeded", chunk=2000):
     catalogue_uuid = uuid.UUID(str(catalogue_id))
     rows = [{**event, "catalogue_id": catalogue_uuid} for event in events]
     with app.app_context():
-        deleted = _delete(AnalyticsEvent, catalogue_uuid, replace) if replace else 0
-        for start in range(0, len(rows), chunk):
-            db.session.execute(insert(AnalyticsEvent), rows[start : start + chunk])
-        db.session.commit()
+        postgres = db.engine.dialect.name == "postgresql"
+        try:
+            if postgres:
+                # Si otra conexión tiene la tabla bloqueada, mejor un error claro que esperar sin fin.
+                db.session.execute(db.text(f"SET LOCAL lock_timeout = '{LOCK_TIMEOUT}'"))
+            deleted = _delete(AnalyticsEvent, catalogue_uuid, replace) if replace else 0
+            if postgres:
+                _copy(db, AnalyticsEvent.__tablename__, rows)
+            else:
+                for start in range(0, len(rows), chunk):
+                    db.session.execute(insert(AnalyticsEvent), rows[start : start + chunk])
+            db.session.commit()
+        except Exception as error:
+            if getattr(getattr(error, "orig", error), "pgcode", None) == "55P03":  # lock_not_available
+                raise SystemExit(
+                    f"La tabla de analíticas lleva más de {LOCK_TIMEOUT} bloqueada por otra conexión "
+                    "(¿una siembra anterior que sigue abierta?). No se guardó nada; inténtalo en un par de minutos."
+                ) from None
+            raise
     return deleted, len(rows)
+
+
+def _copy(db, table, rows):
+    """COPY en vez de INSERT: contra una base remota y pequeña es un solo envío
+    y Postgres lo procesa varias veces más rápido que miles de filas sueltas."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    for row in rows:
+        values = {**row, "id": uuid.uuid4(), "occurred_at": row["occurred_at"].isoformat()}
+        # En CSV un campo vacío sin comillas es NULL (target_type y target_key de las visitas).
+        writer.writerow([values.get(column) for column in EVENT_COLUMNS])
+    buffer.seek(0)
+    cursor = db.session.connection().connection.cursor()
+    cursor.copy_expert(f"COPY {table} ({', '.join(EVENT_COLUMNS)}) FROM STDIN WITH (FORMAT csv)", buffer)
 
 
 def clear_events(app, catalogue_id, everything=False):

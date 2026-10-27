@@ -55,6 +55,10 @@ class Traffic:
     sources: dict = field(default_factory=lambda: dict(DEFAULT_SOURCES))
     devices: dict = field(default_factory=lambda: dict(DEFAULT_DEVICES))
     seed: int | None = None
+    # Días completos después de hoy: las pantallas piden datos hasta "hoy", así
+    # que no se ven, pero si las capturas se toman pasada la medianoche del
+    # negocio (Londres cambia de día a media tarde en México) siguen saliendo bien.
+    ahead: int = 1
 
 
 @dataclass
@@ -124,14 +128,18 @@ def _poisson(rng, lam):
 def generate(catalogue_id, traffic, products, categories, timezone_name="UTC", now=None, until_now=False):
     """Lista de eventos (dicts listos para insertar en `analytics_event`).
 
-    Por defecto el día de hoy se genera completo: comparar "hoy a medias" contra
-    días enteros haría que la semana actual saliera a la baja en la captura.
+    Por defecto hoy (y los `ahead` días siguientes) se generan completos:
+    comparar "hoy a medias" contra días enteros haría que la semana actual
+    saliera a la baja en la captura. Por lo mismo, hoy y los días siguientes
+    nunca bajan respecto al día anterior: el inicio de la app enseña "vistas
+    hoy" contra ayer, y un lunes siempre perdería contra el domingo.
     """
     rng = random.Random(traffic.seed)
     zone = ZoneInfo(timezone_name or "UTC")
     now = now or datetime.now(timezone.utc)
-    limit = now if until_now else datetime.combine(now.astimezone(zone).date(), time(23, 59, 59), zone).astimezone(timezone.utc)
     today = now.astimezone(zone).date()
+    last_day = today + timedelta(days=0 if until_now else traffic.ahead)
+    limit = now if until_now else datetime.combine(last_day, time(23, 59, 59), zone).astimezone(timezone.utc)
     hours, hour_weights = list(HOUR_WEIGHTS), list(HOUR_WEIGHTS.values())
     # Clientela habitual desde el principio: si los habituales salieran sólo de
     # quien ya visitó, al inicio del periodo serían pocos y se repetirían mucho,
@@ -153,11 +161,16 @@ def generate(catalogue_id, traffic, products, categories, timezone_name="UTC", n
             "dedup_key": f"{SEED_PREFIX}{uuid.uuid4().hex}",
         })
 
-    for offset in range(traffic.days, -1, -1):
+    previous = None
+    for offset in range(traffic.days, -(last_day - today).days - 1, -1):
         day = today - timedelta(days=offset)
         progress = 1 - offset / traffic.days if traffic.days else 1.0
         mean = traffic.daily_views * (1 + traffic.growth * progress) * WEEKDAY_FACTOR[day.weekday()]
-        for _ in range(max(0, round(mean * rng.lognormvariate(0, 0.1)))):
+        count = max(0, round(mean * rng.lognormvariate(0, 0.1)))
+        if offset <= 0 and previous is not None:
+            count = max(count, round(previous * rng.uniform(1.04, 1.15)))
+        previous = count
+        for _ in range(count):
             hour = rng.choices(hours, weights=hour_weights, k=1)[0]
             at = datetime.combine(day, time(hour, rng.randrange(60), rng.randrange(60)), zone).astimezone(timezone.utc)
             if at > limit:

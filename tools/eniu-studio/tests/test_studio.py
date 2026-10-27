@@ -7,7 +7,7 @@ import io
 import sys
 import unittest
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -103,9 +103,23 @@ class GenerateTestCase(unittest.TestCase):
         self.assertTrue(all(event["dedup_key"].startswith(traffic.SEED_PREFIX) for event in self.events))
         self.assertEqual(len({event["dedup_key"] for event in self.events}), len(self.events))
 
-    def test_nothing_happens_after_the_end_of_today(self):
-        last = max(event["occurred_at"] for event in self.events).astimezone(ZoneInfo(ZONE))
-        self.assertLessEqual(last.date(), NOW.astimezone(ZoneInfo(ZONE)).date())
+    def test_it_covers_today_and_tomorrow_but_nothing_later(self):
+        today = NOW.astimezone(ZoneInfo(ZONE)).date()
+        days = {event["occurred_at"].astimezone(ZoneInfo(ZONE)).date() for event in self.events}
+        self.assertEqual(max(days) - today, timedelta(days=1))
+        products, categories = _targets()
+        only_today = traffic.generate("menu-1", traffic.Traffic(days=30, daily_views=30, seed=4, ahead=0), products, categories, ZONE, now=NOW)
+        self.assertEqual(max(e["occurred_at"].astimezone(ZoneInfo(ZONE)).date() for e in only_today), today)
+
+    def test_today_never_drops_against_yesterday_whatever_the_weekday(self):
+        products, categories = _targets()
+        for shift in range(7):  # incluye domingo y lunes, que pierden contra el día anterior por costumbre
+            now = NOW + timedelta(days=shift)
+            today = now.astimezone(ZoneInfo(ZONE)).date()
+            events = traffic.generate("menu-1", traffic.Traffic(days=30, daily_views=30, seed=shift), products, categories, ZONE, now=now)
+            views = Counter(e["occurred_at"].astimezone(ZoneInfo(ZONE)).date() for e in events if e["event_type"] == "menu_view")
+            for day in (today, today + timedelta(days=1)):
+                self.assertGreater(views[day], views[day - timedelta(days=1)], (today.strftime("%A"), day))
 
     def test_the_busiest_hours_are_lunch_and_dinner_in_the_business_timezone(self):
         hours = Counter(

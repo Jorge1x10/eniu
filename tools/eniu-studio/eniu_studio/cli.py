@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import unicodedata
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -414,8 +415,12 @@ def _seed(ctx, business, catalogue, options):
     clock = business.get("timezone") or "UTC"
     if database.dialect(flask_app) == "sqlite":
         clock = "UTC"
+    ctx.say(f"  · generando analíticas de {catalogue['name']}...")
     events, checks = traffic.generate_for_screenshots(catalogue["id"], plan, products, categories, clock)
+    ctx.say(f"  · guardando {len(events)} eventos en la base de {ctx.env}...")
+    started = time.monotonic()
     deleted, inserted = database.write_events(flask_app, catalogue["id"], events, replace=options.get("replace", "seeded"))
+    ctx.say(f"  · guardados en {time.monotonic() - started:.1f} s")
     return {**traffic.summarize(events), **checks, "replaced": deleted, "inserted": inserted, "days": plan.days}
 
 
@@ -659,4 +664,9 @@ def main(argv=None):
     except EniuError as error:
         detail = error.payload.get("fields") or error.payload.get("code") or ""
         raise SystemExit(f"Error de la API ({error.status}): {error.message} {detail}".strip())
+    except KeyboardInterrupt:
+        raise SystemExit(
+            "\nCancelado. Vuelve a correr el mismo comando para completar: sólo crea lo que falta, "
+            "y las analíticas se guardan todas o ninguna."
+        ) from None
 
