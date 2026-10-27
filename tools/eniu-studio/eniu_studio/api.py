@@ -233,8 +233,10 @@ class EniuAPI:
 
     # --- analíticas y menú público ------------------------------------------------------
 
-    def analytics(self, business_id, catalogue_id, date_from=None, date_to=None):
-        params = {key: value for key, value in (("from", date_from), ("to", date_to)) if value}
+    def analytics(self, business_id, catalogue_id, date_from=None, date_to=None, zone=None):
+        # Sin zona el backend agrupa días y horas con la de Ciudad de México; la
+        # app manda la del negocio.
+        params = {key: value for key, value in (("from", date_from), ("to", date_to), ("timezone", zone)) if value}
         return self._request("GET", f"/businesses/{business_id}/catalogues/{catalogue_id}/analytics", params=params)
 
     def public_menu(self, slug):

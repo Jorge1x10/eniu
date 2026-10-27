@@ -453,10 +453,10 @@ def cmd_stats_clear(ctx):
 
 def cmd_stats_show(ctx):
     business, catalogue = ctx.menu(ctx.args.menu)
-    zone = ZoneInfo(business.get("timezone") or "UTC")
-    today = datetime.now(timezone.utc).astimezone(zone).date()
+    zone_name = business.get("timezone") or "UTC"
+    today = datetime.now(timezone.utc).astimezone(ZoneInfo(zone_name)).date()
     start = today - timedelta(days=ctx.args.days - 1)
-    data = ctx.api.analytics(business["id"], catalogue["id"], start.isoformat(), today.isoformat())
+    data = ctx.api.analytics(business["id"], catalogue["id"], start.isoformat(), today.isoformat(), zone_name)
     if ctx.args.json:
         return ctx.done(data)
     s = data.get("summary", {})
@@ -470,7 +470,7 @@ def cmd_stats_show(ctx):
     top = s.get("top_product") or {}
     day = s.get("busiest_day") or {}
     hour = s.get("busiest_hour") or {}
-    print(f"{catalogue['name']} · del {start} al {today} ({ctx.args.days} días)")
+    print(f"{catalogue['name']} · del {start} al {today} ({ctx.args.days} {'día' if ctx.args.days == 1 else 'días'})")
     print(f"  Visitas al menú            {metric('menu_views')}")
     print(f"  Visitantes únicos          {metric('approximate_unique_visitors')}")
     print(f"  Interacciones de producto  {metric('product_interactions')}")
