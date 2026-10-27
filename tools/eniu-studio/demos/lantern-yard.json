@@ -1,0 +1,85 @@
+{
+  "business": {
+    "name": "Lantern Yard",
+    "description": "Wood-fired kitchen and bar in Shoreditch.",
+    "currency": "GBP",
+    "timezone": "Europe/London",
+    "address": "18 Lantern Yard, Shoreditch, London",
+    "phone": "+44 20 7946 0958",
+    "photo": "auto",
+    "logo": { "background": "#18140D", "foreground": "#FFE05A" }
+  },
+  "menus": [
+    {
+      "name": "All-day menu",
+      "description": "Wood-fired pizza, smash burgers and natural wine, 12 till late.",
+      "publish": true,
+      "template": {
+        "layout": "magazine",
+        "palette": "midnight",
+        "font": "fraunces",
+        "show_cover": true,
+        "show_product_images": true,
+        "cover": "auto"
+      },
+      "categories": [
+        {
+          "name": "Burgers",
+          "products": [
+            { "name": "Classic smash burger", "description": "Two aged-beef patties, American cheese, pickles and house sauce.", "price": 13.5, "popularity": 10 },
+            { "name": "Smoky BBQ burger", "description": "Streaky bacon, cheddar, crispy onions and chipotle BBQ.", "price": 14.5, "popularity": 6 },
+            { "name": "Crispy chicken burger", "description": "Buttermilk thigh, slaw and hot honey mayo.", "price": 13, "popularity": 5 },
+            { "name": "Halloumi burger", "description": "Grilled halloumi, roast peppers and harissa yoghurt.", "price": 12.5, "popularity": 3 }
+          ]
+        },
+        {
+          "name": "Wood-fired pizza",
+          "products": [
+            { "name": "Margherita pizza", "description": "San Marzano tomato, fior di latte and basil.", "price": 11, "popularity": 8 },
+            { "name": "Nduja & hot honey pizza", "description": "Spicy nduja, mozzarella and a drizzle of hot honey.", "price": 14, "popularity": 7 },
+            { "name": "Pizza diavola", "description": "Spicy salami, chilli and mozzarella.", "price": 13.5, "popularity": 5 },
+            { "name": "Mushroom & truffle pizza", "description": "Wild mushrooms, taleggio and truffle oil.", "price": 14.5, "popularity": 4 }
+          ]
+        },
+        {
+          "name": "Salads & soup",
+          "products": [
+            { "name": "Burrata salad", "description": "Heirloom tomatoes, basil oil and toasted seeds.", "price": 11.5, "popularity": 5 },
+            { "name": "Caesar salad", "description": "Gem lettuce, parmesan, sourdough croutons and anchovy dressing.", "price": 9.5, "popularity": 4 },
+            { "name": "Roasted tomato soup", "description": "With sourdough and whipped butter.", "price": 7.5, "popularity": 3 }
+          ]
+        },
+        {
+          "name": "Sides",
+          "products": [
+            { "name": "Truffle parmesan fries", "description": "Hand-cut, with truffle mayo.", "price": 6, "popularity": 6 },
+            { "name": "Skin-on fries", "description": "Sea salt and rosemary.", "price": 4.5, "popularity": 5 },
+            { "name": "Onion rings", "description": "Beer-battered, with smoked aioli.", "price": 5, "popularity": 3 }
+          ]
+        },
+        {
+          "name": "Desserts",
+          "products": [
+            { "name": "Sticky toffee pudding", "description": "Warm date sponge, toffee sauce and clotted cream.", "price": 7, "popularity": 5, "image": "auto:dessert" },
+            { "name": "Chocolate brownie", "description": "With salted caramel ice cream.", "price": 6.5, "popularity": 4 }
+          ]
+        },
+        {
+          "name": "Drinks",
+          "products": [
+            { "name": "Flat white", "description": "Single-origin espresso from a local roaster.", "price": 3.4, "popularity": 5, "image": "auto:coffee" },
+            { "name": "Iced latte", "description": "Double shot over ice.", "price": 3.8, "popularity": 3 },
+            { "name": "Craft beer", "description": "Rotating London pale ale.", "price": 6, "popularity": 4 },
+            { "name": "Homemade lemonade", "description": "Lemon, mint and a little ginger.", "price": 4, "popularity": 3, "image": "auto:drink" },
+            { "name": "Natural wine", "description": "By the glass, ask for today's pour.", "price": 8.5, "popularity": 2, "available": false, "image": "auto:drink" }
+          ]
+        }
+      ],
+      "promotions": [
+        { "name": "Lunch deal", "badge": "£12 lunch", "days": "all", "products": ["Classic smash burger", "Margherita pizza"] },
+        { "name": "Happy hour", "badge": "Happy hour", "days": [0, 1, 2, 3, 4], "categories": ["Drinks"] }
+      ],
+      "stats": { "days": 60, "daily_views": 30, "growth": 0.55, "returning": 0.3, "seed": 21 }
+    }
+  ]
+}
