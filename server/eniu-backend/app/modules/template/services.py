@@ -261,13 +261,13 @@ def update_template(owner_id, business_id, catalogue_id, data, cover=None, backg
             "splash", "remove_cover", "remove_background", "remove_splash",
         }
         if unknown:
-            return {"message": f"Campos no permitidos: {', '.join(sorted(unknown))}"}, 400
+            return {"message": _("Campos no permitidos: {fields}", fields=", ".join(sorted(unknown)))}, 400
         if "remove_cover" in data and not isinstance(data["remove_cover"], bool):
-            return {"message": "remove_cover debe ser verdadero o falso"}, 400
+            return {"message": _("{field} debe ser verdadero o falso", field="remove_cover")}, 400
         if "remove_background" in data and not isinstance(data["remove_background"], bool):
-            return {"message": "remove_background debe ser verdadero o falso"}, 400
+            return {"message": _("{field} debe ser verdadero o falso", field="remove_background")}, 400
         if "remove_splash" in data and not isinstance(data["remove_splash"], bool):
-            return {"message": "remove_splash debe ser verdadero o falso"}, 400
+            return {"message": _("{field} debe ser verdadero o falso", field="remove_splash")}, 400
 
         config = CatalogueTemplate.query.filter_by(catalogue_id=catalogue.id).first()
         current = config.to_dict() if config else default_configuration()

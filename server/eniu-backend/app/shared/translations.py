@@ -22,6 +22,7 @@ _EN = {
     "Autenticación con Google correcta": "Signed in with Google",
     "Autenticación con Apple correcta": "Signed in with Apple",
     "Usuario no encontrado": "Account not found",
+    "Credenciales incorrectas": "Incorrect email, username or password",
     "Usuario/correo y contraseña son obligatorios": (
         "Email or username and password are required"
     ),
@@ -182,6 +183,9 @@ _EN = {
 
     # --- Menús (catálogos) -------------------------------------------------
     "Catálogo no encontrado": "Menu not found",
+    "Catálogo creado correctamente": "Menu created successfully",
+    "Catálogo actualizado correctamente": "Menu updated successfully",
+    "Catálogo publicado correctamente": "Menu published successfully",
     "Catálogo eliminado correctamente": "Menu deleted successfully",
     "Catálogo despublicado correctamente": "Menu unpublished successfully",
     "El nombre del catálogo es obligatorio": "The menu name is required",
