@@ -185,6 +185,11 @@ class AnalyticsApiTestCase(unittest.TestCase):
         self.assertEqual(self.client.get(self.summary_url(self.foreign_business_id, self.foreign_catalogue_id), headers=self.auth()).status_code, 403)
         self.assertEqual(self.client.get(self.summary_url(query="?timezone=Not/AZone"), headers=self.auth()).status_code, 400)
         self.assertEqual(self.client.get(self.summary_url(query="?timezone=../../etc/passwd"), headers=self.auth()).status_code, 400)
+        # La zona viaja hasta `timezone(...)` en Postgres: sólo pasan nombres
+        # que `zoneinfo` reconoce, así que nada de SQL llega a la consulta.
+        injected = self.client.get(self.summary_url(query="?timezone=UTC%27%3B%20DROP%20TABLE%20analytics_event%3B--"), headers=self.auth())
+        self.assertEqual(injected.status_code, 400)
+        self.assertEqual(self.client.get(self.summary_url(), headers=self.auth()).status_code, 200)
 
     def set_owner_language(self, language):
         with self.app.app_context():
