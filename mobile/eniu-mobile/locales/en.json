@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Eniu",
+    "NSPhotoLibraryUsageDescription": "Eniu needs access to your photos so you can upload pictures of your products."
+  }
+}
