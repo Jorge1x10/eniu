@@ -169,7 +169,7 @@ function BillingSettings({ user, setUser }) {
       </div>
       <Feedback error={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
-        {active ? <button type="button" disabled={portalApi.loading} onClick={() => redirectTo(portalApi)} className="min-h-11 cursor-pointer rounded-xl bg-[#FFE05A] px-5 py-3 font-bold text-[#111111] hover:bg-[#E8C93D] disabled:opacity-60">{portalApi.loading ? "Abriendo..." : t("Administrar suscripción")}</button> : <button type="button" disabled={checkoutApi.loading || subscriptionLoading} onClick={() => redirectTo(checkoutApi)} className="min-h-11 cursor-pointer rounded-xl bg-[#FFE05A] px-5 py-3 font-bold text-[#111111] hover:bg-[#E8C93D] disabled:opacity-60">{checkoutApi.loading ? "Preparando..." : t("Contratar Plan Esencial")}</button>}
+        {active ? <button type="button" disabled={portalApi.loading} onClick={() => redirectTo(portalApi)} className="min-h-11 cursor-pointer rounded-xl bg-[#FFE05A] px-5 py-3 font-bold text-[#111111] hover:bg-[#E8C93D] disabled:opacity-60">{portalApi.loading ? t("Abriendo...") : t("Administrar suscripción")}</button> : <button type="button" disabled={checkoutApi.loading || subscriptionLoading} onClick={() => redirectTo(checkoutApi)} className="min-h-11 cursor-pointer rounded-xl bg-[#FFE05A] px-5 py-3 font-bold text-[#111111] hover:bg-[#E8C93D] disabled:opacity-60">{checkoutApi.loading ? t("Preparando...") : t("Contratar Plan Esencial")}</button>}
       </div>
       <p className="text-xs leading-5 text-[#777777]">{t("El cobro es recurrente mensual. Stripe procesa el pago y permite actualizar el método de pago o cancelar desde su portal seguro.")}</p>
     </div>

@@ -407,7 +407,14 @@ _EN = {
     "Sin categoría": "Uncategorized",
     "Código QR": "QR code",
     "Enlace copiado": "Copied link",
+    "Redes sociales": "Social media",
     "Sitio de referencia": "Referring site",
+    "Acceso directo": "Direct",
+    "Desconocido": "Unknown",
+    "Celular": "Phone",
+    "Computadora": "Computer",
+    "{hour}:00 a. m.": "{hour}:00 AM",
+    "{hour}:00 p. m.": "{hour}:00 PM",
     "Producto eliminado": "Deleted product",
     "Categoría eliminada": "Deleted category",
 
@@ -445,11 +452,11 @@ _EN = {
     "Tu plan actual no incluye la pantalla de bienvenida del menú.": (
         "Your current plan doesn't include the menu splash screen."
     ),
-    "Tu plan actual sólo incluye la plantilla básica.": (
-        "Your current plan only includes the basic template."
+    "Tu plan actual no incluye esa plantilla.": (
+        "Your current plan doesn't include that template."
     ),
-    "Tu plan actual sólo incluye la tipografía básica.": (
-        "Your current plan only includes the basic font."
+    "Tu plan actual no incluye esa tipografía.": (
+        "Your current plan doesn't include that font."
     ),
     "Stripe no está configurado": "Stripe isn't configured",
     "RevenueCat no está configurado": "RevenueCat isn't configured",

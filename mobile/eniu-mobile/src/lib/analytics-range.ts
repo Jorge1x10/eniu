@@ -42,6 +42,18 @@ export function todayIn(timezone: string): string {
  * las 00:00 puede caer dentro de un cambio de horario de verano y correr la
  * fecha un día entero.
  */
+/**
+ * Ruta de las visitas de un menú: el informe de los últimos `days` días o el
+ * resumen de 7 días del plan gratuito, cuyo periodo fija el backend y por eso
+ * sólo recibe la zona horaria.
+ */
+export function visitsPath(scope: 'full' | 'summary', businessId: string, catalogueId: string, days: number, timezone?: string | null): string {
+  const base = `businesses/${businessId}/catalogues/${catalogueId}/analytics`;
+  return scope === 'summary'
+    ? `${base}/summary?timezone=${encodeURIComponent(timezone || deviceTimezone())}`
+    : `${base}?${analyticsRange(days, timezone)}`;
+}
+
 export function analyticsRange(days: number, timezone?: string | null): string {
   const zone = timezone || deviceTimezone();
   const to = todayIn(zone);

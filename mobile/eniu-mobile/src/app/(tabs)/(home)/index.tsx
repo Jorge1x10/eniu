@@ -22,7 +22,7 @@ import { useBusinessesTodayViews } from '@/features/business/business-views';
 import { catalogueKeys, listCatalogues } from '@/features/catalogues/catalogue-api';
 import { useProductQuickActions } from '@/features/catalogues/product-quick-actions';
 import { getLastCelebratedMilestone, getMilestoneNotificationsEnabled, nextUncelebratedMilestone, setLastCelebratedMilestone } from '@/features/milestones/milestone-store';
-import { analyticsRange } from '@/lib/analytics-range';
+import { visitsPath } from '@/lib/analytics-range';
 import { api } from '@/lib/api';
 import { defaultPictureUrl } from '@/lib/product-image';
 import type { Analytics, Product } from '@/types/models';
@@ -84,12 +84,16 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { user } = useAuth();
-  const { limits } = usePlan();
+  const { limits, analyticsScope } = usePlan();
   const { businesses, selectedBusiness, selectBusiness, isLoading: loadingBusinesses } = useBusiness();
   const businessSummaries = useBusinessesTodayViews(businesses, limits.allow_analytics);
   const catalogues = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
   const selectedCatalogue = catalogues.data?.catalogues[0];
-  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, selectedCatalogue?.id, 30, selectedBusiness?.timezone], queryFn: () => api.get<Analytics>(`businesses/${selectedBusiness!.id}/catalogues/${selectedCatalogue!.id}/analytics?${analyticsRange(30, selectedBusiness!.timezone)}`), enabled: Boolean(selectedBusiness && selectedCatalogue) });
+  // El gratuito lee el resumen de 7 días; el de pago, el informe de 30. Antes
+  // los dos pedían el informe, y al gratuito el 403 le dejaba Inicio en cero.
+  const isSummary = analyticsScope !== 'full';
+  const visitsScope = isSummary ? 'summary' : 'full';
+  const analytics = useQuery({ queryKey: ['analytics', visitsScope, selectedBusiness?.id, selectedCatalogue?.id, 30, selectedBusiness?.timezone], queryFn: () => api.get<Analytics>(visitsPath(visitsScope, selectedBusiness!.id, selectedCatalogue!.id, 30, selectedBusiness!.timezone)), enabled: Boolean(selectedBusiness && selectedCatalogue) && analyticsScope !== 'none' });
   const productsKey = ['products', selectedBusiness?.id, selectedCatalogue?.id] as const;
   const products = useQuery({ queryKey: productsKey, queryFn: () => api.get<{ products: Product[] }>(`businesses/${selectedBusiness?.id}/catalogues/${selectedCatalogue?.id}/products`), enabled: Boolean(selectedBusiness && selectedCatalogue) });
   const publicationKey = ['publication', selectedBusiness?.id, selectedCatalogue?.id] as const;
@@ -100,10 +104,10 @@ export default function HomeScreen() {
   const viewsToday = series.length ? series[series.length - 1] : 0;
   const viewsYesterday = series.length > 1 ? series[series.length - 2] : 0;
   const delta = viewsYesterday > 0 ? Math.round(((viewsToday - viewsYesterday) / viewsYesterday) * 100) : viewsToday > 0 ? 100 : 0;
-  const monthlyViews = series.reduce((total, value) => total + value, 0);
+  const periodViews = series.reduce((total, value) => total + value, 0);
   const qrViews = analytics.data?.sources?.find((source) => source.key === 'qr')?.views ?? 0;
   const publishedCount = (catalogues.data?.catalogues ?? []).filter((item) => item.is_published).length;
-  const showDemoBadge = Boolean(selectedCatalogue) && !analytics.isLoading && monthlyViews === 0;
+  const showDemoBadge = Boolean(selectedCatalogue) && !analytics.isLoading && periodViews === 0;
   const currency = new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: selectedBusiness?.currency || 'MXN' });
   const publicUrl = publication.data?.publication.is_published ? publication.data.publication.public_url : null;
 
@@ -115,11 +119,11 @@ export default function HomeScreen() {
       const enabled = await getMilestoneNotificationsEnabled();
       if (!enabled) return;
       const last = await getLastCelebratedMilestone(selectedCatalogue.id);
-      const reached = nextUncelebratedMilestone(monthlyViews, last);
+      const reached = nextUncelebratedMilestone(periodViews, last);
       if (reached && active) setMilestone(reached);
     })();
     return () => { active = false; };
-  }, [selectedCatalogue, monthlyViews, analytics.isLoading]);
+  }, [selectedCatalogue, periodViews, analytics.isLoading]);
 
   async function dismissMilestone() {
     if (selectedCatalogue && milestone) await setLastCelebratedMilestone(selectedCatalogue.id, milestone);
@@ -179,14 +183,16 @@ export default function HomeScreen() {
 
             <View style={{ height: 18 }} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <HeroStat value={monthlyViews.toLocaleString(currentLocale())} label={t("vistas · 30 días")} />
-              <HeroStat value={qrViews.toLocaleString(currentLocale())} label={t("escaneos de QR")} />
+              <HeroStat value={periodViews.toLocaleString(currentLocale())} label={isSummary ? t("vistas · 7 días") : t("vistas · 30 días")} />
+              {/* De dónde llegan las visitas es parte del informe completo: el
+                  resumen del gratuito no lo trae, y un cero aquí mentiría. */}
+              {isSummary ? null : <HeroStat value={qrViews.toLocaleString(currentLocale())} label={t("escaneos de QR")} />}
               <HeroStat value={publishedCount} label={t("menús publicados")} />
             </View>
           </HeroHeader>
 
           <View style={{ paddingHorizontal: inset, paddingTop: 22, gap: 22 }}>
-            {showDemoBadge ? <View style={{ borderRadius: 16, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}><View style={{ minHeight: 24, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 999, backgroundColor: theme.yellow, paddingHorizontal: 9 }}><Text style={{ color: '#111111', fontSize: 10, fontWeight: '800', letterSpacing: 0.6 }}>EJEMPLO</Text></View><Text style={{ flex: 1, color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Todavía no tienes visitas reales. Esto es cómo se verá tu panel cuando tus clientes empiecen a escanear.")}</Text></View> : null}
+            {showDemoBadge ? <View style={{ borderRadius: 16, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}><View style={{ minHeight: 24, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 999, backgroundColor: theme.yellow, paddingHorizontal: 9 }}><Text style={{ color: '#111111', fontSize: 10, fontWeight: '800', letterSpacing: 0.6 }}>{t("EJEMPLO")}</Text></View><Text style={{ flex: 1, color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Todavía no tienes visitas reales. Esto es cómo se verá tu panel cuando tus clientes empiecen a escanear.")}</Text></View> : null}
 
             {selectedCatalogue && products.data?.products.length ? (
               <View style={{ gap: 11 }}>

@@ -15,6 +15,15 @@ describe("buildDashboardViewModel", () => {
     expect(result.menus[0].views).toBe(45);
   });
 
+  it("con el resumen del gratuito cuenta los 7 días y no los presenta como del mes", () => {
+    const week = visits.slice(-7).map(({ date, views }) => ({ date, views }));
+    const result = buildDashboardViewModel({ catalogues: [], analytics: { visits_over_time: week, summary: { menu_views: { value: 42 } } }, analyticsScope: "summary", now: new Date(2026, 7, 10) });
+    expect(result.metrics.weeklyViews).toBe(42);
+    expect(result.metrics.monthlyViews).toBeNull();
+    expect(result.metrics.qrScans).toBeNull();
+    expect(result.chart).toHaveLength(7);
+  });
+
   it("maneja ausencia de analíticas sin NaN ni cifras ficticias", () => {
     const result = buildDashboardViewModel({ catalogues: [], analytics: null });
     expect(result.metrics.monthlyViews).toBeNull();

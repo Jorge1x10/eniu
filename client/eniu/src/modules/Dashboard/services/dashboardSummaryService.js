@@ -48,7 +48,19 @@ export function dashboardDateRange(timezone = browserTimezone(), today = todayIn
   return { from: from.toISOString().slice(0, 10), to: today, timezone };
 }
 
-export function useDashboardSummaryService(businessId, timezone) {
+/**
+ * Qué parte de las analíticas puede pedir el resumen de Inicio.
+ *
+ * `full` es el informe del plan de pago; `summary`, los 7 días del gratuito.
+ * Pedir el informe completo sin tenerlo devolvía 403, y Inicio lo pintaba como
+ * "No pudimos cargar el resumen de tu negocio" a todo usuario gratuito.
+ */
+export function analyticsScopeFor(limits) {
+  if (limits?.allow_analytics) return "full";
+  return limits?.analytics_summary ? "summary" : "none";
+}
+
+export function useDashboardSummaryService(businessId, timezone, scope = "full") {
   // `timezone` llega vacío mientras el negocio carga; `dashboardDateRange`
   // resuelve ese hueco con la zona del navegador.
   const { request } = useApi();
@@ -57,10 +69,17 @@ export function useDashboardSummaryService(businessId, timezone) {
     if (!cataloguesResponse.ok || cataloguesResponse.aborted) return cataloguesResponse;
     const catalogues = cataloguesResponse.data?.catalogues || [];
     const selected = catalogues.find((item) => item.id === preferredCatalogueId) || catalogues[0] || null;
-    if (!selected) return { ok: true, data: { catalogues, selectedCatalogue: null, analytics: null } };
-    const query = new URLSearchParams(dashboardDateRange(timezone)).toString();
-    const analyticsResponse = await request({ method: "GET", path: `businesses/${businessId}/catalogues/${selected.id}/analytics?${query}`, signal });
-    if (!analyticsResponse.ok || analyticsResponse.aborted) return analyticsResponse;
-    return { ok: true, data: { catalogues, selectedCatalogue: selected, analytics: analyticsResponse.data } };
-  }, [businessId, timezone, request]);
+    const withoutAnalytics = { ok: true, data: { catalogues, selectedCatalogue: selected, analytics: null, analyticsScope: scope } };
+    if (!selected || scope === "none") return withoutAnalytics;
+    const path = scope === "summary"
+      ? `businesses/${businessId}/catalogues/${selected.id}/analytics/summary?${new URLSearchParams({ timezone: timezone || browserTimezone() })}`
+      : `businesses/${businessId}/catalogues/${selected.id}/analytics?${new URLSearchParams(dashboardDateRange(timezone || undefined))}`;
+    const analyticsResponse = await request({ method: "GET", path, signal });
+    if (analyticsResponse.aborted) return analyticsResponse;
+    // Si el plan cambió desde que se cargó la sesión, la API dice 403: Inicio
+    // se queda sin cifras en vez de mostrar un error que no lo es.
+    if (analyticsResponse.status === 403) return withoutAnalytics;
+    if (!analyticsResponse.ok) return analyticsResponse;
+    return { ok: true, data: { catalogues, selectedCatalogue: selected, analytics: analyticsResponse.data, analyticsScope: scope } };
+  }, [businessId, timezone, scope, request]);
 }

@@ -10,7 +10,13 @@ export type PlanLimits = {
   allow_cover: boolean;
   allow_background: boolean;
   allow_product_images: boolean;
+  /** El informe completo: lo más visto, horas, dispositivos y fuentes. */
   allow_analytics: boolean;
+  /**
+   * El resumen de visitas de 7 días, que el plan gratuito sí incluye. Opcional
+   * porque un backend anterior no lo manda.
+   */
+  analytics_summary?: boolean;
   allow_splash: boolean;
   show_eniu_badge: boolean;
 };

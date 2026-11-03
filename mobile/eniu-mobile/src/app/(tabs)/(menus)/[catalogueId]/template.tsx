@@ -78,6 +78,10 @@ export default function TemplateScreen() {
   const { catalog } = useTemplateCatalog();
   const templatesLocked = catalog.layouts.some((layout) => !allowsTemplate(layout.key));
   const fontsLocked = catalog.fonts.some((font) => !allowsFont(font.key));
+  // Las cuentas salen del plan y del catálogo, no de un texto fijo: el aviso
+  // decía "sólo la plantilla básica" y quedó mal en cuanto el gratuito tuvo tres.
+  const allowedLayouts = catalog.layouts.filter((layout) => allowsTemplate(layout.key)).length;
+  const allowedFonts = catalog.fonts.filter((font) => allowsFont(font.key)).length;
   // Los 4 primeros tokens ya tienen su propio selector arriba (son las
   // columnas planas); aquí sólo van los que no tienen campo propio.
   const advancedTokens = catalog.color_tokens.filter((token) => !CORE_TOKEN_KEYS.has(token.key));
@@ -323,7 +327,7 @@ export default function TemplateScreen() {
             );
           })}
         </ScrollView>
-        {templatesLocked ? <PlanNotice message={t("Tu plan actual sólo incluye la plantilla básica.")} /> : null}
+        {templatesLocked ? <PlanNotice message={t("Tu plan actual incluye {{count}} de las {{total}} plantillas.", { count: allowedLayouts, total: catalog.layouts.length })} /> : null}
       </Section>
 
       <Section title={t("Colores")} description={t("Empieza por una paleta lista o elige cada color a mano.")}>
@@ -376,7 +380,7 @@ export default function TemplateScreen() {
           onChange={(key) => updateTheme('font_key', key)}
           isLocked={(key) => !allowsFont(key)}
         />
-        {fontsLocked ? <PlanNotice message={t("Tu plan actual sólo incluye la tipografía básica.")} /> : null}
+        {fontsLocked ? <PlanNotice message={t("Tu plan actual incluye {{count}} de las {{total}} tipografías.", { count: allowedFonts, total: catalog.fonts.length })} /> : null}
       </Section>
 
       <Section title={t("Imágenes del menú")} description={t("La foto del negocio te identifica; la portada encabeza el menú que ven tus clientes.")}>

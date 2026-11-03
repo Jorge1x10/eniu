@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../../auth/hooks/useAuth", () => ({ useAuth: () => mocks.auth }));
 vi.mock("../../Business/services/useBusiness", () => ({ useBusiness: () => mocks.business }));
-vi.mock("../services/dashboardSummaryService", () => ({ useDashboardSummaryService: () => mocks.loadSummary }));
+vi.mock("../services/dashboardSummaryService", async (importOriginal) => ({ ...(await importOriginal()), useDashboardSummaryService: () => mocks.loadSummary }));
 vi.mock("../../Catalogue/services/catalogueService", () => ({ useCatalogueService: () => ({ create: mocks.create }) }));
 vi.mock("react-router", async (importOriginal) => ({ ...(await importOriginal()), useNavigate: () => mocks.navigate }));
 vi.mock("../../Business/components/CreateBusinessModal", () => ({ default: ({ isOpen }) => isOpen ? <div role="dialog">Crear negocio</div> : null }));
@@ -70,6 +70,18 @@ describe("HomePage", () => {
     expect(screen.getByText("Carta del café")).toBeInTheDocument();
     expect(document.body).not.toHaveTextContent("12,840"); expect(document.body).not.toHaveTextContent("4,291"); expect(document.body).not.toHaveTextContent("Desayunos");
     expect(screen.getByText("Todavía no hay actividad reciente.")).toBeInTheDocument();
+  });
+
+  it("muestra al plan gratuito sus visitas de 7 días sin selector de periodo", async () => {
+    const summary = { summary: { menu_views: { value: 12 } }, visits_over_time: analytics.visits_over_time.map(({ date, views }) => ({ date, views })) };
+    mocks.loadSummary.mockResolvedValue({ ok: true, data: { catalogues: [catalogue], selectedCatalogue: catalogue, analytics: summary, analyticsScope: "summary" } });
+    renderPage();
+    const viewsCard = (await screen.findByText("Vistas en 7 días")).closest("article");
+    expect(within(viewsCard).getByText("12")).toBeInTheDocument();
+    expect(screen.queryByText("Vistas este mes")).not.toBeInTheDocument();
+    const qrCard = screen.getByText("Escaneos QR").closest("article");
+    expect(within(qrCard).getByText("Incluido en Esencial")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Periodo de la gráfica" })).not.toBeInTheDocument();
   });
 
   it("muestra error y reintenta", async () => {

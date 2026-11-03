@@ -77,21 +77,22 @@ export type OfferingProblem =
   | 'oferta-vacia';
 
 export type OfferingResult =
-  | { item: PurchasesPackage; problem: null }
-  | { item: null; problem: OfferingProblem };
+  | { items: PurchasesPackage[]; problem: null }
+  | { items: []; problem: OfferingProblem };
 
 /**
- * El paquete que se ofrece hoy. Se toma de la oferta activa del panel de
- * RevenueCat, no de una lista escrita aquí: así cambiar de producto o de
- * precio no obliga a publicar una versión nueva en las tiendas.
+ * Los paquetes que se ofrecen hoy, en el orden del panel: por ejemplo el
+ * mensual y el anual. Se toman de la oferta activa de RevenueCat, no de una
+ * lista escrita aquí: así sumar un plan anual o cambiar un precio no obliga a
+ * publicar una versión nueva en las tiendas.
  *
  * Un producto sólo llega hasta aquí si App Store Connect lo devuelve, y eso
  * exige el Contrato de Apps de Pago activo y el producto al menos en "Listo
  * para enviar". Mientras falte cualquiera de las dos, la oferta viaja sin
  * paquetes y el resultado es `oferta-vacia`, no un error.
  */
-export async function currentPackage(): Promise<OfferingResult> {
-  if (!ensureConfigured()) return { item: null, problem: 'sin-ofertas' };
+export async function currentPackages(): Promise<OfferingResult> {
+  if (!ensureConfigured()) return { items: [], problem: 'sin-ofertas' };
   let offerings;
   try {
     offerings = await Purchases.getOfferings();
@@ -112,14 +113,14 @@ export async function currentPackage(): Promise<OfferingResult> {
   if (!current) {
     const problem = Object.keys(offerings.all).length ? 'sin-oferta-actual' : 'sin-ofertas';
     console.warn('RevenueCat: sin oferta utilizable', { problem, ofertas: Object.keys(offerings.all) });
-    return { item: null, problem };
+    return { items: [], problem };
   }
-  const item = current.availablePackages[0];
-  if (!item) {
+  const items = current.availablePackages;
+  if (!items.length) {
     console.warn('RevenueCat: la oferta actual no trae paquetes', { oferta: current.identifier });
-    return { item: null, problem: 'oferta-vacia' };
+    return { items: [], problem: 'oferta-vacia' };
   }
-  return { item, problem: null };
+  return { items, problem: null };
 }
 
 export type PurchaseOutcome = 'purchased' | 'cancelled';

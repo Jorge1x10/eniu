@@ -11,9 +11,10 @@ import { ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { HeroHeader } from '@/components/hero-header';
 import { HeroScreen } from '@/components/hero-screen';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
+import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, deleteCatalogue, getCatalogue } from '@/features/catalogues/catalogue-api';
-import { analyticsRange } from '@/lib/analytics-range';
+import { visitsPath } from '@/lib/analytics-range';
 import { ApiError, api } from '@/lib/api';
 import type { Analytics, Catalogue, Category, Product } from '@/types/models';
 import { useTranslation } from 'react-i18next';
@@ -41,19 +42,24 @@ export default function CatalogueDetailScreen() {
   const products = useQuery({ queryKey: ['products', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ products: Product[] }>(`${base}/products`), enabled: Boolean(selectedBusiness && catalogueId) });
   const categories = useQuery({ queryKey: ['categories', selectedBusiness?.id, catalogueId], queryFn: () => api.get<{ categories: Category[] }>(`${base}/categories`), enabled: Boolean(selectedBusiness && catalogueId) });
   const counts: Record<string, number | undefined> = { products: products.data?.products.length, categories: categories.data?.categories.length };
-  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, catalogueId, 30, selectedBusiness?.timezone], queryFn: () => api.get<Analytics>(`${base}/analytics?${analyticsRange(30, selectedBusiness!.timezone)}`), enabled: Boolean(selectedBusiness && catalogueId) });
+  // El gratuito sólo tiene el resumen de 7 días: pedirle el informe de 30
+  // devolvía 403 y la línea decía "0 vistas" aunque el menú sí tuviera visitas.
+  const { analyticsScope } = usePlan();
+  const visitsScope = analyticsScope === 'full' ? 'full' : 'summary';
+  const analytics = useQuery({ queryKey: ['analytics', visitsScope, selectedBusiness?.id, catalogueId, 30, selectedBusiness?.timezone], queryFn: () => api.get<Analytics>(visitsPath(visitsScope, selectedBusiness!.id, catalogueId, 30, selectedBusiness!.timezone)), enabled: Boolean(selectedBusiness && catalogueId) && analyticsScope !== 'none' });
   const [deleting, setDeleting] = useState(false);
   const insets = useSafeAreaInsets();
   const safeTop = Math.max(insets.top, 12);
 
   const productCount = counts.products ?? 0;
   const categoryCount = counts.categories ?? 0;
-  const monthlyViews = (analytics.data?.visits_over_time ?? []).reduce((total, point) => total + Number(point.views || 0), 0);
+  const periodViews = (analytics.data?.visits_over_time ?? []).reduce((total, point) => total + Number(point.views || 0), 0);
   const metaLine = [
     productCount === 1 ? t("1 producto") : t("{{count}} productos", { count: productCount }),
     categoryCount === 1 ? t("1 categoría") : t("{{count}} categorías", { count: categoryCount }),
-    t("{{count}} vistas en 30 días", { count: monthlyViews }),
-  ].join(' · ');
+    analyticsScope === 'none' ? null
+      : visitsScope === 'full' ? t("{{count}} vistas en 30 días", { count: periodViews }) : t("{{count}} vistas en 7 días", { count: periodViews }),
+  ].filter(Boolean).join(' · ');
 
   // Esta pantalla queda montada en el stack de Menús. Si el usuario cambia de
   // negocio desde otra pestaña, el menú abierto ya no pertenece al negocio

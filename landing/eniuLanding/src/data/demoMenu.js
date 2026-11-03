@@ -10,22 +10,22 @@
 // gratuito que aplica el backend. Si allá cambian, hay que cambiarlos aquí:
 // la demo promete lo que el visitante encontrará al registrarse.
 
-export const FREE_PRODUCT_LIMIT = 15
+export const FREE_PRODUCT_LIMIT = 40
 
 // `free: true` marca lo que incluye el plan gratuito; el resto lleva la
 // etiqueta de plan de pago en la interfaz.
 export const DEMO_TEMPLATES = [
   { key: 'modern', free: true },
-  { key: 'minimal' },
+  { key: 'minimal', free: true },
   { key: 'elegant' },
   { key: 'bold' },
 ]
 
 export const DEMO_FONTS = [
   { key: 'inter', label: 'Inter', family: 'Inter, system-ui, sans-serif', free: true },
-  { key: 'poppins', label: 'Poppins', family: 'Poppins, system-ui, sans-serif' },
-  { key: 'playfair', label: 'Playfair Display', family: '"Playfair Display", Georgia, serif' },
-  { key: 'lora', label: 'Lora', family: 'Lora, Georgia, serif' },
+  { key: 'poppins', label: 'Poppins', family: 'Poppins, system-ui, sans-serif', free: true },
+  { key: 'playfair', label: 'Playfair Display', family: '"Playfair Display", Georgia, serif', free: true },
+  { key: 'lora', label: 'Lora', family: 'Lora, Georgia, serif', free: true },
 ]
 
 // Se carga sólo cuando alguien abre la pestaña de diseño, para no retrasar la

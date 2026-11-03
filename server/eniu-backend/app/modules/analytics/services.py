@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.database.db import db
 from app.modules.analytics.model import AnalyticsEvent
-from app.modules.billing.guards import ensure_analytics_access
+from app.modules.billing.guards import ensure_analytics_access, ensure_analytics_summary_access
 from app.modules.analytics.security import protected_value, secure_equal, tracking_key
 from app.modules.catalogue.model import Catalogue
 from app.modules.catalogue.services import catalogue_access
@@ -19,13 +19,30 @@ EVENT_TYPES = {"menu_view", "product_view", "category_select"}
 TARGET_BY_EVENT = {"menu_view": None, "product_view": "product", "category_select": "category"}
 SOURCES = ("qr", "copied_link", "social", "referral", "direct", "unknown")
 DEVICES = ("mobile", "tablet", "desktop", "unknown")
-SOURCE_LABELS = {"qr": _("Código QR"), "copied_link": _("Enlace copiado"), "social": "Redes sociales", "referral": _("Sitio de referencia"), "direct": "Acceso directo", "unknown": "Desconocido"}
-DEVICE_LABELS = {"mobile": "Celular", "tablet": "Tablet", "desktop": "Computadora", "unknown": "Desconocido"}
 EVENT_FIELDS = {"type", "visitor_id", "session_id", "occurred_at", "source", "device_type", "target_type", "target_key"}
 ANONYMOUS_ID = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 TRACKING_KEY = re.compile(r"^[0-9a-f]{64}$")
 MAX_EVENTS = 20
 MAX_RANGE_DAYS = 90
+SUMMARY_PARAMS = {"timezone"}
+
+
+def _source_labels():
+    """Etiquetas de las fuentes en el idioma de quien consulta.
+
+    Son una función y no un diccionario del módulo porque `_()` traduce en el
+    momento de llamarse: evaluadas al importar, quedaban siempre en español y
+    un usuario en inglés veía «Redes sociales» en su informe.
+    """
+    return {
+        "qr": _("Código QR"), "copied_link": _("Enlace copiado"), "social": _("Redes sociales"),
+        "referral": _("Sitio de referencia"), "direct": _("Acceso directo"), "unknown": _("Desconocido"),
+    }
+
+
+def _device_labels():
+    # «Tablet» se escribe igual en los dos idiomas, por eso no pasa por `_()`.
+    return {"mobile": _("Celular"), "tablet": "Tablet", "desktop": _("Computadora"), "unknown": _("Desconocido")}
 
 
 class AnalyticsValidationError(ValueError):
@@ -104,7 +121,7 @@ def record_events(public_slug, payload):
     if not isinstance(payload, dict) or set(payload) != {"events"} or not isinstance(payload.get("events"), list):
         return {"message": _("Debes enviar únicamente una lista de eventos")}, 400
     if not payload["events"] or len(payload["events"]) > MAX_EVENTS:
-        return {"message": f"El lote debe contener entre 1 y {MAX_EVENTS} eventos"}, 400
+        return {"message": _("El lote debe contener entre 1 y {max} eventos", max=MAX_EVENTS)}, 400
     try:
         catalogue = Catalogue.query.filter_by(public_slug=public_slug, is_published=True).first()
         if not catalogue:
@@ -160,7 +177,7 @@ def _parse_period(args):
         raise AnalyticsValidationError(_("La fecha inicial no puede ser posterior a la final"))
     days = (end_date - start_date).days + 1
     if days > MAX_RANGE_DAYS:
-        raise AnalyticsValidationError(f"El rango máximo es de {MAX_RANGE_DAYS} días")
+        raise AnalyticsValidationError(_("El rango máximo es de {days} días", days=MAX_RANGE_DAYS))
     start_utc = datetime.combine(start_date, time.min, zone).astimezone(timezone.utc)
     end_utc = datetime.combine(end_date + timedelta(days=1), time.min, zone).astimezone(timezone.utc)
     previous_end = start_date - timedelta(days=1)
@@ -203,6 +220,27 @@ def _date_hour_expressions(timezone_name):
     return func.date(AnalyticsEvent.occurred_at), cast(func.strftime("%H", AnalyticsEvent.occurred_at), Integer)
 
 
+def _daily_menu_views(catalogue_id, start, end, timezone_name):
+    """Visitas y visitantes de cada día del periodo, por fecha local `AAAA-MM-DD`."""
+    date_expr, _hour = _date_hour_expressions(timezone_name)
+    rows = db.session.query(date_expr.label("day"), func.count(AnalyticsEvent.id), func.count(distinct(AnalyticsEvent.visitor_hash))).filter(
+        AnalyticsEvent.catalogue_id == catalogue_id, AnalyticsEvent.event_type == "menu_view", AnalyticsEvent.occurred_at >= start, AnalyticsEvent.occurred_at < end,
+    ).group_by(date_expr).all()
+    return {str(day): (views, visitors) for day, views, visitors in rows}
+
+
+def _menu_views(catalogue_id, start, end):
+    return AnalyticsEvent.query.filter(
+        AnalyticsEvent.catalogue_id == catalogue_id, AnalyticsEvent.event_type == "menu_view",
+        AnalyticsEvent.occurred_at >= start, AnalyticsEvent.occurred_at < end,
+    ).count()
+
+
+def _hour_label(hour):
+    display_hour = hour % 12 or 12
+    return _("{hour}:00 a. m.", hour=display_hour) if hour < 12 else _("{hour}:00 p. m.", hour=display_hour)
+
+
 def _breakdown(catalogue_id, start, end, column, keys, labels):
     rows = db.session.query(column, func.count(AnalyticsEvent.id)).filter(
         AnalyticsEvent.catalogue_id == catalogue_id,
@@ -242,11 +280,8 @@ def get_analytics(owner_id, business_id, catalogue_id, args):
         current = _count_summary(catalogue.id, start_utc, end_utc)
         previous = _count_summary(catalogue.id, previous_start_utc, start_utc)
         summary = {key: {"value": current[key], "previous_value": previous[key], **_percentage_change(current[key], previous[key])} for key in current}
-        date_expr, hour_expr = _date_hour_expressions(timezone_name)
-        daily_rows = db.session.query(date_expr.label("day"), func.count(AnalyticsEvent.id), func.count(distinct(AnalyticsEvent.visitor_hash))).filter(
-            AnalyticsEvent.catalogue_id == catalogue.id, AnalyticsEvent.event_type == "menu_view", AnalyticsEvent.occurred_at >= start_utc, AnalyticsEvent.occurred_at < end_utc,
-        ).group_by(date_expr).all()
-        daily = {str(day): (views, visitors) for day, views, visitors in daily_rows}
+        _date, hour_expr = _date_hour_expressions(timezone_name)
+        daily = _daily_menu_views(catalogue.id, start_utc, end_utc, timezone_name)
         visits = []
         cursor = start_date
         while cursor <= end_date:
@@ -261,9 +296,7 @@ def get_analytics(owner_id, business_id, catalogue_id, args):
         busiest_day = max(visits, key=lambda item: item["views"]) if any(item["views"] for item in visits) else None
         if hour_rows:
             hour = hour_rows[0][0]
-            suffix = "a. m." if hour < 12 else "p. m."
-            display_hour = hour % 12 or 12
-            busiest_hour = {"hour": hour, "label": f"{display_hour}:00 {suffix}", "views": hour_rows[0][1]}
+            busiest_hour = {"hour": hour, "label": _hour_label(hour), "views": hour_rows[0][1]}
         else:
             busiest_hour = None
         summary.update({"top_product": top_products[0] if top_products else None, "busiest_day": busiest_day, "busiest_hour": busiest_hour})
@@ -274,8 +307,46 @@ def get_analytics(owner_id, business_id, catalogue_id, args):
             "visits_over_time": visits,
             "top_products": top_products,
             "top_categories": top_categories,
-            "devices": _breakdown(catalogue.id, start_utc, end_utc, AnalyticsEvent.device_type, DEVICES, DEVICE_LABELS),
-            "sources": _breakdown(catalogue.id, start_utc, end_utc, AnalyticsEvent.source, SOURCES, SOURCE_LABELS),
+            "devices": _breakdown(catalogue.id, start_utc, end_utc, AnalyticsEvent.device_type, DEVICES, _device_labels()),
+            "sources": _breakdown(catalogue.id, start_utc, end_utc, AnalyticsEvent.source, SOURCES, _source_labels()),
+        }, 200
+    except AnalyticsValidationError as error:
+        return {"message": str(error)}, 400
+    except SQLAlchemyError as error:
+        current_app.logger.exception(error)
+        return {"message": _("No fue posible consultar las analíticas")}, 500
+
+
+def get_analytics_summary(owner_id, business_id, catalogue_id, args):
+    """Visitas de los últimos 7 días, comparadas con los 7 anteriores.
+
+    Es la parte de las analíticas que incluye el plan gratuito. El periodo es
+    fijo a propósito y no acepta `from` ni `to`: si se pudiera mover, este
+    resumen sería el informe completo con otro nombre. Por lo mismo no trae
+    productos, horas, dispositivos ni fuentes, que siguen siendo de pago.
+    """
+    try:
+        catalogue, error = catalogue_access(owner_id, business_id, catalogue_id)
+        if error:
+            return error
+        blocked = ensure_analytics_summary_access(owner_id)
+        if blocked:
+            return blocked
+        period_args = {key: args[key] for key in SUMMARY_PARAMS if key in args}
+        zone, timezone_name, start_date, end_date, start_utc, end_utc, previous_start, previous_end, previous_start_utc = _parse_period(period_args)
+        views = _menu_views(catalogue.id, start_utc, end_utc)
+        previous = _menu_views(catalogue.id, previous_start_utc, start_utc)
+        daily = _daily_menu_views(catalogue.id, start_utc, end_utc, timezone_name)
+        visits = []
+        cursor = start_date
+        while cursor <= end_date:
+            visits.append({"date": cursor.isoformat(), "views": daily.get(cursor.isoformat(), (0, 0))[0]})
+            cursor += timedelta(days=1)
+        return {
+            "period": {"from": start_date.isoformat(), "to": end_date.isoformat(), "timezone": timezone_name},
+            "comparison_period": {"from": previous_start.isoformat(), "to": previous_end.isoformat()},
+            "summary": {"menu_views": {"value": views, "previous_value": previous, **_percentage_change(views, previous)}},
+            "visits_over_time": visits,
         }, 200
     except AnalyticsValidationError as error:
         return {"message": str(error)}, 400
