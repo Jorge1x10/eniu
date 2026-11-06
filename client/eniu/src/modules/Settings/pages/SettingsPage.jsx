@@ -158,7 +158,7 @@ function BillingSettings({ user, setUser }) {
                 precio tiene más de una moneda, una cifra fija sería incorrecta
                 para media audiencia, y además quedaría atrás en cuanto cambie. */}
             {price && <p className="mt-2 text-3xl font-black text-[#111111]">{formatPlanPrice(price)} <span className="text-base font-semibold text-[#666666]">{t("al mes")}</span></p>}
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#555555]">{t("Menús digitales, URL pública estable, código QR y administración de productos y categorías.")}</p>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[#555555]">{t("Productos ilimitados, hasta 5 menús por negocio y 3 negocios, todas las plantillas y tipografías, portada y fondo, estadísticas completas y tu menú sin la insignia de Eniu.")}</p>
             {price?.currencies && Object.keys(price.currencies).length > 1 && (
               <p className="mt-2 text-xs text-[#777777]">{t("Se cobra en tu moneda local cuando está disponible.")}</p>
             )}

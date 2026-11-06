@@ -5,7 +5,7 @@ function safeDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function buildDashboardViewModel({ catalogues = [], selectedCatalogue = null, analytics = null, analyticsScope = "full", chartDays = 7, now = new Date() }) {
+export function buildDashboardViewModel({ catalogues = [], selectedCatalogue = null, analytics = null, analyticsScope = "full", productCount = null, chartDays = 7, now = new Date() }) {
   const sortedMenus = [...catalogues].sort((left, right) => new Date(right.updated_at || right.created_at || 0) - new Date(left.updated_at || left.created_at || 0));
   const visits = analytics?.visits_over_time || [];
   const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -25,7 +25,8 @@ export function buildDashboardViewModel({ catalogues = [], selectedCatalogue = n
       weeklyViews,
       activeMenus: catalogues.filter((item) => item.is_published).length,
       draftMenus: catalogues.filter((item) => !item.is_published).length,
-      products: null,
+      // Los productos del menú elegido; null si la consulta no llegó.
+      products: productCount ?? null,
       qrScans: analytics && !isSummary ? Number(qr?.views || 0) : null,
     },
     chart,
@@ -33,7 +34,7 @@ export function buildDashboardViewModel({ catalogues = [], selectedCatalogue = n
     period: chart.length ? `${chart[0].date} — ${chart.at(-1).date}` : i18n.t("Últimos {{days}} días", { days: chartDays }),
     menus: sortedMenus.slice(0, 3).map((menu) => ({
       ...menu,
-      productCount: null,
+      productCount: menu.id === selectedCatalogue?.id ? productCount ?? null : null,
       views: menu.id === selectedCatalogue?.id && analytics ? analytics.summary?.menu_views?.value ?? null : null,
     })),
     selectedCatalogue,

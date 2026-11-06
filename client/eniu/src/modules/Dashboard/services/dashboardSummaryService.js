@@ -69,17 +69,28 @@ export function useDashboardSummaryService(businessId, timezone, scope = "full")
     if (!cataloguesResponse.ok || cataloguesResponse.aborted) return cataloguesResponse;
     const catalogues = cataloguesResponse.data?.catalogues || [];
     const selected = catalogues.find((item) => item.id === preferredCatalogueId) || catalogues[0] || null;
-    const withoutAnalytics = { ok: true, data: { catalogues, selectedCatalogue: selected, analytics: null, analyticsScope: scope } };
-    if (!selected || scope === "none") return withoutAnalytics;
-    const path = scope === "summary"
+    const summary = { catalogues, selectedCatalogue: selected, analytics: null, analyticsScope: scope, productCount: null };
+    if (!selected) return { ok: true, data: summary };
+    // Los productos del menú elegido van en paralelo a las visitas: la tarjeta
+    // «Productos» de Inicio se quedaba siempre en «—». Si esta consulta falla,
+    // Inicio sigue en pie y la tarjeta vuelve a su guion.
+    const productsRequest = request({ method: "GET", path: `businesses/${businessId}/catalogues/${selected.id}/products`, signal });
+    const analyticsPath = scope === "summary"
       ? `businesses/${businessId}/catalogues/${selected.id}/analytics/summary?${new URLSearchParams({ timezone: timezone || browserTimezone() })}`
       : `businesses/${businessId}/catalogues/${selected.id}/analytics?${new URLSearchParams(dashboardDateRange(timezone || undefined))}`;
-    const analyticsResponse = await request({ method: "GET", path, signal });
-    if (analyticsResponse.aborted) return analyticsResponse;
-    // Si el plan cambió desde que se cargó la sesión, la API dice 403: Inicio
-    // se queda sin cifras en vez de mostrar un error que no lo es.
-    if (analyticsResponse.status === 403) return withoutAnalytics;
+    const [productsResponse, analyticsResponse] = await Promise.all([
+      productsRequest,
+      scope === "none" ? Promise.resolve(null) : request({ method: "GET", path: analyticsPath, signal }),
+    ]);
+    if (productsResponse.aborted) return productsResponse;
+    if (analyticsResponse?.aborted) return analyticsResponse;
+    const products = productsResponse.ok ? productsResponse.data?.products : null;
+    summary.productCount = Array.isArray(products) ? products.length : null;
+    // Si el plan cambió desde que se cargó la sesión, la API dice 403; si la web
+    // sale antes que el backend con `/analytics/summary`, dice 404. En los dos
+    // casos Inicio se queda sin cifras en vez de mostrar un error que no lo es.
+    if (!analyticsResponse || analyticsResponse.status === 403 || analyticsResponse.status === 404) return { ok: true, data: summary };
     if (!analyticsResponse.ok) return analyticsResponse;
-    return { ok: true, data: { catalogues, selectedCatalogue: selected, analytics: analyticsResponse.data, analyticsScope: scope } };
+    return { ok: true, data: { ...summary, analytics: analyticsResponse.data } };
   }, [businessId, timezone, scope, request]);
 }

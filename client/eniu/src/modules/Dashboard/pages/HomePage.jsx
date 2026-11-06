@@ -74,7 +74,13 @@ export default function HomePage() {
     monthlyViews: selectedMenuDetail,
     weeklyViews: selectedMenuDetail,
     activeMenus: t("{{count}} en borrador", { count: viewModel.metrics.draftMenus }),
-    products: t("Sin resumen agregado disponible"),
+    // Con el tope del plan a la vista, quien se acerca a los 40 productos lo
+    // sabe antes de toparse con él al crear el siguiente.
+    products: viewModel.metrics.products === null
+      ? t("Sin resumen agregado disponible")
+      : limits.max_products_per_catalogue
+        ? t("Tu plan permite hasta {{limit}} por menú", { limit: limits.max_products_per_catalogue })
+        : t("Menú seleccionado: {{name}}", { name: viewModel.selectedCatalogue?.name }),
     qrScans: isSummary ? t("Incluido en Esencial") : rawData?.analytics ? t("Atribución aproximada en el periodo") : t("Sin información disponible"),
   };
 

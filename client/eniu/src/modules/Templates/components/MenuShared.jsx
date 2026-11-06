@@ -84,7 +84,9 @@ export function MenuFooter({ show = false }) {
   return (
     <footer className="space-y-1.5 py-7 text-center">
       <p className="text-[11px] opacity-75">{t("Consulta al personal sobre alérgenos.")}</p>
-      {show && <p className="text-[10px] opacity-60"><a href={eniuBadgeUrl(i18n.language)} target="_blank" rel="noopener" className="underline-offset-2 hover:underline">{t("Menú creado con ENIU")}</a></p>}
+      {/* El relleno con margen negativo agranda la zona táctil a unos 48 px sin
+          mover el pie: el texto mide 10 px y en el celular costaba atinarle. */}
+      {show && <p className="text-[10px] opacity-60"><a href={eniuBadgeUrl(i18n.language)} target="_blank" rel="noopener" className="-my-[17px] inline-block px-2 py-[17px] underline-offset-2 hover:underline">{t("Menú creado con ENIU")}</a></p>}
     </footer>
   );
 }

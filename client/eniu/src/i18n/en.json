@@ -339,7 +339,6 @@
   "Menú seleccionado: {{name}}": "Selected menu: {{name}}",
   "Menús": "Menus",
   "Menús activos": "Active menus",
-  "Menús digitales, URL pública estable, código QR y administración de productos y categorías.": "Digital menus, a stable public link, a QR code, and product and category management.",
   "Mi negocio": "My business",
   "Mi perfil": "My profile",
   "Minimalista": "Minimal",
@@ -657,5 +656,8 @@
   "Publicado": "Published",
   "Borrador": "Draft",
   "Disponible": "Available",
-  "Abriendo...": "Opening..."
+  "Abriendo...": "Opening...",
+  "Tu plan permite hasta {{limit}} por menú": "Your plan allows up to {{limit}} per menu",
+  "Sin categorías seleccionadas en este periodo.": "No categories selected in this period.",
+  "Productos ilimitados, hasta 5 menús por negocio y 3 negocios, todas las plantillas y tipografías, portada y fondo, estadísticas completas y tu menú sin la insignia de Eniu.": "Unlimited products, up to 5 menus per business and 3 businesses, every template and font, cover and background, full statistics, and your menu without the Eniu badge."
 }

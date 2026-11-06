@@ -11,7 +11,8 @@ type Props = {
   milestone: number;
   catalogueName: string;
   isPublished: boolean;
-  hasScans: boolean;
+  /** null cuando no se sabe: el resumen del plan gratuito no trae las fuentes, y la casilla se omite. */
+  hasScans: boolean | null;
   publicUrl?: string | null;
   onDismiss: () => void;
 };
@@ -39,12 +40,12 @@ export function MilestoneSheet({ visible, milestone, catalogueName, isPublished,
           <View style={{ width: 44, height: 5, borderRadius: 99, backgroundColor: 'rgba(17,17,17,0.22)', alignSelf: 'center', marginBottom: 26 }} />
           <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 1.6, textTransform: 'uppercase', color: '#8A7420' }}>{t("Nuevo logro")}</Text>
           <Text style={{ fontWeight: '900', fontSize: 72, lineHeight: 76, letterSpacing: -3, color: '#111111', fontVariant: ['tabular-nums'], marginTop: 12 }}>{milestone.toLocaleString(currentLocale())}</Text>
-          <Text style={{ fontWeight: '800', fontSize: 22, lineHeight: 28, letterSpacing: -0.4, color: '#111111', marginTop: 6 }}>{t("vistas en")} {catalogueName}</Text>
+          <Text style={{ fontWeight: '800', fontSize: 22, lineHeight: 28, letterSpacing: -0.4, color: '#111111', marginTop: 6 }}>{milestone === 1 ? t("vista en") : t("vistas en")} {catalogueName}</Text>
           <Text style={{ fontSize: 14, lineHeight: 21, color: '#2A2A2A', marginTop: 12, maxWidth: 300 }}>{t("Tus clientes están descubriendo tu menú. Sigue así.")}</Text>
 
           <View style={{ marginTop: 22, borderRadius: 18, backgroundColor: 'rgba(255,253,245,0.72)', padding: 16, gap: 12 }}>
             <Check done={isPublished} label={t("Menú publicado")} />
-            <Check done={hasScans} label={t("Primer escaneo de QR")} />
+            {hasScans === null ? null : <Check done={hasScans} label={t("Primer escaneo de QR")} />}
             {next ? <Check done={false} label={t("Siguiente meta: {{count}} vistas", { count: next.toLocaleString(currentLocale()) })} /> : null}
           </View>
 

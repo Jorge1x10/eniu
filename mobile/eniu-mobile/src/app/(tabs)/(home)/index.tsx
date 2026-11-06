@@ -187,7 +187,7 @@ export default function HomeScreen() {
               {/* De dónde llegan las visitas es parte del informe completo: el
                   resumen del gratuito no lo trae, y un cero aquí mentiría. */}
               {isSummary ? null : <HeroStat value={qrViews.toLocaleString(currentLocale())} label={t("escaneos de QR")} />}
-              <HeroStat value={publishedCount} label={t("menús publicados")} />
+              <HeroStat value={publishedCount} label={publishedCount === 1 ? t("menú publicado") : t("menús publicados")} />
             </View>
           </HeroHeader>
 
@@ -277,7 +277,9 @@ export default function HomeScreen() {
           milestone={milestone}
           catalogueName={selectedCatalogue.name}
           isPublished={selectedCatalogue.is_published}
-          hasScans={qrViews > 0}
+          // El resumen del gratuito no dice de dónde llegan las visitas: sin ese
+          // dato, la casilla del primer escaneo se quedaría vacía para siempre.
+          hasScans={isSummary ? null : qrViews > 0}
           onDismiss={dismissMilestone}
         />
       ) : null}
