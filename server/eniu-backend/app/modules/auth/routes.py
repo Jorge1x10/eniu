@@ -81,7 +81,7 @@ def login():
 
     if not user:
         return jsonify({
-            "message": "Credenciales incorrectas"
+            "message": _("Credenciales incorrectas")
         }), 401
 
     access_token = create_access_token(

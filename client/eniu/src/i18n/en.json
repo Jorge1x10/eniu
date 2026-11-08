@@ -339,7 +339,6 @@
   "Menú seleccionado: {{name}}": "Selected menu: {{name}}",
   "Menús": "Menus",
   "Menús activos": "Active menus",
-  "Menús digitales, URL pública estable, código QR y administración de productos y categorías.": "Digital menus, a stable public link, a QR code, and product and category management.",
   "Mi negocio": "My business",
   "Mi perfil": "My profile",
   "Minimalista": "Minimal",
@@ -648,5 +647,17 @@
   "Decide dónde empieza y termina el día en tus analíticas.": "It decides where the day starts and ends in your analytics.",
   "Consulta al personal sobre alérgenos.": "Ask our staff about allergens.",
   "Visitas diarias al menú.": "Daily menu visits.",
-  "Cada punto es un día del periodo.": "Each point is a day in the period."
+  "Cada punto es un día del periodo.": "Each point is a day in the period.",
+  "Vistas en 7 días": "Views in the last 7 days",
+  "Las visitas de tu menú en los últimos 7 días.": "Your menu's visits over the last 7 days.",
+  "Últimos 7 días comparados con los 7 anteriores.": "The last 7 days compared with the 7 before.",
+  "El informe completo viene con Esencial": "The full report comes with Essential",
+  "Productos con mayor interés, días y horas con más actividad, dispositivos y de dónde llegan tus clientes, en periodos de hasta 90 días.": "Most-viewed products, busiest days and hours, devices and where your guests come from, over periods of up to 90 days.",
+  "Publicado": "Published",
+  "Borrador": "Draft",
+  "Disponible": "Available",
+  "Abriendo...": "Opening...",
+  "Tu plan permite hasta {{limit}} por menú": "Your plan allows up to {{limit}} per menu",
+  "Sin categorías seleccionadas en este periodo.": "No categories selected in this period.",
+  "Productos ilimitados, hasta 5 menús por negocio y 3 negocios, todas las plantillas y tipografías, portada y fondo, estadísticas completas y tu menú sin la insignia de Eniu.": "Unlimited products, up to 5 menus per business and 3 businesses, every template and font, cover and background, full statistics, and your menu without the Eniu badge."
 }

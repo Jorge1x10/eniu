@@ -8,8 +8,9 @@ import CreateCatalogueModal from "../../Catalogue/components/CreateCatalogueModa
 import { useCatalogueService } from "../../Catalogue/services/catalogueService";
 import { getLastCatalogue, rememberCatalogue } from "../../Catalogue/utils/lastCatalogue";
 import { useAuth } from "../../auth/hooks/useAuth";
+import { usePlan } from "../../auth/hooks/usePlan";
 import { ActiveMenus, DashboardSkeleton, MenuViewsChart, MetricCard, QuickActions, RecentActivity } from "../components/HomeDashboardSections";
-import { useDashboardSummaryService } from "../services/dashboardSummaryService";
+import { analyticsScopeFor, useDashboardSummaryService } from "../services/dashboardSummaryService";
 import { buildDashboardViewModel } from "../utils/dashboardViewModel";
 import { useTranslation } from "react-i18next";
 
@@ -20,13 +21,20 @@ const metricDefinitions = [
   { key: "qrScans", title: "Escaneos QR", icon: QrCode, tone: "yellow", titleHint: "Atribución aproximada basada en enlaces con origen QR." },
 ];
 
+// El gratuito ve sus visitas de los últimos 7 días, no las del mes.
+const summaryMetricDefinitions = metricDefinitions.map((metric) => (
+  metric.key === "monthlyViews" ? { ...metric, key: "weeklyViews", title: "Vistas en 7 días" } : metric
+));
+
 export default function HomePage() {
   const { t } = useTranslation();
 
   const { user } = useAuth();
+  const { limits } = usePlan();
+  const analyticsScope = analyticsScopeFor(limits);
   const { selectedBusiness, isLoadingBusinesses } = useBusiness();
   const businessId = selectedBusiness?.id || null;
-  const loadSummary = useDashboardSummaryService(businessId, selectedBusiness?.timezone);
+  const loadSummary = useDashboardSummaryService(businessId, selectedBusiness?.timezone, analyticsScope);
   const { create } = useCatalogueService(businessId);
   const navigate = useNavigate();
   const [rawData, setRawData] = useState(null);
@@ -60,11 +68,20 @@ export default function HomePage() {
 
   const viewModel = useMemo(() => buildDashboardViewModel({ ...(rawData || {}), chartDays }), [chartDays, rawData]);
   const visibleName = user?.name || user?.username || "bienvenido";
+  const isSummary = viewModel.analyticsScope === "summary";
+  const selectedMenuDetail = rawData?.analytics ? t("Menú seleccionado: {{name}}", { name: viewModel.selectedCatalogue?.name }) : t("Sin información disponible");
   const metricDetails = {
-    monthlyViews: rawData?.analytics ? t("Menú seleccionado: {{name}}", { name: viewModel.selectedCatalogue?.name }) : t("Sin información disponible"),
+    monthlyViews: selectedMenuDetail,
+    weeklyViews: selectedMenuDetail,
     activeMenus: t("{{count}} en borrador", { count: viewModel.metrics.draftMenus }),
-    products: t("Sin resumen agregado disponible"),
-    qrScans: rawData?.analytics ? t("Atribución aproximada en el periodo") : t("Sin información disponible"),
+    // Con el tope del plan a la vista, quien se acerca a los 40 productos lo
+    // sabe antes de toparse con él al crear el siguiente.
+    products: viewModel.metrics.products === null
+      ? t("Sin resumen agregado disponible")
+      : limits.max_products_per_catalogue
+        ? t("Tu plan permite hasta {{limit}} por menú", { limit: limits.max_products_per_catalogue })
+        : t("Menú seleccionado: {{name}}", { name: viewModel.selectedCatalogue?.name }),
+    qrScans: isSummary ? t("Incluido en Esencial") : rawData?.analytics ? t("Atribución aproximada en el periodo") : t("Sin información disponible"),
   };
 
   function openCreateMenu() {
@@ -86,8 +103,8 @@ export default function HomePage() {
   return <section className="min-w-0 space-y-6 overflow-x-hidden p-2 text-[#111111] font-['Manrope',ui-sans-serif,system-ui] sm:p-4">
     <header className="flex flex-col gap-3 rounded-xl bg-white sm:flex-row sm:items-start sm:justify-between sm:gap-5 p-3 items-center justify-center sm:h-20"><div><h1 className="text-[25px] font-extrabold leading-tight">{t("Hola,")} {visibleName} 👋</h1><p className="mt-1 text-xs text-[#2A2A2A]">{t("Así se están comportando tus menús hoy.")}</p></div><button type="button" onClick={openCreateMenu} className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#FFE05A] px-4.5 text-sm font-bold hover:bg-[#E8C93D] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111111] sm:w-auto"><Plus aria-hidden="true" size={18} /> {t("Crear menú")}</button></header>
     {error ? <div className="rounded-2xl border border-red-200 bg-white p-8 text-center"><p role="alert" className="font-semibold">{t("No pudimos cargar el resumen de tu negocio.")}</p><button type="button" onClick={() => load()} className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-bold text-white"><RefreshCw aria-hidden="true" size={17} /> {t("Reintentar")}</button></div> : <>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metricDefinitions.map((metric) => <MetricCard key={metric.key} {...metric} value={viewModel.metrics[metric.key]} detail={metricDetails[metric.key]} />)}</div>
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,376px)]"><MenuViewsChart points={viewModel.chart} total={viewModel.chartTotal} period={viewModel.period} days={chartDays} onDaysChange={setChartDays} /><QuickActions businessId={businessId} catalogueId={viewModel.selectedCatalogue?.id} onCreateMenu={openCreateMenu} /></div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{(isSummary ? summaryMetricDefinitions : metricDefinitions).map(({ key, ...metric }) => <MetricCard key={key} {...metric} value={viewModel.metrics[key]} detail={metricDetails[key]} />)}</div>
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,376px)]"><MenuViewsChart points={viewModel.chart} total={viewModel.chartTotal} period={viewModel.period} days={chartDays} onDaysChange={setChartDays} selectable={!isSummary} /><QuickActions businessId={businessId} catalogueId={viewModel.selectedCatalogue?.id} onCreateMenu={openCreateMenu} /></div>
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,376px)]"><ActiveMenus menus={viewModel.menus} businessId={businessId} onCreateMenu={openCreateMenu} /><RecentActivity /></div>
     </>}
     {isCreateMenuOpen && <CreateCatalogueModal onClose={() => setIsCreateMenuOpen(false)} onCreate={create} onCreated={handleCreated} />}

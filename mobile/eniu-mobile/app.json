@@ -2,7 +2,7 @@
   "expo": {
     "name": "Eniu",
     "slug": "eniu-mobile",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "orientation": "portrait",
     "icon": "./assets/brand/app-icon-light.png",
     "scheme": "eniu",
@@ -17,8 +17,14 @@
         "dark": "./assets/brand/app-icon-dark.png"
       },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "es",
+        "CFBundleAllowMixedLocalizations": true
       }
+    },
+    "locales": {
+      "es": "./locales/es.json",
+      "en": "./locales/en.json"
     },
     "android": {
       "package": "com.eniu.app",
@@ -66,7 +72,12 @@
           "iosUrlScheme": "com.googleusercontent.apps.366455277593-pu0vhubu01ga7ema31jqa047gd9pc1t6"
         }
       ],
-      "expo-localization"
+      [
+        "expo-localization",
+        {
+          "supportedLocales": ["es", "en"]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

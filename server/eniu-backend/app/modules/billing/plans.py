@@ -19,22 +19,42 @@ UNLIMITED = None
 DEFAULT_LAYOUT_KEY = catalog.DEFAULT_LAYOUT_KEY
 DEFAULT_FONT_KEY = catalog.DEFAULT_FONT_KEY
 
+# Lo que el gratuito puede elegir de diseño. Con una sola plantilla y una sola
+# tipografía todos los menús gratuitos se veían iguales, y nadie publica un
+# menú que no siente suyo.
+#
+# Todas están en `catalog.LEGACY_*` a propósito: la app 1.0.0, que sigue en
+# teléfonos sin actualizar, convierte en la básica cualquier clave que no
+# conoce y la manda así al guardar. Con claves que sí conoce, un usuario
+# gratuito puede editar desde esa app sin perder la plantilla que eligió.
+FREE_LAYOUT_KEYS = frozenset({"modern", "minimal", "natural"})
+FREE_FONT_KEYS = frozenset({"inter", "poppins", "montserrat", "playfair", "lora"})
+
 
 PLANS = {
     FREE: {
         "name": "Plan gratuito",
         "max_businesses": 1,
         "max_catalogues_per_business": 1,
-        "max_products_per_catalogue": 15,
-        "layout_keys": {DEFAULT_LAYOUT_KEY},
-        "font_keys": {DEFAULT_FONT_KEY},
+        # Con 15 no cabía ni la carta de una taquería: el menú real quedaba a
+        # medias y no se publicaba.
+        "max_products_per_catalogue": 40,
+        "layout_keys": set(FREE_LAYOUT_KEYS),
+        "font_keys": set(FREE_FONT_KEYS),
         # El color nunca fue una función de pago: el gratuito siempre pudo
         # elegir cualquier color, y sigue pudiendo elegir cualquier paleta
         # curada o entrar en modo avanzado igual que un plan pago.
         "allow_cover": False,
         "allow_background": False,
         "allow_product_images": True,
+        # `allow_analytics` es el informe completo (lo más visto, horas,
+        # dispositivos, de dónde llegan). Sigue en False para el gratuito
+        # porque las apps ya publicadas lo usan para mostrar el candado.
         "allow_analytics": False,
+        # El resumen de los últimos 7 días: cuántas veces se abrió el menú.
+        # Es la prueba de que el QR funciona, y sin ella el gratuito no tenía
+        # ninguna razón para volver a abrir la app.
+        "analytics_summary": True,
         "allow_splash": False,
         "show_eniu_badge": True,
     },
@@ -49,6 +69,7 @@ PLANS = {
         "allow_background": True,
         "allow_product_images": True,
         "allow_analytics": True,
+        "analytics_summary": True,
         "allow_splash": True,
         "show_eniu_badge": False,
     },
@@ -150,6 +171,7 @@ def to_public_dict(plan_key):
         "allow_background": limits["allow_background"],
         "allow_product_images": limits["allow_product_images"],
         "allow_analytics": limits["allow_analytics"],
+        "analytics_summary": limits["analytics_summary"],
         "allow_splash": limits["allow_splash"],
         "show_eniu_badge": limits["show_eniu_badge"],
     }

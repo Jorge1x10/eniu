@@ -37,7 +37,9 @@ export function PalettePicker({ palettes, value, onChange }: {
                 <View key={token} style={{ width: 19, height: 19, borderRadius: 999, backgroundColor: palette.tokens[token], borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' }} />
               ))}
             </View>
-            <Text style={{ color: appTheme.text, fontSize: 13, fontWeight: '800' }}>{t(palette.name)}</Text>
+            {/* Un espacio de ancho cero tras la barra deja partir «Oscura/Nocturna»
+                en la barra; sin él la tarjeta de 132 px lo cortaba a media palabra. */}
+            <Text style={{ color: appTheme.text, fontSize: 13, fontWeight: '800' }}>{t(palette.name).replace(/\//g, '/​')}</Text>
           </Pressable>
         );
       })}

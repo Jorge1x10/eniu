@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AreaChart } from '@/components/area-chart';
+import { PlanNotice } from '@/components/ui/plan-notice';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen-state';
 import { HeroHeader } from '@/components/hero-header';
 import { HeroScreen } from '@/components/hero-screen';
@@ -10,7 +11,7 @@ import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys, listCatalogues } from '@/features/catalogues/catalogue-api';
-import { analyticsRange } from '@/lib/analytics-range';
+import { visitsPath } from '@/lib/analytics-range';
 import { api } from '@/lib/api';
 import type { Analytics } from '@/types/models';
 import { useTranslation } from 'react-i18next';
@@ -34,25 +35,29 @@ export default function AnalyticsScreen() {
   const insets = useSafeAreaInsets();
   const safeTop = Math.max(insets.top, 12);
   const { selectedBusiness } = useBusiness();
-  const { limits } = usePlan();
+  const { analyticsScope } = usePlan();
+  // El gratuito ve el resumen de 7 días; el resto del informe se anuncia
+  // debajo en vez de esconder la pestaña entera tras un candado.
+  const isSummary = analyticsScope === 'summary';
+  const visitsScope = isSummary ? 'summary' : 'full';
   const menus = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
   const selected = menus.data?.catalogues[0];
-  const analytics = useQuery({ queryKey: ['analytics', selectedBusiness?.id, selected?.id, 30, selectedBusiness?.timezone], queryFn: () => api.get<Analytics>(`businesses/${selectedBusiness!.id}/catalogues/${selected!.id}/analytics?${analyticsRange(30, selectedBusiness!.timezone)}`), enabled: Boolean(selectedBusiness && selected) && limits.allow_analytics });
+  const analytics = useQuery({ queryKey: ['analytics', visitsScope, selectedBusiness?.id, selected?.id, 30, selectedBusiness?.timezone], queryFn: () => api.get<Analytics>(visitsPath(visitsScope, selectedBusiness!.id, selected!.id, 30, selectedBusiness!.timezone)), enabled: Boolean(selectedBusiness && selected) && analyticsScope !== 'none' });
   const points = analytics.data?.visits_over_time ?? [];
   const total = points.reduce((sum, point) => sum + Number(point.views || 0), 0);
   const busiest = points.reduce((best, point) => Number(point.views || 0) > Number(best?.views || 0) ? point : best, points[0]);
   const sources = (analytics.data?.sources ?? []).filter((source) => Number(source.views) > 0).sort((a, b) => Number(b.views) - Number(a.views));
   const sourcesTotal = Math.max(1, sources.reduce((sum, source) => sum + Number(source.views || 0), 0));
   const topProducts = (analytics.data?.top_products ?? []).filter((product) => Number(product.interactions) > 0).slice(0, 5);
-  // El backend ya compara contra los 30 días anteriores; `null` significa que no
-  // había periodo previo con el que comparar, y entonces no se enseña nada.
+  // El backend ya compara contra el periodo anterior (30 o 7 días); `null`
+  // significa que no había con qué comparar, y entonces no se enseña nada.
   const change = analytics.data?.summary?.menu_views?.percentage_change;
   const deltaLabel = typeof change === 'number' ? `${change > 0 ? '+' : ''}${Math.round(change)}%` : null;
 
   const padded = { paddingHorizontal: 18, paddingTop: safeTop + 12, gap: 18 };
 
   if (!selectedBusiness) return <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={padded}><EmptyState title={t("Sin negocio seleccionado")} description={t("Crea un negocio desde Inicio.")} /></ScrollView>;
-  if (!limits.allow_analytics) return <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={padded}><EmptyState title={t("Tu plan actual no incluye analíticas")} description={t("Las visitas de tu menú se siguen registrando mientras tanto, así que al activarlas no empiezas de cero.")} /></ScrollView>;
+  if (analyticsScope === 'none') return <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={padded}><EmptyState title={t("Tu plan actual no incluye analíticas")} description={t("Las visitas de tu menú se siguen registrando mientras tanto, así que al activarlas no empiezas de cero.")} /></ScrollView>;
   if (menus.isLoading || analytics.isLoading) return <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={padded}><LoadingState label={t("Calculando analíticas…")} /></ScrollView>;
   if (menus.isError || analytics.isError) return <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={padded}><ErrorState message={t("No pudimos cargar las analíticas.")} error={menus.error ?? analytics.error} onRetry={() => { menus.refetch(); analytics.refetch(); }} /></ScrollView>;
   if (!selected) return <ScrollView contentInsetAdjustmentBehavior="never" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={padded}><EmptyState title={t("Sin datos todavía")} description={t("Crea un menú para comenzar a registrar visitas.")} /></ScrollView>;
@@ -62,7 +67,7 @@ export default function AnalyticsScreen() {
       {/* Cabecera a sangre, con el número protagonista en amarillo sobre negro. */}
       <HeroHeader paddingHorizontal={20} paddingBottom={26} gap={20}>
         <View style={{ gap: 3 }}>
-          <Text numberOfLines={1} style={{ color: theme.heroMuted, fontSize: 10, fontWeight: '800', letterSpacing: 1.3, textTransform: 'uppercase' }}>{selectedBusiness.name} · {t("30 días")}</Text>
+          <Text numberOfLines={1} style={{ color: theme.heroMuted, fontSize: 10, fontWeight: '800', letterSpacing: 1.3, textTransform: 'uppercase' }}>{selectedBusiness.name} · {isSummary ? t("7 días") : t("30 días")}</Text>
           <Text style={{ color: '#FFFDF5', fontSize: 24, fontWeight: '900' }}>{t("Analíticas")}</Text>
         </View>
 
@@ -71,7 +76,7 @@ export default function AnalyticsScreen() {
           {deltaLabel ? (
             <View style={{ alignItems: 'flex-end', gap: 3, paddingBottom: 6 }}>
               <Text style={{ color: theme.yellow, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{deltaLabel}</Text>
-              <Text style={{ color: theme.heroMuted, fontSize: 10.5, fontWeight: '500' }}>{t("vs. mes anterior")}</Text>
+              <Text style={{ color: theme.heroMuted, fontSize: 10.5, fontWeight: '500' }}>{isSummary ? t("vs. semana anterior") : t("vs. mes anterior")}</Text>
             </View>
           ) : null}
         </View>
@@ -88,6 +93,8 @@ export default function AnalyticsScreen() {
       </HeroHeader>
 
       <View style={{ paddingHorizontal: 18, paddingTop: 20, gap: 22 }}>
+        {isSummary ? <PlanNotice message={t("El informe completo suma lo más visto, las horas con más visitas y de dónde llegan tus clientes.")} /> : null}
+
         {sources.length ? (
           <View style={{ gap: 11 }}>
             <SectionLabel>{t("De dónde llegan")}</SectionLabel>

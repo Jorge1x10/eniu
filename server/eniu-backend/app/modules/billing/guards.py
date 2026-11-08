@@ -87,6 +87,14 @@ def ensure_analytics_access(owner_id):
     return _blocked(_("Tu plan actual no incluye analíticas."))
 
 
+def ensure_analytics_summary_access(owner_id):
+    """El resumen de visitas de 7 días, que el gratuito sí incluye."""
+    limits = limits_for_owner(owner_id)
+    if limits["analytics_summary"] or limits["allow_analytics"]:
+        return None
+    return _blocked(_("Tu plan actual no incluye analíticas."))
+
+
 def ensure_template_allowed(owner_id, layout_key=None, theme=None, cover_upload=False,
                             background_upload=False, splash=None, splash_upload=False,
                             current=None):
@@ -123,11 +131,11 @@ def ensure_template_allowed(owner_id, layout_key=None, theme=None, cover_upload=
     # de que `layout_key` existiera). Ambos representan hoy el mismo catálogo
     # de 8 claves, así que no cambia a qué se le aplica el límite.
     if changed(layout_key, current.get("template_key")) and not plans.allows_layout(plan_key, layout_key):
-        return _blocked(_("Tu plan actual sólo incluye la plantilla básica."))
+        return _blocked(_("Tu plan actual no incluye esa plantilla."))
 
     font_key = theme.get("font_key")
     if changed(font_key, current_theme.get("font_key")) and not plans.allows_font(plan_key, font_key):
-        return _blocked(_("Tu plan actual sólo incluye la tipografía básica."))
+        return _blocked(_("Tu plan actual no incluye esa tipografía."))
 
     if not limits["allow_cover"] and theme.get("show_cover") is True and current_theme.get("show_cover") is not True:
         return _blocked(_("Tu plan actual no incluye portada en el menú."))

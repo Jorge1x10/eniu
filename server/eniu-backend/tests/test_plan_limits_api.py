@@ -12,6 +12,7 @@ from app.modules.billing.services import apply_free_plan_state
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 from app.modules.products.model import Product
+from app.modules.template import catalog
 from app.modules.template.model import CatalogueTemplate
 from app.modules.users.model import User
 from tests.plan_helpers import grant_plan
@@ -99,21 +100,40 @@ class PlanLimitsApiTestCase(unittest.TestCase):
         )
         self.assertEqual(allowed.status_code, 201)
 
-    def test_free_plan_stops_at_fifteen_products(self):
+    def test_free_plan_stops_at_forty_products(self):
+        url = f"/api/businesses/{self.free_business_id}/catalogues/{self.free_catalogue_id}/products"
         with self.app.app_context():
             db.session.add_all([
                 Product(name=f"Producto {index}", catalogue_id=UUID(self.free_catalogue_id), display_order=index)
-                for index in range(15)
+                for index in range(39)
             ])
             db.session.commit()
 
-        response = self.client.post(
-            f"/api/businesses/{self.free_business_id}/catalogues/{self.free_catalogue_id}/products",
-            json={"name": "El que sobra"},
-            headers=self.headers(self.free_token),
-        )
+        fortieth = self.client.post(url, json={"name": "El cuarenta"}, headers=self.headers(self.free_token))
+        self.assertEqual(fortieth.status_code, 201)
+
+        response = self.client.post(url, json={"name": "El que sobra"}, headers=self.headers(self.free_token))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.get_json()["limit"], 15)
+        self.assertEqual(response.get_json()["limit"], 40)
+
+    def test_free_plan_limits_travel_to_the_clients(self):
+        response = self.client.get("/api/auth/me", headers=self.headers(self.free_token))
+        self.assertEqual(response.status_code, 200)
+        limits = response.get_json()["user"]["plan"]["limits"]
+        self.assertEqual(limits["max_products_per_catalogue"], 40)
+        self.assertEqual(limits["layout_keys"], ["minimal", "modern", "natural"])
+        self.assertEqual(limits["template_keys"], ["minimal", "modern", "natural"])
+        self.assertEqual(limits["font_keys"], ["inter", "lora", "montserrat", "playfair", "poppins"])
+        self.assertTrue(limits["analytics_summary"])
+        # Las apps ya publicadas muestran el candado con esta bandera: el
+        # gratuito gana el resumen, no el informe completo.
+        self.assertFalse(limits["allow_analytics"])
+
+    def test_free_plan_designs_stay_inside_what_the_old_app_understands(self):
+        # La app 1.0.0 convierte en la básica cualquier clave que no conoce; si
+        # el gratuito tuviera una así, perdería su diseño al guardar desde ahí.
+        self.assertLessEqual(plans.FREE_LAYOUT_KEYS, catalog.LEGACY_LAYOUT_KEYS)
+        self.assertLessEqual(plans.FREE_FONT_KEYS, catalog.LEGACY_FONT_KEYS)
 
     def test_analytics_are_reserved_for_paid_plans(self):
         blocked = self.client.get(
@@ -128,6 +148,26 @@ class PlanLimitsApiTestCase(unittest.TestCase):
         )
         self.assertEqual(allowed.status_code, 200)
 
+    def test_free_plan_gets_the_seven_day_summary_and_nothing_else(self):
+        response = self.client.get(
+            f"/api/businesses/{self.free_business_id}/catalogues/{self.free_catalogue_id}/analytics/summary?timezone=UTC",
+            headers=self.headers(self.free_token),
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(set(data), {"period", "comparison_period", "summary", "visits_over_time"})
+        self.assertEqual(set(data["summary"]), {"menu_views"})
+        self.assertEqual(len(data["visits_over_time"]), 7)
+        self.assertTrue(all(set(point) == {"date", "views"} for point in data["visits_over_time"]))
+
+    def test_the_summary_period_cannot_be_moved(self):
+        # Con `from`/`to` el resumen se volvería el informe histórico completo.
+        base = f"/api/businesses/{self.free_business_id}/catalogues/{self.free_catalogue_id}/analytics/summary"
+        for query in ("?from=2020-01-01&to=2020-03-30", "?to=2020-03-30", "?timezone=UTC&days=90"):
+            with self.subTest(query=query):
+                response = self.client.get(base + query, headers=self.headers(self.free_token))
+                self.assertEqual(response.status_code, 400)
+
     # --- personalizacion de la plantilla ------------------------------------
 
     def test_free_plan_keeps_colors_but_blocks_the_rest_of_the_design(self):
@@ -140,13 +180,28 @@ class PlanLimitsApiTestCase(unittest.TestCase):
         # porque sólo se puede juzgar comparando contra lo que ya estaba guardado.
         for payload in (
             {"template_key": "luxury"},
-            {"theme": {"font_key": "playfair"}},
+            {"template_key": "receipt"},
+            {"theme": {"font_key": "bebas_neue"}},
+            {"theme": {"font_key": "roboto"}},
             {"theme": {"background_opacity": 0.5}},
         ):
             with self.subTest(payload=payload):
                 blocked = self.client.patch(url, json=payload, headers=self.headers(self.free_token))
                 self.assertEqual(blocked.status_code, 403)
                 self.assertEqual(blocked.get_json()["code"], "plan_limit")
+
+    def test_free_plan_includes_three_templates_and_five_fonts(self):
+        url = self.template_url(self.free_business_id, self.free_catalogue_id)
+        for layout_key in ("minimal", "natural", "modern"):
+            with self.subTest(layout_key=layout_key):
+                response = self.client.patch(url, json={"template_key": layout_key}, headers=self.headers(self.free_token))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.get_json()["template"]["template_key"], layout_key)
+        for font_key in ("poppins", "montserrat", "playfair", "lora", "inter"):
+            with self.subTest(font_key=font_key):
+                response = self.client.patch(url, json={"theme": {"font_key": font_key}}, headers=self.headers(self.free_token))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.get_json()["template"]["theme"]["font_key"], font_key)
 
     def test_free_plan_can_save_while_resending_its_stored_configuration(self):
         # Los clientes reenvían el tema completo en cada guardado. Si el valor
@@ -184,7 +239,7 @@ class PlanLimitsApiTestCase(unittest.TestCase):
         url = self.template_url(self.paid_business_id, self.paid_catalogue_id)
         response = self.client.patch(
             url,
-            json={"template_key": "luxury", "theme": {"font_key": "playfair", "background_opacity": 0.5}},
+            json={"template_key": "luxury", "theme": {"font_key": "bebas_neue", "background_opacity": 0.5}},
             headers=self.headers(self.paid_token),
         )
         self.assertEqual(response.status_code, 200)
@@ -233,7 +288,7 @@ class PlanLimitsApiTestCase(unittest.TestCase):
             db.session.add(CatalogueTemplate(
                 catalogue_id=catalogue.id,
                 template_key="luxury",
-                font_key="playfair",
+                font_key="bebas_neue",
                 show_cover=True,
                 cover_filename="portada.png",
                 splash_enabled=True,
@@ -248,6 +303,18 @@ class PlanLimitsApiTestCase(unittest.TestCase):
         self.assertIsNone(menu["template"]["theme"]["cover_image_url"])
         self.assertTrue(menu["branding"]["show_eniu_badge"])
 
+    def test_public_menu_keeps_the_free_plan_design_choices(self):
+        with self.app.app_context():
+            catalogue = db.session.get(Catalogue, UUID(self.free_catalogue_id))
+            catalogue.is_published = True
+            catalogue.public_slug = "cafe-natural"
+            db.session.add(CatalogueTemplate(catalogue_id=catalogue.id, template_key="natural", layout_key="natural", font_key="playfair"))
+            db.session.commit()
+
+        menu = self.client.get("/api/public/menus/cafe-natural").get_json()["menu"]
+        self.assertEqual(menu["template"]["key"], "natural")
+        self.assertEqual(menu["template"]["theme"]["font_key"], "playfair")
+
     def test_public_menu_keeps_the_design_and_drops_the_badge_when_paid(self):
         with self.app.app_context():
             catalogue = db.session.get(Catalogue, UUID(self.paid_catalogue_id))
@@ -256,13 +323,13 @@ class PlanLimitsApiTestCase(unittest.TestCase):
             db.session.add(CatalogueTemplate(
                 catalogue_id=catalogue.id,
                 template_key="luxury",
-                font_key="playfair",
+                font_key="bebas_neue",
             ))
             db.session.commit()
 
         menu = self.client.get("/api/public/menus/cafe-de-pago").get_json()["menu"]
         self.assertEqual(menu["template"]["key"], "luxury")
-        self.assertEqual(menu["template"]["theme"]["font_key"], "playfair")
+        self.assertEqual(menu["template"]["theme"]["font_key"], "bebas_neue")
         self.assertFalse(menu["branding"]["show_eniu_badge"])
 
     # --- bajada de plan ------------------------------------------------------
@@ -332,7 +399,7 @@ class PlanLimitsApiTestCase(unittest.TestCase):
             db.session.add(CatalogueTemplate(
                 catalogue_id=catalogue.id,
                 template_key="luxury",
-                font_key="playfair",
+                font_key="bebas_neue",
                 show_cover=True,
                 splash_enabled=True,
             ))
@@ -356,7 +423,7 @@ class PlanLimitsApiTestCase(unittest.TestCase):
             db.session.add(CatalogueTemplate(
                 catalogue_id=catalogue.id,
                 template_key="luxury",
-                font_key="playfair",
+                font_key="bebas_neue",
                 show_cover=True,
                 cover_filename="portada.png",
                 background_filename="fondo.png",
@@ -379,12 +446,28 @@ class PlanLimitsApiTestCase(unittest.TestCase):
             self.assertEqual(config.cover_filename, "portada.png")
             self.assertEqual(config.background_filename, "fondo.png")
 
+    def test_downgrade_keeps_the_design_the_free_plan_includes(self):
+        # Una plantilla y una tipografía del gratuito no son funciones de pago:
+        # bajarlas a la básica le quitaría al usuario algo a lo que tiene derecho.
+        with self.app.app_context():
+            catalogue = db.session.get(Catalogue, UUID(self.paid_catalogue_id))
+            db.session.add(CatalogueTemplate(catalogue_id=catalogue.id, template_key="natural", layout_key="natural", font_key="lora"))
+            db.session.commit()
+
+            owner = db.session.get(User, catalogue.business.owner_id)
+            apply_free_plan_state(owner)
+            db.session.commit()
+
+            config = CatalogueTemplate.query.filter_by(catalogue_id=catalogue.id).first()
+            self.assertEqual(config.template_key, "natural")
+            self.assertEqual(config.font_key, "lora")
+
     def test_a_downgraded_user_can_still_save_the_template(self):
         # El motivo de apagarlas: si la configuración guardada contradijera al
         # plan, el guard rechazaría cualquier guardado posterior.
         with self.app.app_context():
             catalogue = db.session.get(Catalogue, UUID(self.paid_catalogue_id))
-            db.session.add(CatalogueTemplate(catalogue_id=catalogue.id, template_key="luxury", font_key="playfair", show_cover=True))
+            db.session.add(CatalogueTemplate(catalogue_id=catalogue.id, template_key="luxury", font_key="bebas_neue", show_cover=True))
             db.session.commit()
             owner = db.session.get(User, catalogue.business.owner_id)
             apply_free_plan_state(owner)

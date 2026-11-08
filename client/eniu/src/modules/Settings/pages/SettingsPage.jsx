@@ -158,7 +158,7 @@ function BillingSettings({ user, setUser }) {
                 precio tiene más de una moneda, una cifra fija sería incorrecta
                 para media audiencia, y además quedaría atrás en cuanto cambie. */}
             {price && <p className="mt-2 text-3xl font-black text-[#111111]">{formatPlanPrice(price)} <span className="text-base font-semibold text-[#666666]">{t("al mes")}</span></p>}
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#555555]">{t("Menús digitales, URL pública estable, código QR y administración de productos y categorías.")}</p>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[#555555]">{t("Productos ilimitados, hasta 5 menús por negocio y 3 negocios, todas las plantillas y tipografías, portada y fondo, estadísticas completas y tu menú sin la insignia de Eniu.")}</p>
             {price?.currencies && Object.keys(price.currencies).length > 1 && (
               <p className="mt-2 text-xs text-[#777777]">{t("Se cobra en tu moneda local cuando está disponible.")}</p>
             )}
@@ -169,7 +169,7 @@ function BillingSettings({ user, setUser }) {
       </div>
       <Feedback error={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
-        {active ? <button type="button" disabled={portalApi.loading} onClick={() => redirectTo(portalApi)} className="min-h-11 cursor-pointer rounded-xl bg-[#FFE05A] px-5 py-3 font-bold text-[#111111] hover:bg-[#E8C93D] disabled:opacity-60">{portalApi.loading ? "Abriendo..." : t("Administrar suscripción")}</button> : <button type="button" disabled={checkoutApi.loading || subscriptionLoading} onClick={() => redirectTo(checkoutApi)} className="min-h-11 cursor-pointer rounded-xl bg-[#FFE05A] px-5 py-3 font-bold text-[#111111] hover:bg-[#E8C93D] disabled:opacity-60">{checkoutApi.loading ? "Preparando..." : t("Contratar Plan Esencial")}</button>}
+        {active ? <button type="button" disabled={portalApi.loading} onClick={() => redirectTo(portalApi)} className="min-h-11 cursor-pointer rounded-xl bg-[#FFE05A] px-5 py-3 font-bold text-[#111111] hover:bg-[#E8C93D] disabled:opacity-60">{portalApi.loading ? t("Abriendo...") : t("Administrar suscripción")}</button> : <button type="button" disabled={checkoutApi.loading || subscriptionLoading} onClick={() => redirectTo(checkoutApi)} className="min-h-11 cursor-pointer rounded-xl bg-[#FFE05A] px-5 py-3 font-bold text-[#111111] hover:bg-[#E8C93D] disabled:opacity-60">{checkoutApi.loading ? t("Preparando...") : t("Contratar Plan Esencial")}</button>}
       </div>
       <p className="text-xs leading-5 text-[#777777]">{t("El cobro es recurrente mensual. Stripe procesa el pago y permite actualizar el método de pago o cancelar desde su portal seguro.")}</p>
     </div>

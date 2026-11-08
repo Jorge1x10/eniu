@@ -1,14 +1,15 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import AnalitycsPage from "./AnalitycsPage";
 
-const mocks = vi.hoisted(() => ({ getAnalytics: vi.fn(), allowAnalytics: true, businesses: [] }));
-vi.mock("../services/analyticsService", () => ({ useAnalyticsService: () => mocks.getAnalytics }));
+const mocks = vi.hoisted(() => ({ getAnalytics: vi.fn(), getSummary: vi.fn(), allowAnalytics: true, analyticsSummary: false, businesses: [] }));
+vi.mock("../services/analyticsService", () => ({ useAnalyticsService: () => mocks.getAnalytics, useAnalyticsSummaryService: () => mocks.getSummary }));
 // El plan se simula para no montar toda la sesión: la página sólo consulta si lo incluye.
-vi.mock("../../auth/hooks/usePlan", () => ({ usePlan: () => ({ limits: { allow_analytics: mocks.allowAnalytics } }) }));
+vi.mock("../../auth/hooks/usePlan", () => ({ usePlan: () => ({ limits: { allow_analytics: mocks.allowAnalytics, analytics_summary: mocks.analyticsSummary } }) }));
 // La zona horaria del periodo sale del negocio, así que la página necesita la
 // lista; se simula por lo mismo que el plan.
 vi.mock("../../Business/services/useBusiness", () => ({ useBusiness: () => ({ businesses: mocks.businesses }) }));
@@ -25,13 +26,42 @@ const data = {
 function renderPage() { return render(<MemoryRouter initialEntries={["/dashboard/businesses/business-1/catalogues/catalogue-1/analytics"]}><Routes><Route path="/dashboard/businesses/:businessId/catalogues/:catalogueId/analytics" element={<AnalitycsPage />} /></Routes></MemoryRouter>); }
 
 describe("AnalitycsPage", () => {
-  beforeEach(() => { mocks.getAnalytics.mockReset(); mocks.allowAnalytics = true; mocks.businesses = [{ id: "business-1", timezone: "Europe/Madrid" }]; });
+  beforeEach(() => { mocks.getAnalytics.mockReset(); mocks.getSummary.mockReset(); mocks.allowAnalytics = true; mocks.analyticsSummary = false; mocks.businesses = [{ id: "business-1", timezone: "Europe/Madrid" }]; });
 
   it("bloquea las analíticas cuando el plan no las incluye y no consulta al backend", async () => {
     mocks.allowAnalytics = false; renderPage();
     expect(await screen.findByText("Tu plan actual no incluye analíticas")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Incluido en Esencial/ })).toBeInTheDocument();
     expect(mocks.getAnalytics).not.toHaveBeenCalled();
+    expect(mocks.getSummary).not.toHaveBeenCalled();
+  });
+
+  it("muestra al plan gratuito sus visitas de 7 días y anuncia el informe completo", async () => {
+    mocks.allowAnalytics = false; mocks.analyticsSummary = true;
+    mocks.getSummary.mockResolvedValue({ ok: true, data: { period: data.period, comparison_period: data.comparison_period, summary: { menu_views: metric(12, 10, "increased", 20) }, visits_over_time: [{ date: "2026-08-06", views: 0 }, { date: "2026-08-07", views: 12 }] } });
+    renderPage();
+    expect(await screen.findByText("Aumentó 20% respecto al periodo anterior")).toBeInTheDocument();
+    expect(within(screen.getByText("Visitas al menú").closest("article")).getByText("12")).toBeInTheDocument();
+    expect(screen.getByText("El informe completo viene con Esencial")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Incluido en Esencial/ })).toBeInTheDocument();
+    // El periodo lo fija el backend: sólo se manda la zona del negocio.
+    expect(mocks.getSummary).toHaveBeenCalledWith("Europe/Madrid", expect.anything());
+    expect(mocks.getAnalytics).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Últimos 30 días" })).not.toBeInTheDocument();
+  });
+
+  it("termina de cargar dentro de React Strict Mode, como en desarrollo", async () => {
+    // StrictMode monta, desmonta y vuelve a montar: una bandera de "montado"
+    // que sólo se apaga dejaba la página en el esqueleto para siempre.
+    mocks.allowAnalytics = false; mocks.analyticsSummary = true;
+    mocks.getSummary.mockResolvedValue({ ok: true, data: { period: data.period, comparison_period: data.comparison_period, summary: { menu_views: metric(12, 10, "increased", 20) }, visits_over_time: [{ date: "2026-08-07", views: 12 }] } });
+    render(<StrictMode><MemoryRouter initialEntries={["/dashboard/businesses/business-1/catalogues/catalogue-1/analytics"]}><Routes><Route path="/dashboard/businesses/:businessId/catalogues/:catalogueId/analytics" element={<AnalitycsPage />} /></Routes></MemoryRouter></StrictMode>);
+    expect(await screen.findByText("Aumentó 20% respecto al periodo anterior")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cargando analíticas")).not.toBeInTheDocument();
+
+    mocks.allowAnalytics = true; mocks.getAnalytics.mockResolvedValue({ ok: true, data });
+    render(<StrictMode><MemoryRouter initialEntries={["/dashboard/businesses/business-1/catalogues/catalogue-1/analytics"]}><Routes><Route path="/dashboard/businesses/:businessId/catalogues/:catalogueId/analytics" element={<AnalitycsPage />} /></Routes></MemoryRouter></StrictMode>);
+    expect((await screen.findAllByText("Latte")).length).toBeGreaterThan(0);
   });
 
   it("muestra carga y resultados agregados sin Infinity", async () => {
@@ -52,7 +82,10 @@ describe("AnalitycsPage", () => {
     await user.click(screen.getByRole("button", { name: "Últimos 30 días" }));
     await waitFor(() => expect(mocks.getAnalytics.mock.calls.length).toBeGreaterThan(calls));
     const afterPreset = mocks.getAnalytics.mock.calls.length;
-    const from = screen.getByLabelText("Desde"); await user.clear(from); await user.type(from, "2026-08-01");
+    // Relativa a hoy y no escrita a mano: una fecha fija termina quedando a más
+    // de 90 días y la página la rechaza con razón, sin pedir nada.
+    const tenDaysAgo = new Date(Date.now() - 10 * 86400000).toISOString().slice(0, 10);
+    const from = screen.getByLabelText("Desde"); await user.clear(from); await user.type(from, tenDaysAgo);
     expect(mocks.getAnalytics).toHaveBeenCalledTimes(afterPreset);
     await user.click(screen.getByRole("button", { name: "Aplicar periodo" }));
     await waitFor(() => expect(mocks.getAnalytics.mock.calls.length).toBeGreaterThan(afterPreset));

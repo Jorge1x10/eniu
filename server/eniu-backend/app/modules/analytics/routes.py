@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import limiter
-from .services import get_analytics, record_events
+from .services import SUMMARY_PARAMS, get_analytics, get_analytics_summary, record_events
 from app.shared.i18n import _
 
 
@@ -25,4 +25,13 @@ def catalogue_analytics(business_id, catalogue_id):
     if unknown:
         return jsonify({"message": _("La consulta contiene parámetros no permitidos")}), 400
     result, status = get_analytics(get_jwt_identity(), business_id, catalogue_id, request.args)
+    return jsonify(result), status
+
+
+@analytics_bp.get("/businesses/<business_id>/catalogues/<catalogue_id>/analytics/summary")
+@jwt_required()
+def catalogue_analytics_summary(business_id, catalogue_id):
+    if set(request.args) - SUMMARY_PARAMS:
+        return jsonify({"message": _("La consulta contiene parámetros no permitidos")}), 400
+    result, status = get_analytics_summary(get_jwt_identity(), business_id, catalogue_id, request.args)
     return jsonify(result), status

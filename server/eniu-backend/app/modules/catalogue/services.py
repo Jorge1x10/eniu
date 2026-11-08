@@ -160,7 +160,7 @@ def create_catalogue(owner_id, business_id, data):
         db.session.add(catalogue)
         db.session.commit()
         return {
-            "message": "Catálogo creado correctamente",
+            "message": _("Catálogo creado correctamente"),
             "catalogue": catalogue.to_dict(),
         }, 201
     except ValueError as error:
@@ -218,7 +218,7 @@ def update_catalogue(owner_id, business_id, catalogue_id, data):
 
         db.session.commit()
         return {
-            "message": "Catálogo actualizado correctamente",
+            "message": _("Catálogo actualizado correctamente"),
             "catalogue": catalogue.to_dict(),
         }, 200
     except ValueError as error:
@@ -274,7 +274,7 @@ def publish_catalogue(owner_id, business_id, catalogue_id):
     catalogue, error = catalogue_access(owner_id, business_id, catalogue_id)
     if error:
         return error
-    return {"message": "Catálogo publicado correctamente", "catalogue": catalogue.to_dict()}, 200
+    return {"message": _("Catálogo publicado correctamente"), "catalogue": catalogue.to_dict()}, 200
 
 
 def unpublish_catalogue(owner_id, business_id, catalogue_id):

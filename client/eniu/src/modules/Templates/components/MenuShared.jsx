@@ -68,14 +68,25 @@ export function Availability({ available }) {
  * `false` por defecto a propósito: si algún día una plantilla nueva olvidara
  * pasar la bandera, es preferible perder la marca que mostrársela a alguien
  * que pagó por quitarla.
+ *
+ * La marca enlaza al sitio con parámetros de campaña: cada menú gratuito en
+ * una mesa es una vitrina para otros restaurantes, y sin `utm_*` esas visitas
+ * se contaban como tráfico directo.
  */
+function eniuBadgeUrl(language) {
+  const site = language?.startsWith("en") ? "https://eniu.app/en" : "https://eniu.app/";
+  return `${site}?utm_source=eniu_menu&utm_medium=badge&utm_campaign=free_plan`;
+}
+
 export function MenuFooter({ show = false }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <footer className="space-y-1.5 py-7 text-center">
       <p className="text-[11px] opacity-75">{t("Consulta al personal sobre alérgenos.")}</p>
-      {show && <p className="text-[10px] opacity-60">{t("Menú creado con ENIU")}</p>}
+      {/* El relleno con margen negativo agranda la zona táctil a unos 48 px sin
+          mover el pie: el texto mide 10 px y en el celular costaba atinarle. */}
+      {show && <p className="text-[10px] opacity-60"><a href={eniuBadgeUrl(i18n.language)} target="_blank" rel="noopener" className="-my-[17px] inline-block px-2 py-[17px] underline-offset-2 hover:underline">{t("Menú creado con ENIU")}</a></p>}
     </footer>
   );
 }

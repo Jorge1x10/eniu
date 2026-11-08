@@ -149,6 +149,72 @@ class AnalyticsApiTestCase(unittest.TestCase):
         serialized = str(data)
         self.assertNotIn("visitor_hash", serialized); self.assertNotIn("tracking_key", serialized)
 
+    def store(self, occurred, event_type="menu_view", catalogue=None):
+        """Guarda un evento directo en la base, saltándose la ventana de 7 días del endpoint público."""
+        from uuid import UUID, uuid4
+        with self.app.app_context():
+            db.session.add(AnalyticsEvent(
+                catalogue_id=UUID(catalogue or self.catalogue_id), event_type=event_type, occurred_at=occurred,
+                visitor_hash="v" * 64, session_hash="s" * 64, source="qr", device_type="mobile", dedup_key=uuid4().hex * 2,
+            ))
+            db.session.commit()
+
+    def summary_url(self, business=None, catalogue=None, query="?timezone=UTC"):
+        return f"/api/businesses/{business or self.business_id}/catalogues/{catalogue or self.catalogue_id}/analytics/summary{query}"
+
+    def test_summary_counts_the_last_seven_days_against_the_seven_before(self):
+        now = datetime.now(timezone.utc).replace(hour=12, minute=0, second=0, microsecond=0)
+        self.store(now); self.store(now); self.store(now - timedelta(days=3))
+        self.store(now - timedelta(days=10))
+        # Fuera de los dos periodos, y eventos que no son visitas: no cuentan.
+        self.store(now - timedelta(days=30)); self.store(now, event_type="product_view")
+        response = self.client.get(self.summary_url(), headers=self.auth())
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["summary"]["menu_views"], {"value": 3, "previous_value": 1, "percentage_change": 200.0, "change_status": "increased"})
+        visits = data["visits_over_time"]
+        self.assertEqual(len(visits), 7)
+        self.assertEqual(visits[-1], {"date": now.date().isoformat(), "views": 2})
+        self.assertEqual(visits[-4]["views"], 1)
+        self.assertEqual(data["period"]["from"], (now.date() - timedelta(days=6)).isoformat())
+
+    def test_summary_requires_auth_and_catalogue_scope(self):
+        self.assertEqual(self.client.get(self.summary_url()).status_code, 401)
+        self.assertEqual(self.client.get(self.summary_url(), headers=self.auth(self.outsider_token)).status_code, 403)
+        self.assertEqual(self.client.get(self.summary_url(catalogue=self.foreign_catalogue_id), headers=self.auth()).status_code, 404)
+        self.assertEqual(self.client.get(self.summary_url(self.foreign_business_id, self.foreign_catalogue_id), headers=self.auth()).status_code, 403)
+        self.assertEqual(self.client.get(self.summary_url(query="?timezone=Not/AZone"), headers=self.auth()).status_code, 400)
+        self.assertEqual(self.client.get(self.summary_url(query="?timezone=../../etc/passwd"), headers=self.auth()).status_code, 400)
+        # La zona viaja hasta `timezone(...)` en Postgres: sólo pasan nombres
+        # que `zoneinfo` reconoce, así que nada de SQL llega a la consulta.
+        injected = self.client.get(self.summary_url(query="?timezone=UTC%27%3B%20DROP%20TABLE%20analytics_event%3B--"), headers=self.auth())
+        self.assertEqual(injected.status_code, 400)
+        self.assertEqual(self.client.get(self.summary_url(), headers=self.auth()).status_code, 200)
+
+    def set_owner_language(self, language):
+        with self.app.app_context():
+            owner = User.query.filter_by(email="analytics-owner@example.com").first()
+            owner.language = language
+            db.session.commit()
+
+    def test_report_labels_follow_the_language_of_the_account(self):
+        # Se traducían al importar el módulo, así que salían en español aunque
+        # la cuenta estuviera en inglés.
+        now = datetime.now(timezone.utc).replace(microsecond=0)
+        self.assertEqual(self.post([self.event(occurred=now, source="social", device="desktop")]).status_code, 204)
+        self.set_owner_language("en")
+        data = self.client.get(self.private_url(), headers=self.auth()).get_json()
+        labels = {item["key"]: item["label"] for item in data["sources"] + data["devices"]}
+        self.assertEqual(labels["social"], "Social media")
+        self.assertEqual(labels["qr"], "QR code")
+        self.assertEqual(labels["desktop"], "Computer")
+        self.assertEqual(labels["mobile"], "Phone")
+        self.assertRegex(data["summary"]["busiest_hour"]["label"], r"^\d{1,2}:00 (AM|PM)$")
+        self.set_owner_language("es")
+        spanish = self.client.get(self.private_url(), headers=self.auth()).get_json()
+        self.assertEqual({item["key"]: item["label"] for item in spanish["sources"]}["social"], "Redes sociales")
+        self.assertRegex(spanish["summary"]["busiest_hour"]["label"], r"^\d{1,2}:00 [ap]\. m\.$")
+
     def test_empty_catalogue_date_timezone_and_max_range_validation(self):
         response = self.client.get(self.private_url(catalogue=self.second_catalogue_id), headers=self.auth())
         self.assertEqual(response.status_code, 200)

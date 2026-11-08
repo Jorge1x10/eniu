@@ -9,13 +9,14 @@ import { useAuth } from "./useAuth";
 const FREE_LIMITS = {
   max_businesses: 1,
   max_catalogues_per_business: 1,
-  max_products_per_catalogue: 15,
-  template_keys: ["modern"],
-  font_keys: ["inter"],
+  max_products_per_catalogue: 40,
+  template_keys: ["minimal", "modern", "natural"],
+  font_keys: ["inter", "lora", "montserrat", "playfair", "poppins"],
   allow_cover: false,
   allow_background: false,
   allow_product_images: true,
   allow_analytics: false,
+  analytics_summary: true,
   allow_splash: false,
   show_eniu_badge: true,
 };

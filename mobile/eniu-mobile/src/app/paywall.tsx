@@ -13,18 +13,18 @@ import { Feedback } from '@/components/ui/feedback';
 import {
   CloseIcon,
   EyeIcon,
+  GridIcon,
   ImageIcon,
   PaletteIcon,
   PlusIcon,
   StarIcon,
-  TagIcon,
 } from '@/components/ui/icons';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { PRIVACY_URL, TERMS_URL } from '@/constants/legal';
 import { useAuth } from '@/features/auth/auth-context';
 import { usePlan } from '@/features/auth/use-plan';
 import {
-  currentPackage,
+  currentPackages,
   purchase,
   purchasesAvailable,
   restore,
@@ -37,13 +37,16 @@ import type { User } from '@/types/models';
  * Lo que el plan de pago desbloquea, en lo que le cambia el día a quien lo
  * usa. Cada uno lleva su icono: una lista de seis palomitas idénticas se lee
  * como letra chica, y esto es lo único que sostiene la decisión de pagar.
+ *
+ * Las promociones no van aquí: el plan gratuito siempre las tuvo, y venderlas
+ * como de pago era prometer algo que quien paga ya tenía.
  */
 const BENEFITS = [
   { icon: PaletteIcon, label: 'Las 13 plantillas y todas las tipografías' },
   { icon: ImageIcon, label: 'Portada, fondos y pantalla de bienvenida' },
-  { icon: TagIcon, label: 'Promociones para resaltar productos' },
-  { icon: PlusIcon, label: 'Productos ilimitados en cada menú' },
-  { icon: EyeIcon, label: 'Analíticas de visitas y escaneos' },
+  { icon: PlusIcon, label: 'Productos ilimitados y hasta 5 menús por negocio' },
+  { icon: GridIcon, label: 'Hasta 3 negocios o sucursales' },
+  { icon: EyeIcon, label: 'Analíticas completas: lo más visto y de dónde llegan' },
   { icon: StarIcon, label: 'Sin la marca de Eniu en tu menú' },
 ] as const;
 
@@ -108,6 +111,10 @@ function introLabel(item: PurchasesPackage, t: TFunction): string | null {
     : t("{{price}} los primeros {{n}} {{unit}}", { price: intro.priceString, n, unit });
 }
 
+function periodLabel(item: PurchasesPackage, t: TFunction): string {
+  return item.product.subscriptionPeriod === 'P1Y' ? t("por año") : t("por mes");
+}
+
 export default function PaywallScreen() {
   const { t } = useTranslation();
 
@@ -119,10 +126,11 @@ export default function PaywallScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [showDetail, setShowDetail] = useState(false);
+  const [chosenId, setChosenId] = useState<string | null>(null);
 
   const offering = useQuery({
-    queryKey: ['revenuecat-package'],
-    queryFn: () => currentPackage(),
+    queryKey: ['revenuecat-packages'],
+    queryFn: () => currentPackages(),
     enabled: purchasesAvailable(),
     retry: 0,
   });
@@ -168,12 +176,14 @@ export default function PaywallScreen() {
     }
   }
 
-  const item = offering.data?.item ?? null;
+  const items = offering.data?.items ?? [];
+  // Si la oferta trae mensual y anual, se elige aquí; sin elección, el primero
+  // en el orden del panel de RevenueCat, que es donde se decide cuál destacar.
+  const item = items.find((candidate) => candidate.identifier === chosenId) ?? items[0] ?? null;
   // Quien ya paga por la web no debe poder comprar aquí: se le cobraría dos
   // veces, y la suscripción de Stripe no se puede cancelar desde la tienda.
   const paysOnWeb = !isFree && plan?.provider === 'stripe';
   const canBuy = Boolean(item) && !paysOnWeb;
-  const intro = item ? introLabel(item, t) : null;
 
   /**
    * Un fallo de red y una oferta mal configurada no son lo mismo, pero para
@@ -274,24 +284,46 @@ export default function PaywallScreen() {
           </View>
         ) : item ? (
           /* El precio y el periodo se toman de la tienda, nunca escritos a
-             mano: es lo que de verdad se le va a cobrar y en su moneda. */
-          <View style={{ ...cardStyle(theme, 20), padding: 18, borderWidth: 2, borderColor: theme.yellow, gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 7 }}>
-                <Text style={{ color: theme.text, fontSize: 34, fontWeight: '900', letterSpacing: -1 }}>{item.product.priceString}</Text>
-                <Text style={{ color: theme.muted, fontSize: 14, fontWeight: '700', paddingBottom: 6 }}>
-                  {item.product.subscriptionPeriod === 'P1Y' ? t("por año") : t("por mes")}
-                </Text>
-              </View>
-              {/* Sólo aparece si la tienda de verdad ofrece prueba o descuento. */}
-              {intro ? (
-                <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: theme.yellow }}>
-                  <Text style={{ color: theme.onYellow, fontSize: 11.5, fontWeight: '900' }}>{intro}</Text>
-                </View>
-              ) : null}
-            </View>
-            <View style={{ height: 1, backgroundColor: theme.border }} />
-            <Text style={{ color: theme.muted, fontSize: 13, lineHeight: 19 }}>{t("Cancela cuando quieras desde los ajustes de tu tienda.")}</Text>
+             mano: es lo que de verdad se le va a cobrar y en su moneda. Con
+             mensual y anual, cada paquete es una tarjeta que se elige; con uno
+             solo, se ve igual que siempre. */
+          <View accessibilityRole={items.length > 1 ? 'radiogroup' : undefined} style={{ gap: 10 }}>
+            {items.map((option) => {
+              const selected = option.identifier === item.identifier;
+              const intro = introLabel(option, t);
+              const perMonth = option.product.subscriptionPeriod === 'P1Y' ? option.product.pricePerMonthString : null;
+              return (
+                <Pressable
+                  key={option.identifier}
+                  accessibilityRole={items.length > 1 ? 'radio' : undefined}
+                  accessibilityState={items.length > 1 ? { checked: selected } : undefined}
+                  disabled={items.length < 2 || busy}
+                  onPress={() => setChosenId(option.identifier)}
+                  style={{ ...cardStyle(theme, 20), padding: 18, borderWidth: 2, borderColor: selected ? theme.yellow : theme.border, gap: 10 }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 7, flexShrink: 1 }}>
+                      <Text style={{ color: theme.text, fontSize: 34, fontWeight: '900', letterSpacing: -1 }}>{option.product.priceString}</Text>
+                      <Text style={{ color: theme.muted, fontSize: 14, fontWeight: '700', paddingBottom: 6 }}>{periodLabel(option, t)}</Text>
+                    </View>
+                    {/* Sólo aparece si la tienda de verdad ofrece prueba o descuento. */}
+                    {intro ? (
+                      <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: theme.yellow }}>
+                        <Text style={{ color: theme.onYellow, fontSize: 11.5, fontWeight: '900' }}>{intro}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  {perMonth ? <Text style={{ color: theme.muted, fontSize: 13, fontWeight: '600' }}>{t("Equivale a {{price}} al mes", { price: perMonth })}</Text> : null}
+                  {items.length === 1 ? (
+                    <>
+                      <View style={{ height: 1, backgroundColor: theme.border }} />
+                      <Text style={{ color: theme.muted, fontSize: 13, lineHeight: 19 }}>{t("Cancela cuando quieras desde los ajustes de tu tienda.")}</Text>
+                    </>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+            {items.length > 1 ? <Text style={{ color: theme.muted, fontSize: 13, lineHeight: 19 }}>{t("Cancela cuando quieras desde los ajustes de tu tienda.")}</Text> : null}
           </View>
         ) : (
           renderOfferingProblem()
