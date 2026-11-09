@@ -9,6 +9,10 @@
 # Requiere que el simulador ya tenga configurado el idioma es-MX (lo hace el
 # workflow de GitHub Actions antes de lanzar la app), porque la pantalla de
 # login todavía no tiene una preferencia de idioma guardada en la cuenta.
+#
+# Cada idioma enseña un negocio distinto de la cuenta demo: Casa Nopal (menú
+# en español, pesos) en español y Lantern Yard (menú en inglés, libras) en
+# inglés. Los dos los monta tools/eniu-studio con sus demos.
 appId: com.eniu.app
 ---
 - launchApp
@@ -23,6 +27,12 @@ appId: com.eniu.app
 - tapOn: "Iniciar sesión"
 - assertVisible: "Inicio"
 
+- runFlow:
+    file: subflows/select-business.yaml
+    env:
+      BUSINESS: "Casa Nopal"
+      CONTINUE: "Seguir"
+      SWITCH_LABEL: "Cambiar de negocio"
 - takeScreenshot: screenshots/es-01-inicio
 - tapOn: "Menús"
 - takeScreenshot: screenshots/es-02-menus
@@ -33,6 +43,12 @@ appId: com.eniu.app
 
 - tapOn: "English"
 - tapOn: "Home"
+- runFlow:
+    file: subflows/select-business.yaml
+    env:
+      BUSINESS: "Lantern Yard"
+      CONTINUE: "Continue"
+      SWITCH_LABEL: "Switch business"
 - takeScreenshot: screenshots/en-01-home
 - tapOn: "Menus"
 - takeScreenshot: screenshots/en-02-menus
