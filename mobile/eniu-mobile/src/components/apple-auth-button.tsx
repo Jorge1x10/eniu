@@ -1,7 +1,7 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform, useColorScheme, View } from 'react-native';
+import { Platform, StyleProp, useColorScheme, View, ViewStyle } from 'react-native';
 
 import { Feedback } from '@/components/ui/feedback';
 import { useAuth } from '@/features/auth/auth-context';
@@ -13,7 +13,11 @@ function joinName(fullName: AppleAuthentication.AppleAuthenticationCredential['f
   return parts.length ? parts.join(' ') : null;
 }
 
-export function AppleAuthButton({ mode }: { mode: 'login' | 'register' }) {
+/**
+ * Devuelve `null` en Android o si Apple no está disponible: la fila que lo
+ * contiene debe verse bien sólo con Google. `compact` es para ir en fila.
+ */
+export function AppleAuthButton({ mode, style }: { mode: 'login' | 'register'; /** Va en fila; hoy usa el mismo tipo `CONTINUE`. */ compact?: boolean; style?: StyleProp<ViewStyle> }) {
   const { t } = useTranslation();
 
   const scheme = useColorScheme();
@@ -52,9 +56,12 @@ export function AppleAuthButton({ mode }: { mode: 'login' | 'register' }) {
   }
 
   return (
-    <View style={{ gap: 12 }}>
+    <View style={[{ gap: 12 }, style]}>
+      {/* Botón nativo: las guías de Apple no permiten sustituirlo por uno propio.
+          "Continuar" sirve igual para entrar o registrarse, y cabe en media
+          fila en la variante compacta. */}
       <AppleAuthentication.AppleAuthenticationButton
-        buttonType={mode === 'register' ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP : AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+        buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
         buttonStyle={scheme === 'dark' ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
         cornerRadius={14}
         style={{ height: 50 }}
