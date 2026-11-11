@@ -2,6 +2,8 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { writeSitemap } from './sitemap.mjs'
+
 const root = fileURLToPath(new URL('../dist/', import.meta.url))
 const files = {}
 
@@ -13,6 +15,10 @@ async function collect(directory) {
     else files[`/${relative(root, path).replaceAll('\\', '/')}`] = (await readFile(path)).toString('base64')
   }
 }
+
+// Antes de recoger nada: el worker sirve lo que haya en `dist` en este
+// momento, así que un sitemap escrito después no llegaría a producción.
+await writeSitemap(resolve(root, 'sitemap.xml'))
 
 await collect(root)
 
