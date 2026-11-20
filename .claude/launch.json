@@ -27,6 +27,16 @@
       "port": 5174
     },
     {
+      "name": "eniu-studio",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "tools/eniu-studio/studio.py",
+        "local",
+        "serve"
+      ],
+      "port": 5055
+    },
+    {
       "name": "eniu-landing",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
