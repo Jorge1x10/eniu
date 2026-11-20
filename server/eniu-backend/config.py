@@ -63,6 +63,31 @@ class Config:
     # Con 0 no se confía en la cabecera, que es lo correcto sin proxy: de lo
     # contrario cualquiera podría inventarse la IP y saltarse los límites.
     TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT", "1"))
+
+    # Versiones de la app móvil (ver app/modules/system/client_version.py y
+    # docs/API_VERSIONING.md). Vacías no bloquean ni sugieren nada.
+    #
+    # MOBILE_MIN_VERSION: por debajo de esta, la API responde 426 y la app
+    # pide actualizar. Se puede afinar por plataforma con los *_IOS/*_ANDROID,
+    # porque Apple y Google no aprueban las versiones el mismo día: subir la
+    # mínima antes de que la nueva esté en una tienda deja a esa plataforma
+    # sin app que funcione.
+    #
+    # MOBILE_LATEST_VERSION: la última publicada. Por debajo, la app sugiere
+    # actualizar sin bloquear.
+    MOBILE_MIN_VERSION = os.getenv("MOBILE_MIN_VERSION", "")
+    MOBILE_MIN_VERSION_IOS = os.getenv("MOBILE_MIN_VERSION_IOS", "")
+    MOBILE_MIN_VERSION_ANDROID = os.getenv("MOBILE_MIN_VERSION_ANDROID", "")
+    MOBILE_LATEST_VERSION = os.getenv("MOBILE_LATEST_VERSION", "")
+    MOBILE_LATEST_VERSION_IOS = os.getenv("MOBILE_LATEST_VERSION_IOS", "")
+    MOBILE_LATEST_VERSION_ANDROID = os.getenv("MOBILE_LATEST_VERSION_ANDROID", "")
+    MOBILE_STORE_URL_IOS = os.getenv(
+        "MOBILE_STORE_URL_IOS", "https://apps.apple.com/app/id6806468732"
+    )
+    MOBILE_STORE_URL_ANDROID = os.getenv(
+        "MOBILE_STORE_URL_ANDROID",
+        "https://play.google.com/store/apps/details?id=com.eniu.app",
+    )
     FRONTEND_URL = os.getenv("FRONTEND_URL", os.getenv("FRONT", "http://localhost:5173")).rstrip("/")
     CORS_ORIGINS = [
         origin.strip().rstrip("/")

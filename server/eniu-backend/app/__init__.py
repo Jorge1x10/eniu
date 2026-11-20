@@ -48,7 +48,12 @@ def create_app(test_config=None):
                 "origins": app.config["CORS_ORIGINS"]
             }
         },
-        allow_headers=["Content-Type", "Authorization"],
+        allow_headers=[
+            "Content-Type",
+            "Authorization",
+            "X-Eniu-Platform",
+            "X-Eniu-App-Version",
+        ],
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     )
     db.init_app(app)
@@ -76,6 +81,10 @@ def create_app(test_config=None):
     configure_jwt_security()
 
     register_routes(app)
+
+    from app.modules.system.client_version import enforce_minimum_version
+
+    app.before_request(enforce_minimum_version)
 
     @app.after_request
     def security_headers(response):
