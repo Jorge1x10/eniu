@@ -1,0 +1,97 @@
+name: CI
+
+# Corre las pruebas, el lint y el build de las cuatro partes del repositorio en
+# cada pull request y en cada push a main. Ninguna necesita secretos: las
+# pruebas del backend traen su propia configuración y las de la web definen la
+# URL de la API en vite.config.js.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (Flask)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/eniu-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: server/eniu-backend/requirements*.txt
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt
+      - name: Pruebas
+        run: python -m pytest -q
+
+  web:
+    name: Panel web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client/eniu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/eniu/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Pruebas
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  mobile:
+    name: App móvil
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/eniu-mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/eniu-mobile/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+
+  landing:
+    name: Landing
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landing/eniuLanding
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: landing/eniuLanding/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Pruebas
+        run: npm test
+      - name: Build
+        run: npm run build
