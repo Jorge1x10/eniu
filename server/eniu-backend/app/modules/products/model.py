@@ -47,6 +47,24 @@ class Product(BaseModel):
             "price IS NULL OR price >= 0",
             name="ck_products_price_non_negative",
         ),
+        # Postgres no indexa las claves foráneas por su cuenta, así que sin
+        # esto cada consulta del menú público recorría la tabla entera.
+        #
+        # Las columnas van en el orden en que se usan al servir un menú: se
+        # filtra por catálogo, luego por sección, y se ordena por
+        # display_order y created_at. Con ese orden la base resuelve el filtro
+        # y el ordenamiento en un solo recorrido del índice, sin ordenar
+        # después. El prefijo `catalogue_id` sirve igual para cargar el
+        # catálogo completo, así que no hace falta un índice aparte para eso.
+        db.Index(
+            "ix_products_catalogue_section_order",
+            "catalogue_id", "category_id", "display_order", "created_at",
+        ),
+        # `category_id` a secas es para el borrado: la FK es ON DELETE SET
+        # NULL, y sin índice propio borrar una categoría obliga a recorrer
+        # todos los productos. El índice de arriba no sirve para eso porque
+        # `category_id` no es su primera columna.
+        db.Index("ix_products_category", "category_id"),
     )
 
     def to_dict(self):
