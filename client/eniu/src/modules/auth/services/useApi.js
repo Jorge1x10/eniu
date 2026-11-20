@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { refreshAccessToken } from "../../../services/session";
 import { useAuth } from "../hooks/useAuth";
 
-const BASE_URL = import.meta.env.VITE_API_URL.replace(/\/$/, "");
+const BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const PUBLIC_AUTH_ROUTES = new Set([
   "auth/login",
   "auth/google",
@@ -37,26 +38,7 @@ export function useApi(route = "") {
     };
   }, []);
 
-  const refreshToken = useCallback(async () => {
-    const refresh = localStorage.getItem("refresh_token");
-    if (!refresh) return false;
-
-    try {
-      const response = await fetch(`${BASE_URL}/auth/refresh`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${refresh}` },
-      });
-      if (!response.ok) return false;
-
-      const data = await readResponse(response);
-      if (!data?.access_token) return false;
-
-      localStorage.setItem("access_token", data.access_token);
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
+  const refreshToken = useCallback(async () => Boolean(await refreshAccessToken()), []);
 
   const request = useCallback(async ({
     method = "GET",

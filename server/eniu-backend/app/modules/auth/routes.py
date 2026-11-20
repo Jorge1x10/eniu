@@ -2,7 +2,6 @@ from flask import Blueprint, current_app, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
 from app import db, bcrypt, jwt
 from app.extensions import limiter
-from datetime import timedelta, datetime, date
 from .services import (
     authenticate_apple_user,
     authenticate_google_user,
@@ -89,8 +88,7 @@ def login():
     )
 
     refresh_token = create_refresh_token(
-        identity=str(user.id),
-        expires_delta=timedelta(hours=2)
+        identity=str(user.id)
     )
 
     return jsonify({
@@ -121,8 +119,7 @@ def refresh():
     user_id = get_jwt_identity()
 
     access_token = create_access_token(
-        identity=user_id,
-        expires_delta=timedelta(hours=2)
+        identity=user_id
     )
 
     return jsonify({

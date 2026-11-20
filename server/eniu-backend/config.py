@@ -1,4 +1,6 @@
 import os
+from datetime import timedelta
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -36,6 +38,31 @@ class Config:
         })
 
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    # Una sola duración para cada tipo de token, sin importar cómo se entró
+    # (correo, Google, Apple o registro). Antes el login por correo daba un
+    # refresh de 2 horas y los demás el default de 30 días: en la app móvil,
+    # quien entraba con correo tenía que volver a iniciar sesión cada 2 horas.
+    #
+    # El refresh largo no deja una sesión robada viva para siempre: cada token
+    # lleva `auth_version`, y cambiar la contraseña o "cerrar las demás
+    # sesiones" lo sube e invalida todos los anteriores (ver jwt_security.py).
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(
+        minutes=int(os.getenv("JWT_ACCESS_TOKEN_MINUTES", "60"))
+    )
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(
+        days=int(os.getenv("JWT_REFRESH_TOKEN_DAYS", "30"))
+    )
+
+    # Cuántos proxies hay entre el cliente y gunicorn. Render pone uno (su
+    # balanceador) y añade la IP real del cliente al final de X-Forwarded-For.
+    # Sin esto `request.remote_addr` es la IP del balanceador, y el rate
+    # limiter —que cuenta por IP— metía a todos los usuarios en el mismo
+    # contador: diez logins por minuto para el servicio entero.
+    #
+    # Si se pone un CDN delante (Cloudflare, por ejemplo) hay que subirlo a 2.
+    # Con 0 no se confía en la cabecera, que es lo correcto sin proxy: de lo
+    # contrario cualquiera podría inventarse la IP y saltarse los límites.
+    TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT", "1"))
     FRONTEND_URL = os.getenv("FRONTEND_URL", os.getenv("FRONT", "http://localhost:5173")).rstrip("/")
     CORS_ORIGINS = [
         origin.strip().rstrip("/")

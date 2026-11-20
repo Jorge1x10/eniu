@@ -2,6 +2,7 @@ import os
 from flask import Flask, request
 from flask_cors import CORS
 from flask_migrate import Migrate
+from werkzeug.middleware.proxy_fix import ProxyFix
 from app import storage
 from app.database.db import db
 from app.extensions import bcrypt, cache, jwt, limiter
@@ -18,6 +19,12 @@ def create_app(test_config=None):
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
+
+    proxies = int(app.config.get("TRUSTED_PROXY_COUNT") or 0)
+    if proxies > 0:
+        # Sólo la IP y el esquema: el host y el puerto los fija Render y no
+        # hace falta reescribirlos.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxies, x_proto=proxies)
     if app.config.get("TESTING"):
         # Never let a cached response from one test leak into another.
         app.config["CACHE_TYPE"] = "NullCache"
