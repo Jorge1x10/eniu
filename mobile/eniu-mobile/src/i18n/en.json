@@ -657,5 +657,14 @@
   "vistas · 7 días": "views · 7 days",
   "{{count}} vistas en 7 días": "{{count}} views in 7 days",
   "EJEMPLO": "SAMPLE",
-  "vista en": "view in"
+  "vista en": "view in",
+  "Hay una versión nueva de Eniu": "There's a new version of Eniu",
+  "La versión {{version}} ya está disponible.": "Version {{version}} is now available.",
+  "Ahora no": "Not now",
+  "Actualizar": "Update",
+  "Actualiza Eniu": "Update Eniu",
+  "Hay una versión nueva de Eniu. Actualiza la app para seguir usándola.": "There's a new version of Eniu. Update the app to keep using it.",
+  "Tienes la versión {{current}}. Se necesita la {{minimum}} o posterior.": "You have version {{current}}. Version {{minimum}} or later is required.",
+  "Tienes la versión {{current}}.": "You have version {{current}}.",
+  "Actualizar ahora": "Update now"
 }

@@ -48,6 +48,7 @@ class PublicationApiTestCase(unittest.TestCase):
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
             "JWT_SECRET_KEY": "publication-tests-secret-at-least-32-bytes",
+            "ANALYTICS_TOKEN_SECRET": "publication-analytics-secret-at-least-32-bytes",
             "PUBLIC_WEB_BASE_URL": "https://menus.example.test",
         })
 

@@ -10,5 +10,10 @@ export default defineConfig({
     setupFiles: './src/test/setup.js',
     globals: true,
     restoreMocks: true,
+    // Las pruebas no deben depender de un `.env` local: varios módulos leen
+    // la URL de la API al importarse.
+    env: {
+      VITE_API_URL: 'http://api.eniu.test/api',
+    },
   },
 })
