@@ -26,6 +26,8 @@ export const eniuLight = {
   /** Bloque oscuro de cabecera: contra la crema es el plano más contrastado. */
   hero: '#141210',
   heroMuted: '#8C8578',
+  /** Encabezado de las pantallas de acceso: el mismo plano oscuro del hero. */
+  authHero: '#141210',
   /** Elevated cards use a soft warm shadow instead of a border. */
   cardBorderWidth: 0,
   cardShadow: {
@@ -75,6 +77,12 @@ export const eniuDark = {
   danger: '#F0736B',
   hero: '#332C21',
   heroMuted: '#A39B8C',
+  /**
+   * En las pantallas de acceso `hero` (#332C21) se ve demasiado café como fondo
+   * de un encabezado completo; ahí se usa la superficie, que sigue destacando
+   * contra el fondo casi negro de la hoja.
+   */
+  authHero: '#1C1916',
   cardBorderWidth: 1,
   cardShadow: {
     shadowColor: '#000000',

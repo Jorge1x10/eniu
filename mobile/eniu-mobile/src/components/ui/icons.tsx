@@ -100,3 +100,18 @@ export function CloseIcon({ color, size = 16 }: IconProps) {
 export function LockIcon({ color, size = 14 }: IconProps) {
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Rect x={4} y={10.5} width={16} height={10} rx={2.5} stroke={color} strokeWidth={2} /><Path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke={color} strokeWidth={2} strokeLinecap="round" /></Svg>;
 }
+
+/** Correo — campo de correo o usuario en el acceso */
+export function MailIcon({ color, size = 18 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Rect x={3} y={5} width={18} height={14} rx={2.5} stroke={color} strokeWidth={2} /><Path d="m4 7 8 6 8-6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
+}
+
+/** Privacidad — escudo con palomita */
+export function ShieldCheckIcon({ color, size = 18 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M12 3 5 6v5.5c0 4.3 3 8 7 9.5 4-1.5 7-5.2 7-9.5V6l-7-3Z" stroke={color} strokeWidth={2} strokeLinejoin="round" /><Path d="m9 12 2.2 2.2L15.5 10" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
+}
+
+/** Avanzar — flecha al final de un CTA */
+export function ArrowRightIcon({ color, size = 18 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M5 12h14m0 0-6-6m6 6-6 6" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
+}
