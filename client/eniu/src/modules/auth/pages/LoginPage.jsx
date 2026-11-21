@@ -1,5 +1,5 @@
 import LoginForm from "../components/LoginForm";
-import darkLogo from "../../../assets/Images/eniu-DarkBannerNoBack.svg"
+import darkLogo from "../../../assets/Images/eniu-logo-dark.webp"
 import { useTranslation } from "react-i18next";
 
 

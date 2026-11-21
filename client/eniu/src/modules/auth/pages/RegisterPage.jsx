@@ -1,5 +1,5 @@
 import RegisterForm from "../components/RegisterForm";
-import darkLogo from "../../../assets/Images/eniu-DarkBannerNoBack.svg"
+import darkLogo from "../../../assets/Images/eniu-logo-dark.webp"
 import { useTranslation } from "react-i18next";
 
 export default function RegisterPage() {

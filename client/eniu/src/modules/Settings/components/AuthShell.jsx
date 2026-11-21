@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-import darkLogo from "../../../assets/Images/eniu-DarkBannerNoBack.svg";
+import darkLogo from "../../../assets/Images/eniu-logo-dark.webp";
 import { useTranslation } from "react-i18next";
 
 export default function AuthShell({ title, description, children }) {
