@@ -14,6 +14,68 @@ reordenarlos sin depender de la posición.
 # no nombran precios ni invitan a comprar, porque la app de iOS no puede
 # ofrecer una compra fuera de las reglas de Apple.
 _EN = {
+    # --- Pedidos desde la mesa -----------------------------------------------
+    "Acepta o cancela los pedidos pendientes antes de cerrar la cuenta": (
+        "Accept or cancel the pending orders before closing the bill"
+    ),
+    "Algunos productos ya no se pueden pedir. Revisa tu carrito.": (
+        "Some items can no longer be ordered. Check your cart."
+    ),
+    "Cierra la cuenta de la mesa antes de borrarla": "Close the table's bill before deleting it",
+    "Cuenta no encontrada": "Bill not found",
+    "El estado del pedido no es válido": "The order status is not valid",
+    "El nombre de la mesa no es válido": "The table name is not valid",
+    "El número de mesa debe ser de 1 a {limit}": "The table number must be between 1 and {limit}",
+    "El pedido es demasiado grande": "The order is too large",
+    "El pedido no tiene productos": "The order has no items",
+    "El pedido no tiene un identificador válido": "The order doesn't have a valid identifier",
+    "Elige un menú de este negocio para la mesa": (
+        "Choose one of this business's menus for the table"
+    ),
+    "Escribe tu nombre para mandar el pedido": "Enter your name to send the order",
+    "Espera a que el negocio confirme tus pedidos antes de mandar otro": (
+        "Wait for the business to confirm your orders before sending another one"
+    ),
+    "Esta mesa no está disponible": "This table is not available",
+    "Este negocio no está recibiendo pedidos en este momento": (
+        "This business isn't taking orders right now"
+    ),
+    "Este pedido está cancelado": "This order is cancelled",
+    "La cantidad debe ser de 1 a {limit}": "The quantity must be between 1 and {limit}",
+    "La cuenta de esta mesa ya está cerrada": "This table's bill is already closed",
+    "Las notas no pueden superar {limit} caracteres": (
+        "Notes can't be longer than {limit} characters"
+    ),
+    "Las notas no son válidas": "The notes are not valid",
+    "Mesa eliminada": "Table deleted",
+    "Mesa no encontrada": "Table not found",
+    "No fue posible actualizar el pedido": "We couldn't update the order",
+    "No fue posible actualizar la mesa": "We couldn't update the table",
+    "No fue posible actualizar los pedidos": "We couldn't update ordering",
+    "No fue posible cancelar el producto": "We couldn't cancel the item",
+    "No fue posible cargar la cuenta": "We couldn't load the bill",
+    "No fue posible cargar la mesa": "We couldn't load the table",
+    "No fue posible cargar las mesas": "We couldn't load the tables",
+    "No fue posible cargar los pedidos": "We couldn't load the orders",
+    "No fue posible cargar tus pedidos": "We couldn't load your orders",
+    "No fue posible cerrar la cuenta": "We couldn't close the bill",
+    "No fue posible crear la mesa": "We couldn't create the table",
+    "No fue posible eliminar la mesa": "We couldn't delete the table",
+    "No fue posible mandar el pedido": "We couldn't send the order",
+    "No pudimos identificar este dispositivo. Recarga la página.": (
+        "We couldn't identify this device. Reload the page."
+    ),
+    "Pedido no encontrado": "Order not found",
+    "Producto del pedido no encontrado": "Order item not found",
+    "Todavía no tienes pedidos en esta mesa": "You don't have any orders at this table yet",
+    "Tu plan actual no incluye pedidos desde la mesa": (
+        "Your current plan doesn't include table ordering"
+    ),
+    "Un pedido puede tener hasta {limit} productos": "An order can have up to {limit} items",
+    "Un pedido sólo puede avanzar de estado": "An order can only move forward",
+    "Uno de los productos del pedido no es válido": "One of the items in the order is not valid",
+    "Ya existe una mesa con ese número": "A table with that number already exists",
+
     # --- Versión de la app ---------------------------------------------------
     "Hay una versión nueva de Eniu. Actualiza la app para seguir usándola.": (
         "There's a new version of Eniu. Update the app to keep using it."

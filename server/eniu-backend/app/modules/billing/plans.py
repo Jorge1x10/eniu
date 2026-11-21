@@ -57,6 +57,11 @@ PLANS = {
         "analytics_summary": True,
         "allow_splash": False,
         "show_eniu_badge": True,
+        # Pedidos desde la mesa. Pendiente de decidir si es función de pago:
+        # mientras tanto todos los planes la tienen, y cada negocio la
+        # enciende a mano (`Business.ordering_enabled`), así que esto no
+        # activa nada por sí solo.
+        "allow_orders": True,
     },
     ESSENTIAL: {
         "name": "Plan Esencial",
@@ -72,6 +77,7 @@ PLANS = {
         "analytics_summary": True,
         "allow_splash": True,
         "show_eniu_badge": False,
+        "allow_orders": True,
     },
 }
 
@@ -174,6 +180,7 @@ def to_public_dict(plan_key):
         "analytics_summary": limits["analytics_summary"],
         "allow_splash": limits["allow_splash"],
         "show_eniu_badge": limits["show_eniu_badge"],
+        "allow_orders": limits["allow_orders"],
     }
 
 
