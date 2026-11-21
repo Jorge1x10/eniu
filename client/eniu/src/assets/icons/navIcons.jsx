@@ -8,6 +8,8 @@ import {
   Tags,
   Palette,
   Megaphone,
+  ClipboardList,
+  Armchair,
 } from "lucide-react";
 
 export const DASH_ICONS = {
@@ -20,4 +22,6 @@ export const DASH_ICONS = {
   qrcodes: LucideScanQrCode,
   analytics: ChartSpline,
   config: Cog,
+  orders: ClipboardList,
+  tables: Armchair,
 };

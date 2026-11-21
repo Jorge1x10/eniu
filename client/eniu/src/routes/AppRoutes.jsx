@@ -27,6 +27,8 @@ const CatalogueDetailPage = lazy(() => import("../modules/Catalogue/pages/Catalo
 const TemplatesPage = lazy(() => import("../modules/Templates/pages/TemplatesPage"));
 const PromotionsPage = lazy(() => import("../modules/Templates/pages/PromotionsPage"));
 const PublicationPage = lazy(() => import("../modules/Publication/pages/PublicationPage"));
+const OrdersPage = lazy(() => import("../modules/Ordering/pages/OrdersPage"));
+const TablesPage = lazy(() => import("../modules/Ordering/pages/TablesPage"));
 
 // Cada pantalla se descarga al visitarla. Las del dashboard esperan dentro de
 // su propio `Suspense` (`MotionDiv`), así que la barra lateral no parpadea al
@@ -90,6 +92,8 @@ export default function AppRoutes() {
           <Route path="businesses/:businessId/catalogues/:catalogueId/promotions" element={<PromotionsPage />} />
           <Route path="businesses/:businessId/catalogues/:catalogueId/qr" element={<PublicationPage />} />
           <Route path="businesses/:businessId/catalogues/:catalogueId/analytics" element={<AnalitycsPage />} />
+          <Route path="pedidos" element={<OrdersPage />} />
+          <Route path="mesas" element={<TablesPage />} />
           <Route path="qr" element={<QrPage />} />
           <Route path="analiticas" element={<MenuPage />} />
           <Route path="settings" element={<SettingsPage />} />

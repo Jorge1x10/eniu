@@ -16,6 +16,10 @@ import { useTranslation } from "react-i18next";
 // visible dejaría de funcionar en cuanto la interfaz cambia de idioma.
 const dashboardOptions = [
   { key: "home", label: "Inicio", path: "/dashboard", icon: DASH_ICONS.home },
+  // Pedidos y mesas son del negocio, no de un menú: van arriba porque es lo
+  // que se mira durante el servicio.
+  { key: "orders", label: "Pedidos", path: "/dashboard/pedidos", icon: DASH_ICONS.orders },
+  { key: "tables", label: "Mesas", path: "/dashboard/mesas", icon: DASH_ICONS.tables },
   { key: "menus", label: "Menús", path: "/dashboard/menus", icon: DASH_ICONS.menus },
   { key: "products", label: "Productos", path: "/dashboard/productos", icon: DASH_ICONS.products },
   { key: "categories", label: "Categorías", path: "/dashboard/categorias", icon: DASH_ICONS.categories },
