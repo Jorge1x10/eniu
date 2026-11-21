@@ -27,7 +27,8 @@ from sqlalchemy.orm import selectinload
 from app.database.basemodel import utc_now
 from app.database.db import db
 from app.modules.analytics.security import protected_value, tracking_key
-from app.modules.billing.guards import limits_for_owner
+from app.modules.billing.guards import plan_key_for
+from app.modules.billing.plans import allows_orders
 from app.modules.business.model import Business
 from app.modules.catalogue.model import Catalogue
 from app.modules.catalogue.services import _business_access
@@ -232,8 +233,25 @@ def _public_table(qr_token):
     return table
 
 
+def _plan_allows_orders(business):
+    return allows_orders(plan_key_for(business.owner_id))
+
+
+def _ordering_state(business):
+    """Si el negocio acepta pedidos ahora y, si no, por qué.
+
+    `paused`: el negocio los apagó. `plan`: su plan no los incluye (por
+    ejemplo, terminó la prueba gratuita). El panel muestra uno u otro aviso.
+    """
+    if not _plan_allows_orders(business):
+        return {"enabled": False, "reason": "plan"}
+    if not business.ordering_enabled:
+        return {"enabled": False, "reason": "paused"}
+    return {"enabled": True, "reason": None}
+
+
 def _ordering_enabled(business):
-    return bool(business.ordering_enabled) and bool(limits_for_owner(business.owner_id).get("allow_orders"))
+    return _ordering_state(business)["enabled"]
 
 
 def get_public_table(qr_token):
@@ -644,13 +662,13 @@ def set_ordering(owner_id, business_id, enabled):
         business, error = _business_access(owner_id, business_id)
         if error:
             return error
-        if enabled and not limits_for_owner(business.owner_id).get("allow_orders"):
+        if enabled and not _plan_allows_orders(business):
             return {"message": _("Tu plan actual no incluye pedidos desde la mesa"), "code": "plan_limit"}, 403
         business.ordering_enabled = enabled
         db.session.flush()
         _touch(business.id)
         db.session.commit()
-        return {"ordering": {"enabled": business.ordering_enabled}}, 200
+        return {"ordering": _ordering_state(business)}, 200
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.exception(error)
@@ -686,7 +704,7 @@ def live_orders(owner_id, business_id, known_version=None):
         return {
             "changed": True,
             "version": business.orders_version,
-            "ordering": {"enabled": _ordering_enabled(business)},
+            "ordering": _ordering_state(business),
             "accounts": [_account_payload_for_business(account) for account in accounts],
         }, 200
     except SQLAlchemyError as error:

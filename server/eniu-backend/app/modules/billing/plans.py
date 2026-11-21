@@ -6,6 +6,10 @@ lugar de cablearlos: así cambiar un límite no obliga a publicar una versión
 nueva en las tiendas.
 """
 
+from datetime import date, datetime, timezone
+
+from flask import current_app, has_app_context
+
 from app.modules.template import catalog
 from app.shared.i18n import _
 
@@ -57,11 +61,10 @@ PLANS = {
         "analytics_summary": True,
         "allow_splash": False,
         "show_eniu_badge": True,
-        # Pedidos desde la mesa. Pendiente de decidir si es función de pago:
-        # mientras tanto todos los planes la tienen, y cada negocio la
-        # enciende a mano (`Business.ordering_enabled`), así que esto no
-        # activa nada por sí solo.
-        "allow_orders": True,
+        # Pedidos desde la mesa: función de pago, porque es lo que más carga el
+        # servidor. El gratuito sólo los tiene durante la prueba que fije
+        # ORDERS_FREE_PLAN_UNTIL (ver `allows_orders`).
+        "allow_orders": False,
     },
     ESSENTIAL: {
         "name": "Plan Esencial",
@@ -156,6 +159,35 @@ def allows_font(plan_key, font_key):
     return allowed is None or font_key in allowed
 
 
+def orders_free_until():
+    """Último día (UTC) en que el plan gratuito puede recibir pedidos, o None.
+
+    Sale de ORDERS_FREE_PLAN_UNTIL (AAAA-MM-DD). Sin ella, o con una fecha
+    ilegible, no hay prueba: los pedidos son sólo de los planes de pago. Así
+    un error de configuración nunca regala la función.
+    """
+    if not has_app_context():
+        return None
+    value = current_app.config.get("ORDERS_FREE_PLAN_UNTIL")
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value).strip())
+    except ValueError:
+        return None
+
+
+def _orders_trial_active(today=None):
+    until = orders_free_until()
+    today = today or datetime.now(timezone.utc).date()
+    return bool(until and today <= until)
+
+
+def allows_orders(plan_key, today=None):
+    """Si este plan puede recibir pedidos desde la mesa hoy."""
+    return bool(limits_for(plan_key)["allow_orders"]) or _orders_trial_active(today)
+
+
 def within_limit(count, limit):
     """True si todavía cabe un elemento más bajo ese límite."""
     return limit is UNLIMITED or count < limit
@@ -180,7 +212,13 @@ def to_public_dict(plan_key):
         "analytics_summary": limits["analytics_summary"],
         "allow_splash": limits["allow_splash"],
         "show_eniu_badge": limits["show_eniu_badge"],
-        "allow_orders": limits["allow_orders"],
+        "allow_orders": allows_orders(plan_key),
+        # Sólo cuando el plan tiene los pedidos por la prueba gratuita: los
+        # clientes pueden avisar hasta cuándo, sin nombrar precios.
+        "orders_free_until": (
+            orders_free_until().isoformat()
+            if not limits["allow_orders"] and _orders_trial_active() else None
+        ),
     }
 
 

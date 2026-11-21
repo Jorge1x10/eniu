@@ -36,10 +36,30 @@ Código: `app/modules/ordering/`. Pruebas: `tests/test_ordering_api.py`.
 - **Qué se puede pedir:** lo que el menú público muestra, que está disponible y
   que **tiene precio**. Un producto sin precio ("Consultar") se ve en el menú,
   pero se pide al mesero.
-- **Activación:** `Business.ordering_enabled`, apagado por defecto, y el permiso
-  `allow_orders` del plan (hoy lo tienen todos los planes; está pendiente decidir
-  si es de pago). Apagarlo es también el botón de **pausar pedidos**: el menú se
-  sigue viendo, pero no se puede pedir.
+- **Activación:** `Business.ordering_enabled`, apagado por defecto. Apagarlo es
+  también el botón de **pausar pedidos**: el menú se sigue viendo, pero no se
+  puede pedir.
+
+## Es una función de pago
+
+Los pedidos son lo que más carga el servidor, así que están en los planes de
+pago (`allow_orders` en `billing/plans.py`). El plan gratuito solo los tiene
+durante una **prueba** que se controla sin desplegar código:
+
+```text
+ORDERS_FREE_PLAN_UNTIL=2027-03-31   # último día de la prueba, incluido (UTC)
+```
+
+- **Vacía o ilegible:** no hay prueba. Un error de configuración nunca regala la
+  función.
+- **Durante la prueba**, el plan del usuario dice `allow_orders: true` y
+  `orders_free_until: "2027-03-31"`, para que los clientes avisen hasta cuándo
+  sin nombrar precios (la app de iOS no puede ofrecer compras fuera de Apple).
+- **Al pasar la fecha**, los negocios gratuitos dejan de recibir pedidos nuevos.
+  Lo que ya estaba en curso se atiende, y las cuentas abiertas se cierran con
+  normalidad. El panel recibe `ordering: {"enabled": false, "reason": "plan"}`
+  (si el negocio los pausó, `reason` es `"paused"`).
+- **Los planes de pago** no dependen de la fecha.
 
 ## Identificar al comensal sin cuentas
 

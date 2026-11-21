@@ -64,6 +64,13 @@ class Config:
     # contrario cualquiera podría inventarse la IP y saltarse los límites.
     TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT", "1"))
 
+    # Pedidos desde la mesa: son de los planes de pago. Con una fecha
+    # (AAAA-MM-DD), el plan gratuito también los tiene hasta ese día incluido,
+    # como prueba. Al pasar la fecha se apagan solos para los negocios
+    # gratuitos: ya no reciben pedidos nuevos, pero pueden terminar de atender
+    # y cerrar las cuentas abiertas. Vacía: sin prueba.
+    ORDERS_FREE_PLAN_UNTIL = os.getenv("ORDERS_FREE_PLAN_UNTIL", "")
+
     # Versiones de la app móvil (ver app/modules/system/client_version.py y
     # docs/API_VERSIONING.md). Vacías no bloquean ni sugieren nada.
     #

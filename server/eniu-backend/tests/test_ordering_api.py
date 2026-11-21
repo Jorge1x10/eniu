@@ -1,7 +1,6 @@
 """Pedidos desde la mesa: mesas, cuenta, pedidos, estados y límites."""
 import unittest
 from decimal import Decimal
-from unittest.mock import patch
 
 from flask_jwt_extended import create_access_token
 from sqlalchemy.exc import IntegrityError
@@ -14,6 +13,7 @@ from app.modules.category.model import Category
 from app.modules.ordering.model import Order, TableAccount
 from app.modules.products.model import Product
 from app.modules.users.model import User
+from tests.plan_helpers import grant_plan
 
 CONFIG = {
     "TESTING": True,
@@ -30,6 +30,7 @@ ANA = "device-ana-0123456789abc"
 
 class OrderingTestCase(unittest.TestCase):
     config = CONFIG
+    paid_owner = True
 
     @classmethod
     def setUpClass(cls):
@@ -67,6 +68,10 @@ class OrderingTestCase(unittest.TestCase):
                 Product(name="Ajeno", price=Decimal("10.00"), catalogue_id=other.id),
             ])
             db.session.commit()
+            # Los pedidos son de pago; la prueba gratuita tiene sus propias
+            # pruebas en `FreeTrialTestCase`.
+            if self.paid_owner:
+                grant_plan(owner.id)
             self.owner_token = create_access_token(identity=str(owner.id))
             self.outsider_token = create_access_token(identity=str(outsider.id))
             self.business_id = str(business.id)
@@ -489,11 +494,72 @@ class BusinessOrderFlowTestCase(OrderingTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(self.client.get(self.business_url("/orders/live"), headers=outsider).status_code, 403)
 
-    def test_a_plan_without_ordering_cannot_turn_it_on(self):
-        with patch("app.modules.ordering.services.limits_for_owner", return_value={"allow_orders": False}):
-            response = self.client.patch(self.business_url("/ordering"), json={"enabled": True}, headers=self.auth())
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json["code"], "plan_limit")
+    def test_pausing_says_why_ordering_is_off(self):
+        response = self.client.patch(self.business_url("/ordering"), json={"enabled": False}, headers=self.auth())
+        self.assertEqual(response.json["ordering"], {"enabled": False, "reason": "paused"})
+        self.assertEqual(self.live()["ordering"], {"enabled": False, "reason": "paused"})
+
+
+class FreeTrialTestCase(OrderingTestCase):
+    """Los pedidos son de pago; el gratuito sólo los tiene durante la prueba."""
+
+    paid_owner = False
+
+    def set_trial(self, value):
+        self.app.config["ORDERS_FREE_PLAN_UNTIL"] = value
+
+    def tearDown(self):
+        self.app.config["ORDERS_FREE_PLAN_UNTIL"] = ""
+        super().tearDown()
+
+    def me(self):
+        return self.client.get("/api/auth/me", headers=self.auth()).json["user"]["plan"]["limits"]
+
+    def test_without_a_trial_the_free_plan_cannot_take_orders(self):
+        self.set_trial("")
+        token = self.qr_token(self.create_table())
+        self.assertFalse(self.client.get(f"/api/public/tables/{token}").json["ordering"]["enabled"])
+        self.assertEqual(self.order(token, [self.line("Latte")]).json["code"], "ordering_disabled")
+        refused = self.client.patch(self.business_url("/ordering"), json={"enabled": True}, headers=self.auth())
+        self.assertEqual(refused.status_code, 403)
+        self.assertEqual(refused.json["code"], "plan_limit")
+        self.assertEqual(self.live()["ordering"], {"enabled": False, "reason": "plan"})
+        self.assertFalse(self.me()["allow_orders"])
+        self.assertIsNone(self.me()["orders_free_until"])
+
+    def test_during_the_trial_the_free_plan_takes_orders(self):
+        self.set_trial("2999-12-31")
+        token = self.qr_token(self.create_table())
+        self.assertEqual(self.order(token, [self.line("Latte")]).status_code, 201)
+        self.assertTrue(self.me()["allow_orders"])
+        self.assertEqual(self.me()["orders_free_until"], "2999-12-31")
+
+    def test_when_the_trial_ends_open_bills_can_still_be_finished(self):
+        self.set_trial("2999-12-31")
+        token = self.qr_token(self.create_table())
+        self.order(token, [self.line("Latte")], key="antes-del-fin")
+        account = self.live()["accounts"][0]
+
+        self.set_trial("2000-01-01")
+        self.assertEqual(self.order(token, [self.line("Latte")], key="despues-fin").json["code"], "ordering_disabled")
+        # Lo que ya estaba en curso se atiende y se cobra con normalidad.
+        self.assertEqual(self.set_status(account["orders"][0]["id"], "ready").status_code, 200)
+        closed = self.client.post(self.business_url(f"/accounts/{account['id']}/close"), headers=self.auth())
+        self.assertEqual(closed.status_code, 200)
+
+    def test_an_unreadable_date_never_gives_the_feature_away(self):
+        self.set_trial("31/12/2999")
+        token = self.qr_token(self.create_table())
+        self.assertFalse(self.client.get(f"/api/public/tables/{token}").json["ordering"]["enabled"])
+
+    def test_paid_plans_do_not_depend_on_the_trial(self):
+        self.set_trial("2000-01-01")
+        with self.app.app_context():
+            grant_plan(User.query.filter_by(email="owner@example.com").first().id)
+        token = self.qr_token(self.create_table())
+        self.assertEqual(self.order(token, [self.line("Latte")]).status_code, 201)
+        self.assertTrue(self.me()["allow_orders"])
+        self.assertIsNone(self.me()["orders_free_until"])
 
 
 class OneOpenBillPerTableTestCase(OrderingTestCase):
