@@ -1,8 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
-import en from "./en.json";
-
 // El texto en español es la clave, igual que en el backend
 // (`app/shared/i18n.py`): así las pantallas se leen tal cual en el código y,
 // si a una cadena le falta traducción, sale en español en lugar de mostrar
@@ -48,10 +46,32 @@ export function rememberLanguage(language) {
   }
 }
 
-i18n.use(initReactI18next).init({
+/**
+ * Descarga el catálogo de un idioma sólo cuando hace falta.
+ *
+ * El español no tiene catálogo (es el propio código), así que quien lee en
+ * español —la mayoría de los comensales— no descarga los 42 KB del inglés.
+ * Mientras llega, `useTranslation` suspende y espera en el `Suspense` más
+ * cercano, de modo que no se pinta en un idioma para cambiar al otro.
+ */
+const lazyCatalogs = {
+  type: "backend",
+  init() {},
+  read(language, _namespace, callback) {
+    if (language !== "en") {
+      callback(null, {});
+      return;
+    }
+    import("./en.json").then(
+      (module) => callback(null, module.default),
+      (error) => callback(error, null),
+    );
+  },
+};
+
+i18n.use(lazyCatalogs).use(initReactI18next).init({
   lng: initialLanguage(),
   fallbackLng: DEFAULT_LANGUAGE,
-  resources: { en: { translation: en } },
   // Las claves son frases completas, con puntos y dos puntos dentro. Sin
   // desactivar estos separadores, i18next leería "Duración:" como un espacio
   // de nombres y no encontraría nada.
