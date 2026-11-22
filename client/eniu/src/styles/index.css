@@ -1,5 +1,58 @@
 @import "tailwindcss";
 
+/* Tokens del rediseño (sección 2 del documento de diseño). Generan clases como
+   `bg-eniu-bg` o `border-eniu-warm`. Los de superficie y texto cambian con el
+   tema (ver `html[data-theme="dark"]` más abajo); los de la comanda, el
+   amarillo y la barra lateral son iguales en los dos. */
+@theme {
+  --color-eniu-bg: #FBF7EC;
+  --color-eniu-surface: #FFFFFF;
+  --color-eniu-surface-alt: #F2EBD8;
+  --color-eniu-text: #111111;
+  --color-eniu-muted: #6E675E;
+  --color-eniu-warm: #E9DDB7;
+  --color-eniu-gold: #8A7420;
+  --color-eniu-sand: #F8E8AE;
+  --color-eniu-success: #16803A;
+  --color-eniu-danger: #C62828;
+  --color-eniu-danger-soft: #FDECEC;
+  /* Bloque oscuro destacado (tarjeta de pendientes, botón negro). */
+  --color-eniu-hero: #111111;
+  --color-eniu-hero-hover: #2A2A2A;
+
+  /* Fijos en los dos temas. */
+  --color-eniu-ink: #111111;
+  --color-eniu-ink-soft: #2A2A2A;
+  --color-eniu-cream: #FBF7EC;
+  --color-eniu-hero-muted: #A39B8C;
+  --color-eniu-yellow: #FFE05A;
+  --color-eniu-yellow-pressed: #E8C93D;
+  --color-eniu-badge-dark: #3A3631;
+  --color-eniu-note: #FFF1A8;
+  --color-eniu-paper: #FFFDF5;
+  --color-eniu-rule: #D6CBA2;
+  --color-eniu-ticket-muted: #6E675E;
+  --color-eniu-ticket-alt: #F2EBD8;
+  --color-eniu-ticket-success: #16803A;
+  --color-eniu-ticket-danger: #C62828;
+}
+
+html[data-theme="dark"] {
+  --color-eniu-bg: #0B0A08;
+  --color-eniu-surface: #1C1916;
+  --color-eniu-surface-alt: #2B261D;
+  --color-eniu-text: #FBF7EC;
+  --color-eniu-muted: #A8A093;
+  --color-eniu-warm: #3A342A;
+  --color-eniu-gold: #FFE05A;
+  --color-eniu-sand: #363224;
+  --color-eniu-success: #3DBF6B;
+  --color-eniu-danger: #F0736B;
+  --color-eniu-danger-soft: #3A1E1C;
+  --color-eniu-hero: #2B261D;
+  --color-eniu-hero-hover: #3A342A;
+}
+
 @utility form-control {
   width: 100%;
   border-radius: 0.75rem;
@@ -97,4 +150,15 @@ html[data-theme="dark"] .bg-\[\#FFE05A\] * {
 
 html[data-theme="dark"] .theme-toggle-thumb {
   background-color: #FFFFFF !important;
+}
+
+/* Orillas recortadas de la comanda: semicírculos de radio 5 cada 12 px. */
+.ticket-edges {
+  --ticket-bite: radial-gradient(circle 5px at 6px 0, transparent 5px, #000 5.5px);
+  -webkit-mask: radial-gradient(circle 5px at 6px 0, transparent 5px, #000 5.5px) top / 12px 8px repeat-x,
+    radial-gradient(circle 5px at 6px 8px, transparent 5px, #000 5.5px) bottom / 12px 8px repeat-x,
+    linear-gradient(#000 0 0) center / 100% calc(100% - 16px) no-repeat;
+  mask: radial-gradient(circle 5px at 6px 0, transparent 5px, #000 5.5px) top / 12px 8px repeat-x,
+    radial-gradient(circle 5px at 6px 8px, transparent 5px, #000 5.5px) bottom / 12px 8px repeat-x,
+    linear-gradient(#000 0 0) center / 100% calc(100% - 16px) no-repeat;
 }

@@ -34,7 +34,7 @@ export function useLiveOrders(businessId, { onNewPending } = {}) {
   useEffect(() => { notifyRef.current = onNewPending; }, [onNewPending]);
 
   const refresh = useCallback(async ({ force = false } = {}) => {
-    if (busyRef.current && !force) return;
+    if (!businessId || (busyRef.current && !force)) return;
     busyRef.current = true;
     const response = await live(force ? null : versionRef.current);
     busyRef.current = false;
@@ -58,11 +58,12 @@ export function useLiveOrders(businessId, { onNewPending } = {}) {
     }
     seenRef.current = new Set(pending);
     setState({ accounts, ordering: data.ordering || null, loaded: true, error: false });
-  }, [live]);
+  }, [businessId, live]);
 
   useEffect(() => {
     versionRef.current = null;
     seenRef.current = null;
+    if (!businessId) return undefined;
     const first = window.setTimeout(() => refresh({ force: true }), 0);
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") refresh();

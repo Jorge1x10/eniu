@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import OrdersPage from "./OrdersPage";
+import { LiveOrdersProvider } from "../context/LiveOrdersContext";
 import { LIVE_POLL_MS } from "../hooks/useLiveOrders";
 
 const mocks = vi.hoisted(() => ({
@@ -53,12 +54,13 @@ function snapshot(accounts, version = 1, ordering = { enabled: true, reason: nul
 }
 
 function renderPage() {
-  return render(<MemoryRouter><OrdersPage /></MemoryRouter>);
+  return render(<MemoryRouter><LiveOrdersProvider businessId="business-1"><OrdersPage /></LiveOrdersProvider></MemoryRouter>);
 }
 
 describe("OrdersPage", () => {
   beforeEach(() => {
     mocks.playSound.mockReset();
+    localStorage.clear();
     mocks.plan = { limits: {} };
     mocks.service = {
       live: vi.fn(),
@@ -71,19 +73,33 @@ describe("OrdersPage", () => {
 
   afterEach(() => vi.useRealTimers());
 
-  it("muestra cada pedido con su comensal y su mesa, con las mesas por atender primero", async () => {
+  it("muestra una tarjeta por mesa, con las que tienen pedidos por aceptar primero", async () => {
     mocks.service.live.mockResolvedValue(snapshot([
       account("a-served", 2, [order("o-ready", "ready", { diner_name: "Ana" })], { total: "110.00", opened_at: "2026-11-22T19:00:00Z" }),
       account("a-new", 4, [order("o-new", "pending")]),
     ]));
     renderPage();
 
-    const cards = await screen.findAllByRole("article");
-    expect(within(cards[0]).getByRole("heading", { name: "Mesa 4" })).toBeInTheDocument();
-    expect(within(cards[0]).getByText("David | Mesa 4")).toBeInTheDocument();
-    expect(within(cards[0]).getByText("Nota: Con avena")).toBeInTheDocument();
-    expect(within(cards[1]).getByText("Ana | Mesa 2")).toBeInTheDocument();
+    const tables = await screen.findAllByRole("heading", { level: 2 });
+    expect(tables.map((heading) => heading.getAttribute("aria-label"))).toEqual(["Mesa 4", "Mesa 2"]);
+    expect(screen.getByText("1 por aceptar")).toBeInTheDocument();
+    expect(screen.getByText(/^DAVID · /)).toBeInTheDocument();
+    expect(screen.getAllByText("↳ Con avena")).toHaveLength(2);
+    expect(screen.getByText("Mesas con cuenta abierta · 2")).toBeInTheDocument();
     expect(screen.getByText("Por aceptar", { selector: "dt" }).nextSibling).toHaveTextContent("1");
+  });
+
+  it("agrupa los pedidos por estado en tres columnas", async () => {
+    mocks.service.live.mockResolvedValue(snapshot([
+      account("a", 4, [order("o-1", "pending"), order("o-2", "preparing", { diner_name: "Luis" })]),
+    ]));
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Por estado" }));
+
+    const kitchen = screen.getByRole("region", { name: /En cocina/ });
+    expect(within(kitchen).getByText("LUIS")).toBeInTheDocument();
+    expect(within(kitchen).getByRole("button", { name: "Marcar listo" })).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: /Listos/ })).getByText("Nada por aquí")).toBeInTheDocument();
   });
 
   it("acepta un pedido y vuelve a consultar sin esperar al siguiente ciclo", async () => {
@@ -98,7 +114,9 @@ describe("OrdersPage", () => {
   it("no deja cerrar una cuenta con pedidos por aceptar", async () => {
     mocks.service.live.mockResolvedValue(snapshot([account("a", 4, [order("o-1", "pending")])]));
     renderPage();
-    expect(await screen.findByRole("button", { name: "Cerrar cuenta" })).toBeDisabled();
+    const close = await screen.findByRole("button", { name: "Cerrar cuenta" });
+    expect(close).toBeDisabled();
+    expect(close).toHaveAccessibleDescription("Acepta o rechaza los pedidos pendientes para cerrar la cuenta.");
   });
 
   it("cierra la cuenta tras confirmar, mostrando el total", async () => {
@@ -112,14 +130,24 @@ describe("OrdersPage", () => {
     expect(mocks.service.closeAccount).toHaveBeenCalledWith("a");
   });
 
-  it("cancela un producto suelto nombrándolo en la confirmación", async () => {
+  it("quita un producto suelto tras confirmarlo en el mismo renglón", async () => {
     mocks.service.live.mockResolvedValue(snapshot([account("a", 4, [order("o-1", "received")])]));
     renderPage();
-    await userEvent.click(await screen.findByRole("button", { name: "Cancelar Latte" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Quitar Latte del pedido" }));
 
-    const dialog = screen.getByRole("alertdialog", { name: "¿Cancelar 2 × Latte?" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cancelar producto" }));
+    expect(screen.getByText("¿Quitarlo del pedido?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Sí, quitar" }));
     expect(mocks.service.cancelItem).toHaveBeenCalledWith("o-1", "o-1-latte");
+  });
+
+  it("pide confirmación para rechazar un pedido", async () => {
+    mocks.service.live.mockResolvedValue(snapshot([account("a", 4, [order("o-1", "pending")])]));
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Rechazar" }));
+
+    const dialog = screen.getByRole("alertdialog", { name: "¿Rechazar el pedido de David | Mesa 4?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Rechazar pedido" }));
+    expect(mocks.service.setOrderStatus).toHaveBeenCalledWith("o-1", "cancelled");
   });
 
   it("suena cuando llega un pedido nuevo, pero no por lo que ya había al abrir", async () => {
@@ -131,11 +159,11 @@ describe("OrdersPage", () => {
         account("b", 7, [order("o-2", "pending", { diner_name: "Luis" })]),
       ], 2));
     renderPage();
-    await screen.findByText("David | Mesa 4");
+    await screen.findByText(/^DAVID · /);
     expect(mocks.playSound).not.toHaveBeenCalled();
 
     await act(async () => { await vi.advanceTimersByTimeAsync(LIVE_POLL_MS); });
-    expect(await screen.findByText("Luis | Mesa 7")).toBeInTheDocument();
+    expect(await screen.findByText(/^LUIS · /)).toBeInTheDocument();
     expect(mocks.playSound).toHaveBeenCalledTimes(1);
     expect(mocks.service.live).toHaveBeenLastCalledWith(1);
     expect(document.title).toBe("(2) Pedidos · Eniu");
@@ -145,7 +173,7 @@ describe("OrdersPage", () => {
     mocks.service.live.mockResolvedValue(snapshot([], 1, { enabled: false, reason: "plan" }));
     renderPage();
     expect(await screen.findByText(/Tu plan actual no incluye pedidos desde la mesa/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Activar pedidos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 
   it("avisa hasta cuándo dura la prueba gratuita", async () => {
@@ -155,10 +183,19 @@ describe("OrdersPage", () => {
     expect(await screen.findByText(/Los pedidos son gratis hasta el 31 de marzo de 2027/)).toBeInTheDocument();
   });
 
-  it("pausa los pedidos", async () => {
+  it("pausa los pedidos con el interruptor", async () => {
     mocks.service.live.mockResolvedValue(snapshot([]));
     renderPage();
-    await userEvent.click(await screen.findByRole("button", { name: "Pausar pedidos" }));
+    const toggle = await screen.findByRole("switch", { name: "Recibiendo pedidos" });
+    expect(toggle).toBeChecked();
+    await userEvent.click(toggle);
     expect(mocks.service.setOrdering).toHaveBeenCalledWith(false);
+  });
+
+  it("explica la pausa a quien la ve", async () => {
+    mocks.service.live.mockResolvedValue(snapshot([], 1, { enabled: false, reason: "paused" }));
+    renderPage();
+    expect(await screen.findByText(/Pedidos en pausa. Tus clientes ven el menú/)).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Pedidos en pausa" })).not.toBeChecked();
   });
 });
