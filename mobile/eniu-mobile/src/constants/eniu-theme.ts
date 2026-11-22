@@ -10,6 +10,21 @@ const shared = {
   /** Text/icon color for anything sitting on yellow, cream or sand — always dark, in both schemes. */
   onYellow: '#111111',
   heroSurface: 'rgba(255,255,255,0.06)',
+  /**
+   * Texto sobre el bloque oscuro (`authHero` / `hero`). Es oscuro en los dos
+   * modos, así que su texto es siempre claro.
+   */
+  heroText: '#FBF7EC',
+  heroMuted: '#A39B8C',
+  /** Notas de cocina en la comanda. El texto encima es siempre `onYellow`. */
+  noteHighlight: '#FFF1A8',
+  /** Papel de la comanda: crema en los dos modos, como un ticket de verdad. */
+  ticketPaper: '#FFFDF5',
+  /** Líneas punteadas del ticket. */
+  ticketRule: '#D6CBA2',
+  /** Texto principal y secundario sobre `ticketPaper` (no cambian con el modo). */
+  ticketInk: '#111111',
+  ticketInkMuted: '#6E675E',
 };
 
 export const eniuLight = {
@@ -18,14 +33,16 @@ export const eniuLight = {
   surface: '#FFFFFF',
   surfaceAlt: '#F2EBD8',
   text: '#111111',
-  muted: '#7A736A',
-  border: 'rgba(17,17,17,0.07)',
+  /** #7A736A no llegaba a 4.5:1 sobre la crema; éste sí. */
+  muted: '#6E675E',
+  border: 'rgba(17,17,17,0.08)',
   field: '#FFFFFF',
   success: '#16803A',
   danger: '#C62828',
   /** Bloque oscuro de cabecera: contra la crema es el plano más contrastado. */
   hero: '#141210',
-  heroMuted: '#8C8578',
+  /** Tarjeta sólida dentro del bloque oscuro: tapa la línea decorativa de atrás. */
+  heroCard: '#26221C',
   /** Encabezado de las pantallas de acceso: el mismo plano oscuro del hero. */
   authHero: '#141210',
   /** Elevated cards use a soft warm shadow instead of a border. */
@@ -71,12 +88,12 @@ export const eniuDark = {
   text: '#FBF7EC',
   muted: '#A8A093',
   /** Filo apenas visible en vez del gris duro de antes (#555555). */
-  border: 'rgba(251,247,236,0.10)',
+  border: 'rgba(251,247,236,0.08)',
   field: '#141210',
   success: '#3DBF6B',
   danger: '#F0736B',
   hero: '#332C21',
-  heroMuted: '#A39B8C',
+  heroCard: '#2B261D',
   /**
    * En las pantallas de acceso `hero` (#332C21) se ve demasiado café como fondo
    * de un encabezado completo; ahí se usa la superficie, que sigue destacando

@@ -1,12 +1,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { ActivityIndicator, Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DrawingBrandLine } from '@/components/brand-line';
 import { Button } from '@/components/ui/button';
+import { CheckIcon, CopyIcon, ExternalIcon, PrinterIcon, ShareIcon } from '@/components/ui/icons';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { catalogueKeys } from '@/features/catalogues/catalogue-api';
@@ -57,6 +60,7 @@ export default function OnboardingReadyScreen() {
   const { draft, business, catalogue, setProvisioned } = useOnboarding();
   const [step, setStep] = useState(0);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
   // Evita que StrictMode o un re-render dispare el alta dos veces.
   const startedRef = useRef(false);
   // Si el alta falla a la mitad, el reintento reutiliza el negocio ya creado en
@@ -138,54 +142,107 @@ export default function OnboardingReadyScreen() {
     provision();
   }
 
+  async function copyLink() {
+    if (!publicUrl) return;
+    setCopied(await Clipboard.setStringAsync(`${publicUrl}?src=copy`));
+  }
+  async function share() {
+    if (publicUrl) await Share.share({ title: t("Mi menú digital"), message: publicUrl, url: publicUrl });
+  }
+  // TODO(diseño): la app no tiene una función de imprimir. Mientras tanto lleva
+  // a "Publicar y compartir", donde el QR se descarga para imprimirlo.
+  function printQr() {
+    if (business && catalogue) router.replace({ pathname: '/(tabs)/(menus)/[catalogueId]/publication', params: { catalogueId: catalogue.id } });
+  }
+
+  const ON_DARK = theme.heroText;
+  const ON_DARK_MUTED = theme.heroMuted;
+  const darkButton = ({ pressed }: { pressed: boolean }) => ({
+    flex: 1, minHeight: 50, borderRadius: 14, borderCurve: 'continuous' as const, flexDirection: 'row' as const, alignItems: 'center' as const,
+    justifyContent: 'center' as const, gap: 8, backgroundColor: 'rgba(251,247,236,0.08)', borderWidth: 1, borderColor: 'rgba(251,247,236,0.14)',
+    opacity: pressed ? 0.7 : 1,
+  });
+
   return (
-    <ScrollView contentInsetAdjustmentBehavior="never" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, gap: 24, flexGrow: 1, backgroundColor: '#111111' }}>
-      <View style={{ gap: 10 }}>
-        <Text style={{ color: theme.yellow, fontWeight: '700', fontSize: 14 }}>{t("Paso 3 de 3")}</Text>
-        <View style={{ flexDirection: 'row', gap: 5 }}>
-          <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.yellow }} />
-          <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.yellow }} />
-          <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.yellow }} />
-        </View>
-      </View>
-
-      <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 8 }}>
-        <Text style={{ color: '#FFFDF5', fontSize: 30, fontWeight: '800', letterSpacing: -0.6, lineHeight: 36 }}>{publicUrl ? t("Tu menú ya está en línea") : t("Dejando todo listo")}</Text>
-        <Text style={{ color: '#C7C7C7', fontSize: 14, lineHeight: 21 }}>{publicUrl ? t("Imprime este código, pégalo en la mesa y tus clientes lo abren desde su teléfono.") : t("Estamos creando tu negocio y tu primer menú. Tarda unos segundos.")}</Text>
-      </Animated.View>
-
+    <ScrollView contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingHorizontal: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 16, gap: 22, flexGrow: 1, backgroundColor: theme.authHero }}>
       {error ? (
-        <Animated.View entering={FadeIn.duration(240)} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: '#242424', borderWidth: 1, borderColor: '#555555', padding: 18, gap: 14 }}>
-          <Text style={{ color: '#FFFDF5', fontSize: 14, lineHeight: 21 }}>{error}</Text>
-          <Button onPress={retry}>{t("Reintentar")}</Button>
-        </Animated.View>
+        <>
+          <Text accessibilityRole="header" style={{ color: ON_DARK, fontSize: 32, lineHeight: 35, fontWeight: '900', letterSpacing: -1.1, marginTop: 24 }}>{t("No pudimos terminar")}</Text>
+          <Animated.View entering={FadeIn.duration(240)} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: 'rgba(251,247,236,0.06)', borderWidth: 1, borderColor: 'rgba(251,247,236,0.14)', padding: 18, gap: 14 }}>
+            <Text style={{ color: ON_DARK, fontSize: 15, lineHeight: 22 }}>{error}</Text>
+            <Button onPress={retry}>{t("Reintentar")}</Button>
+          </Animated.View>
+        </>
       ) : !publicUrl ? (
-        <Animated.View entering={FadeIn.duration(240)} style={{ gap: 16, paddingVertical: 28, alignItems: 'center' }}>
-          <ActivityIndicator color={theme.yellow} size="large" />
-          <Text style={{ color: '#C7C7C7', fontSize: 13.5, fontWeight: '600' }}>{STEP_LABELS[step]}</Text>
-          <View style={{ flexDirection: 'row', gap: 6 }}>{STEP_LABELS.map((label, index) => (
-            <View key={label} style={{ width: index === step ? 22 : 7, height: 7, borderRadius: 99, backgroundColor: index <= step ? theme.yellow : '#555555' }} />
-          ))}</View>
-        </Animated.View>
+        <>
+          <View style={{ alignItems: 'center', marginTop: 32 }}>
+            <DrawingBrandLine color={theme.yellow} width={150} height={140} />
+          </View>
+          <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 8 }}>
+            <Text accessibilityRole="header" style={{ color: ON_DARK, fontSize: 32, lineHeight: 35, fontWeight: '900', letterSpacing: -1.1 }}>{t("Dejando todo listo")}</Text>
+            <Text style={{ color: ON_DARK_MUTED, fontSize: 15, lineHeight: 22 }}>{t("Estamos creando tu negocio y tu primer menú. Tarda unos segundos.")}</Text>
+          </Animated.View>
+          <View accessibilityRole="list" style={{ gap: 14, marginTop: 8 }}>
+            {STEP_LABELS.map((label, index) => {
+              const done = index < step;
+              const current = index === step;
+              return (
+                <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }} accessibilityLabel={`${t(label)} ${done ? t("Hecho") : current ? t("En curso") : t("Pendiente")}`}>
+                  <View style={{ width: 28, height: 28, borderRadius: 99, alignItems: 'center', justifyContent: 'center', backgroundColor: done ? theme.yellow : 'transparent', borderWidth: done ? 0 : 2, borderColor: current ? theme.yellow : 'rgba(251,247,236,0.24)' }}>
+                    {done ? <CheckIcon color={theme.onYellow} size={13} /> : current ? <ActivityIndicator size="small" color={theme.yellow} /> : null}
+                  </View>
+                  <Text style={{ color: done || current ? ON_DARK : ON_DARK_MUTED, fontSize: 16, fontWeight: current ? '800' : '600' }}>{t(label)}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </>
       ) : (
         <>
-          <Animated.View entering={FadeInDown.duration(380)} style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: '#FFFDF5', padding: 22, alignItems: 'center', gap: 16 }}>
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, borderCurve: 'continuous', padding: 16 }}><QRCode value={`${publicUrl}?src=qr`} size={196} color="#111111" backgroundColor="#FFFFFF" /></View>
-            <Text selectable numberOfLines={1} style={{ color: '#5C5646', fontSize: 12.5, fontWeight: '600' }}>{publicUrl.replace(/^https?:\/\//, '')}</Text>
+          <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 12 }}>
+            <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(61,191,107,0.16)' }}>
+              <View style={{ width: 7, height: 7, borderRadius: 99, backgroundColor: '#3DBF6B' }} />
+              <Text style={{ color: '#3DBF6B', fontSize: 13, fontWeight: '800' }}>{t("Publicado")}</Text>
+            </View>
+            <Text accessibilityRole="header" style={{ color: ON_DARK, fontSize: 32, lineHeight: 35, fontWeight: '900', letterSpacing: -1.1 }}>
+              {t("Tu menú ya está")} <Text style={{ color: theme.yellow }}>{t("en línea")}</Text>
+            </Text>
+            <Text style={{ color: ON_DARK_MUTED, fontSize: 15, lineHeight: 22 }}>{t("Imprime este código, pégalo en la mesa y tus clientes lo abren desde su teléfono.")}</Text>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(380).delay(120)} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: '#242424', padding: 15, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Text style={{ color: theme.onYellow, fontWeight: '800', fontSize: 15 }}>1</Text></View>
-            <Text style={{ flex: 1, color: '#E4DFCB', fontSize: 12.5, lineHeight: 19 }}>{t("Primer logro desbloqueado:")} <Text style={{ color: theme.yellow, fontWeight: '700' }}>{t("menú publicado")}</Text></Text>
+          {/* TODO(diseño): el diseño pone el ícono del negocio al centro del QR; un
+              negocio recién creado todavía no tiene foto. */}
+          <Animated.View entering={FadeInDown.duration(380).delay(80)} style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: theme.ticketPaper, padding: 20, alignItems: 'center', gap: 14 }}>
+            <View accessible accessibilityRole="image" accessibilityLabel={t("Código QR de tu menú")} style={{ backgroundColor: '#FFFFFF', borderRadius: 18, borderCurve: 'continuous', padding: 14 }}>
+              <QRCode value={`${publicUrl}?src=qr`} size={184} color="#111111" backgroundColor="#FFFFFF" />
+            </View>
+            <View style={{ alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, backgroundColor: '#F2EBD8', paddingLeft: 14 }}>
+              <Text selectable numberOfLines={1} style={{ flex: 1, color: theme.ticketInk, fontSize: 13, fontWeight: '600' }}>{publicUrl.replace(/^https?:\/\//, '')}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={copied ? t("Enlace copiado") : t("Copiar enlace")} onPress={copyLink} style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+                {copied ? <CheckIcon color={theme.ticketInk} size={15} /> : <CopyIcon color={theme.ticketInk} size={18} />}
+              </Pressable>
+            </View>
           </Animated.View>
+
+          <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 99, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(255,224,90,0.14)' }}>
+            <Text style={{ color: theme.yellow, fontSize: 13, fontWeight: '700' }}>{t("Primer logro desbloqueado: menú publicado")}</Text>
+          </View>
         </>
       )}
 
       <View style={{ flex: 1, minHeight: 12 }} />
-      <View style={{ gap: 10 }}>
-        <Pressable disabled={!publicUrl} onPress={() => publicUrl ? Linking.openURL(publicUrl) : undefined} style={({ pressed }) => ({ height: 52, borderRadius: 15, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: !publicUrl ? 0.5 : pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}><Text style={{ color: theme.onYellow, fontWeight: '700', fontSize: 15 }}>{t("Ver mi menú como cliente")}</Text></Pressable>
-        <Button variant="secondary" onPress={() => router.replace('/(tabs)/(home)')}>{t("Ir a mi panel")}</Button>
-      </View>
+      {publicUrl ? (
+        <View style={{ gap: 10 }}>
+          <Button size="lg" onPress={() => Linking.openURL(publicUrl)} trailingIcon={<ExternalIcon color={theme.onYellow} size={17} />}>{t("Ver mi menú")}</Button>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Pressable accessibilityRole="button" onPress={share} style={darkButton}><ShareIcon color={ON_DARK} size={16} /><Text style={{ color: ON_DARK, fontSize: 15, fontWeight: '700' }}>{t("Compartir")}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={printQr} style={darkButton}><PrinterIcon color={ON_DARK} size={18} /><Text style={{ color: ON_DARK, fontSize: 15, fontWeight: '700' }}>{t("Imprimir QR")}</Text></Pressable>
+          </View>
+          <Pressable accessibilityRole="link" onPress={() => router.replace('/(tabs)/(home)')} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: ON_DARK_MUTED, fontSize: 15, fontWeight: '700' }}>{t("Ir a mi panel")}</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }

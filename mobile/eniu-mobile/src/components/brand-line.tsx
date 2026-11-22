@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { StyleProp, View, ViewStyle } from 'react-native';
+import Animated, { Easing, useAnimatedProps, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 /** La mano que sostiene el menú, tal como la dibuja el ícono de la app. */
@@ -27,6 +29,49 @@ export function BrandLine({ color, width, height, strokeWidth = 3.4, withTail = 
     <View accessible={false} aria-hidden style={[{ width, height, pointerEvents: 'none', overflow: 'visible' }, style]}>
       <Svg width={width} height={height} viewBox="0 22 86 80" fill="none" style={{ overflow: 'visible' }}>
         <Path d={withTail ? HAND + TAIL : HAND} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    </View>
+  );
+}
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+/** Largo aproximado del trazo de la mano, en unidades del viewBox. */
+const HAND_LENGTH = 340;
+
+/**
+ * La línea de la marca dibujándose en bucle: se usa mientras se crea el menú.
+ * Si el sistema pide reducir el movimiento se muestra completa y quieta.
+ */
+export function DrawingBrandLine({ color, width, height, strokeWidth = 3.4, style }: Omit<Props, 'withTail'>) {
+  const reduceMotion = useReducedMotion();
+  const offset = useSharedValue(reduceMotion ? 0 : HAND_LENGTH);
+
+  useEffect(() => {
+    if (reduceMotion) { offset.value = 0; return; }
+    offset.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: 1600, easing: Easing.inOut(Easing.cubic) }),
+        withTiming(0, { duration: 500 }),
+        withTiming(-HAND_LENGTH, { duration: 900, easing: Easing.in(Easing.cubic) }),
+      ),
+      -1,
+    );
+  }, [offset, reduceMotion]);
+
+  const animatedProps = useAnimatedProps(() => ({ strokeDashoffset: offset.value }));
+
+  return (
+    <View accessible={false} aria-hidden style={[{ width, height, pointerEvents: 'none' }, style]}>
+      <Svg width={width} height={height} viewBox="0 22 86 80" fill="none">
+        <AnimatedPath
+          d={HAND}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray={`${HAND_LENGTH} ${HAND_LENGTH}`}
+          animatedProps={animatedProps}
+        />
       </Svg>
     </View>
   );

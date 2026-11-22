@@ -20,7 +20,7 @@ function initialOf(name: string) {
  * oscura de Inicio; `variant="light"` (por defecto) es la tarjeta clara que
  * aparece en Menús, Analíticas y Ajustes.
  */
-export function BusinessSwitcher({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
+export function BusinessSwitcher({ variant = 'light' }: { variant?: 'light' | 'dark' | 'inline' }) {
   const { t } = useTranslation();
 
   const theme = useEniuTheme();
@@ -38,9 +38,24 @@ export function BusinessSwitcher({ variant = 'light' }: { variant?: 'light' | 'd
 
   function close() { setOpen(false); setCreating(false); }
 
+  // `inline`: el nombre del negocio en texto pequeño sobre el título de la
+  // pantalla (Menús, Analíticas). Sólo navega: no compite con el título.
+  const trigger = variant === 'inline' ? (
+    <Pressable
+      onPress={() => setOpen(true)}
+      accessibilityRole="button"
+      accessibilityLabel={t("Cambiar de negocio. Negocio actual: {{name}}", { name: selectedBusiness.name })}
+      hitSlop={{ top: 10, bottom: 10 }}
+      style={({ pressed }) => ({ alignSelf: 'flex-start', minHeight: 28, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: pressed ? 0.6 : 1 })}
+    >
+      <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 14, fontWeight: '700' }}>{selectedBusiness.name}</Text>
+      <ChevronDownIcon color={theme.muted} size={10} />
+    </Pressable>
+  ) : null;
+
   return (
     <>
-      <Pressable
+      {trigger ?? <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={t("Cambiar de negocio")}
@@ -63,7 +78,7 @@ export function BusinessSwitcher({ variant = 'light' }: { variant?: 'light' | 'd
         <View style={{ minHeight: 25, justifyContent: 'center', paddingHorizontal: 10, borderRadius: 999, backgroundColor: dark ? 'rgba(255,255,255,0.09)' : theme.surfaceAlt, flexShrink: 0 }}>
           <Text style={{ color: dark ? '#C7C1B4' : theme.muted, fontSize: 11, fontWeight: '700' }}>{businessCountLabel}</Text>
         </View>
-      </Pressable>
+      </Pressable>}
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(17,15,12,0.5)', justifyContent: 'flex-end' }} onPress={close}>

@@ -115,20 +115,20 @@ export function ProductImagePicker({ existing, picked, defaultKey, onChangeExist
         {total < MAX_PICTURES ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Agregar fotos"
+            accessibilityLabel={t("Agregar foto")}
             disabled={disabled || working}
             onPress={add}
             style={({ pressed }) => ({ width: 92, height: 92, borderRadius: 16, borderCurve: 'continuous', borderWidth: 1.5, borderStyle: 'dashed', borderColor: theme.yellowPressed, alignItems: 'center', justifyContent: 'center', gap: 6, opacity: disabled || working ? 0.5 : pressed ? 0.7 : 1 })}
           >
             {working ? <ActivityIndicator color={theme.yellowPressed} /> : <>
               <ImageIcon color={theme.yellowPressed} size={22} />
-              <Text style={{ color: theme.yellowPressed, fontSize: 11, fontWeight: '800' }}>{t("Agregar")}</Text>
+              <Text style={{ color: theme.text, fontSize: 11, fontWeight: '800' }}>{t("Agregar foto")}</Text>
             </>}
           </Pressable>
         ) : null}
       </ScrollView>
       <ImageQualitySelector value={quality} onChange={setQuality} />
-      <Text style={{ color: theme.muted, fontSize: 11.5, lineHeight: 17 }}>{t("Se convierten solas al formato que acepta el menú. Máximo")} {MAX_PICTURES} {t("por producto. Toca la estrella para elegir la principal.")}</Text>
+      <Text style={{ color: theme.muted, fontSize: 13, lineHeight: 18 }}>{t("Con foto, tu producto se ve 3× más. Puedes subir hasta {{count}} fotos.", { count: MAX_PICTURES })}</Text>
     </View>
   );
 }

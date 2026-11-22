@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { PropsWithChildren, ReactNode } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -7,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { BrandLine } from '@/components/brand-line';
 import { cardStyle, eniuDark, useEniuTheme } from '@/constants/eniu-theme';
 import { ChevronLeftIcon } from '@/components/ui/icons';
+import { ProgressSteps } from '@/components/ui/progress-steps';
 
 /**
  * Entrada de las pantallas de acceso: el contenido aparece subiendo desde
@@ -20,7 +22,7 @@ const REVEAL_STAGGER_MS = 80;
 const reveal = (delay = 0) => FadeInDown.duration(REVEAL_MS).delay(delay);
 
 /** El encabezado es oscuro en los dos modos, así que su texto siempre es claro. */
-const ON_HERO = eniuDark.text;
+const ON_HERO = eniuDark.heroText;
 
 type HeroProps = PropsWithChildren<{
   variant?: 'hero';
@@ -59,8 +61,13 @@ function HeroShell({ headline, heroSize = 'lg', children }: HeroProps) {
   const large = heroSize === 'lg';
   return (
     <Frame>
-      <View style={{ height: insets.top + (large ? 210 : 186), backgroundColor: theme.authHero, overflow: 'hidden', paddingHorizontal: 24, paddingTop: insets.top + 10, paddingBottom: 28 + 14, justifyContent: 'flex-end' }}>
-        <BrandLine color={theme.yellow} width={214} height={200} style={{ position: 'absolute', right: -14, top: insets.top }} />
+      <View style={{ height: insets.top + (large ? 240 : 216), backgroundColor: theme.authHero, overflow: 'hidden', paddingHorizontal: 24, paddingTop: insets.top + 12, paddingBottom: 28 + 14, justifyContent: 'space-between' }}>
+        <BrandLine color={theme.yellow} width={214} height={200} style={{ position: 'absolute', right: -14, top: insets.top + 24 }} />
+        {/* La marca arriba: el ícono de la app y la palabra, como en la tienda. */}
+        <View accessible accessibilityLabel="Eniu" style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+          <Image source={require('../../assets/brand/app-icon-dark.png')} style={{ width: 34, height: 34, borderRadius: 9 }} contentFit="cover" />
+          <Text style={{ color: ON_HERO, fontSize: 22, fontWeight: '900', letterSpacing: -0.6 }}>eniu</Text>
+        </View>
         <Animated.View entering={reveal()}>
           <Text accessibilityRole="header" style={{ color: ON_HERO, fontSize: large ? 36 : 34, lineHeight: large ? 38 : 36, fontWeight: '900', letterSpacing: -1.4 }}>
             {headline}
@@ -81,29 +88,6 @@ function HeroShell({ headline, heroSize = 'lg', children }: HeroProps) {
   );
 }
 
-function StepBar({ current, total }: { current: number; total: number }) {
-  const { t } = useTranslation();
-  const theme = useEniuTheme();
-  return (
-    <View
-      accessible
-      accessibilityRole="progressbar"
-      accessibilityLabel={t("Paso {{current}} de {{total}}", { current, total })}
-      accessibilityValue={{ min: 1, max: total, now: current }}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-    >
-      <Text style={{ color: theme.muted, fontSize: 12, fontWeight: '700' }}>{t("Paso {{current}} de {{total}}", { current, total })}</Text>
-      <View style={{ flexDirection: 'row', gap: 5 }}>
-        {Array.from({ length: total }, (_, index) => {
-          const position = index + 1;
-          const backgroundColor = position < current ? theme.text : position === current ? theme.yellow : theme.border;
-          return <View key={position} style={{ width: 22, height: 5, borderRadius: 99, backgroundColor }} />;
-        })}
-      </View>
-    </View>
-  );
-}
-
 function CompactShell({ title, subtitle, step, onBack, children }: CompactProps) {
   const { t } = useTranslation();
   const theme = useEniuTheme();
@@ -121,7 +105,7 @@ function CompactShell({ title, subtitle, step, onBack, children }: CompactProps)
             <ChevronLeftIcon color={theme.text} size={14} />
           </Pressable>
         ) : <View />}
-        {step ? <StepBar current={step.current} total={step.total} /> : null}
+        {step ? <ProgressSteps current={step.current} total={step.total} /> : null}
       </View>
       <Animated.View entering={reveal()} style={{ marginTop: 36, gap: 8 }}>
         <Text accessibilityRole="header" style={{ color: theme.text, fontSize: 32, lineHeight: 35, fontWeight: '900', letterSpacing: -1.1 }}>{title}</Text>

@@ -19,6 +19,10 @@ export type PlanLimits = {
   analytics_summary?: boolean;
   allow_splash: boolean;
   show_eniu_badge: boolean;
+  /** Pedidos desde la mesa (incluye la prueba gratuita). Falta en backends viejos. */
+  allow_orders?: boolean;
+  /** Último día de la prueba gratuita de pedidos, si el plan los tiene por ella. */
+  orders_free_until?: string | null;
 };
 
 export type Plan = {
@@ -204,4 +208,60 @@ export type Analytics = {
   /** `label` ya viene traducido por el backend; `key` es el identificador crudo. */
   sources?: { key: string; label?: string; views: number; percentage?: number }[];
   top_products?: { name: string; category_name?: string; interactions: number; is_available?: boolean }[];
+};
+
+// --- Pedidos desde la mesa (server/eniu-backend/docs/ORDERING.md) ------------
+
+export type OrderStatus = 'pending' | 'received' | 'preparing' | 'ready' | 'cancelled';
+
+export type OrderItem = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit_price: string;
+  line_total: string;
+  notes: string | null;
+  is_cancelled: boolean;
+};
+
+export type Order = {
+  id: string;
+  status: OrderStatus;
+  diner_name: string;
+  created_at: string;
+  received_at: string | null;
+  preparing_at: string | null;
+  ready_at: string | null;
+  cancelled_at: string | null;
+  items: OrderItem[];
+  total: string;
+};
+
+export type TableLabel = { id?: string; number: number; name: string | null };
+
+export type TableAccount = {
+  id: string;
+  status: 'open' | 'closed';
+  table: TableLabel;
+  opened_at: string;
+  closed_at: string | null;
+  total: string;
+  pending_orders: number;
+  orders: Order[];
+};
+
+export type OrderingState = { enabled: boolean; reason: 'paused' | 'plan' | null };
+
+export type LiveOrders =
+  | { changed: false; version: number }
+  | { changed: true; version: number; ordering: OrderingState; accounts: TableAccount[] };
+
+export type DiningTable = {
+  id: string;
+  number: number;
+  name: string | null;
+  catalogue_id: string;
+  is_active: boolean;
+  catalogue_published: boolean;
+  qr_url: string | null;
 };
