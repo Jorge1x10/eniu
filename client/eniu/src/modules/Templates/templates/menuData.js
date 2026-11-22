@@ -27,6 +27,41 @@ export function useMenuCurrency() {
   return { format: (value) => formatCurrency(value, currency) };
 }
 
+/**
+ * Pedidos desde la mesa, para las plantillas.
+ *
+ * Sólo existe cuando el menú se abrió con el QR de una mesa (ver
+ * `Publication/ordering`). Sin él vale `null` y las plantillas se dibujan
+ * exactamente como siempre: el menú normal y la vista previa del editor no
+ * cambian un solo nodo (`visualRegression.test.jsx`).
+ *
+ * Forma: `{ canOrder, isOrderable(product), quantityOf(key), add(product),
+ * decrement(key), colors: { background, text } }`.
+ */
+export const MenuOrderingContext = createContext(null);
+
+export function useMenuOrdering() {
+  return useContext(MenuOrderingContext);
+}
+
+/**
+ * Los 6 tokens que no tienen columna propia (ver `catalog.py` en el backend)
+ * llegan resueltos en `theme.tokens` cuando el tema sale de la API. El
+ * fallback de cada uno reproduce exactamente lo que la plantilla ya hacía
+ * antes de que estos tokens existieran — por eso nadie con la paleta por
+ * defecto nota el cambio al desplegar esto.
+ */
+export function resolveTokens(theme) {
+  return {
+    surface: theme.background_color,
+    price: theme.text_color,
+    category_title: theme.text_color,
+    nav_chip_bg: theme.primary_color,
+    nav_chip_text: theme.text_color,
+    ...theme.tokens,
+  };
+}
+
 export function resolveAssetUrl(url) {
   if (!url || url.startsWith("http") || url.startsWith("blob:")) return url;
   try { return `${new URL(import.meta.env.VITE_API_URL).origin}${url}`; } catch { return url; }

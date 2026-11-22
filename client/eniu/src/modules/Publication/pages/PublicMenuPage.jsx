@@ -1,4 +1,4 @@
-import { createElement, useCallback, useEffect, useRef, useState } from "react";
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useLocation, useParams } from "react-router";
 
@@ -8,11 +8,17 @@ import { resolveTemplate } from "../../Templates/templates/templateRegistry";
 import MenuSplash from "../components/MenuSplash";
 import { usePublicAnalytics } from "../analytics/publicAnalytics";
 import { useTranslation } from "react-i18next";
+import { MenuCurrencyContext, MenuOrderingContext, resolveTokens } from "../../Templates/templates/menuData";
+import { FONT_REGISTRY } from "../../Templates/utils/themeDefaults";
+import TableOrderingLayer from "../ordering/TableOrderingLayer";
+import { isOrderable, useTableOrdering } from "../ordering/useTableOrdering";
 
 export default function PublicMenuPage() {
   const { t } = useTranslation();
 
-  const { publicSlug } = useParams();
+  // `qrToken` llega cuando el menú se abre con el QR de una mesa
+  // (`/m/<slug>/mesa/<qr>`): entonces se puede pedir desde la plantilla.
+  const { publicSlug, qrToken } = useParams();
   const location = useLocation();
   const [menu, setMenu] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +52,7 @@ export default function PublicMenuPage() {
     }
     setMenu(adaptPublicMenu(response.data?.menu));
     setIsLoading(false);
-  }, [publicSlug]);
+  }, [publicSlug, t]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,8 +63,38 @@ export default function PublicMenuPage() {
     };
   }, [loadMenu]);
 
+  const ordering = useTableOrdering(qrToken, menu?.products);
+  const tokens = useMemo(() => (menu ? resolveTokens(menu.theme) : null), [menu]);
+  const orderingContext = useMemo(() => (ordering.active && tokens ? {
+    canOrder: ordering.canOrder,
+    isOrderable,
+    quantityOf: ordering.quantityOf,
+    add: ordering.add,
+    decrement: ordering.decrement,
+    colors: { background: tokens.nav_chip_bg, text: tokens.nav_chip_text },
+  } : null), [ordering.active, ordering.canOrder, ordering.quantityOf, ordering.add, ordering.decrement, tokens]);
+  const palette = useMemo(() => (menu && tokens ? {
+    background: menu.theme.background_color,
+    text: menu.theme.text_color,
+    button: tokens.nav_chip_bg,
+    buttonText: tokens.nav_chip_text,
+    rule: "rgba(127,127,127,0.25)",
+    font: FONT_REGISTRY[menu.theme.font_key]?.family || FONT_REGISTRY.inter.family,
+  } : null), [menu, tokens]);
+
   if (isLoading) return <div className="flex min-h-dvh items-center justify-center bg-[#FFFDF5] px-5 text-center"><p aria-live="polite" className="font-semibold text-[#2A2A2A]">{t("Cargando menú...")}</p></div>;
   if (error || !menu) return <div className="flex min-h-dvh items-center justify-center bg-[#FFFDF5] p-5"><div className="w-full max-w-md rounded-2xl border border-[#E9DDB7] bg-white p-8 text-center shadow-sm"><h1 className="text-xl font-bold text-[#111111]">{error}</h1>{canRetry && <button type="button" onClick={() => loadMenu()} className="mt-5 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#111111] px-4 font-semibold text-white"><RefreshCw size={17} /> {t("Reintentar")}</button>}</div></div>;
 
-  return <main ref={menuRootRef} className="min-h-dvh w-full overflow-x-hidden bg-white">{createElement(resolveTemplate(menu.templateKey), { business: menu.business, catalogue: menu.catalogue, categories: menu.categories, products: menu.products, theme: menu.theme, coverUrl: menu.coverUrl, onCategorySelect, showEniuBadge: menu.showEniuBadge })}{menu.splash?.enabled && <MenuSplash splash={menu.splash} theme={menu.theme} businessName={menu.business?.name} />}</main>;
+  const template = createElement(resolveTemplate(menu.templateKey), { business: menu.business, catalogue: menu.catalogue, categories: menu.categories, products: menu.products, theme: menu.theme, coverUrl: menu.coverUrl, onCategorySelect, showEniuBadge: menu.showEniuBadge });
+  return <main ref={menuRootRef} className="min-h-dvh w-full overflow-x-hidden bg-white">
+    {ordering.active ? <MenuOrderingContext.Provider value={orderingContext}>{template}</MenuOrderingContext.Provider> : template}
+    {ordering.active && <>
+      {/* Hueco para que la barra de la mesa no tape el pie del menú. */}
+      <div aria-hidden="true" className="h-28" style={{ backgroundColor: menu.theme.background_color }} />
+      <MenuCurrencyContext.Provider value={menu.business?.currency || "MXN"}>
+        <TableOrderingLayer ordering={ordering} palette={palette} qrToken={qrToken} />
+      </MenuCurrencyContext.Provider>
+    </>}
+    {menu.splash?.enabled && <MenuSplash splash={menu.splash} theme={menu.theme} businessName={menu.business?.name} />}
+  </main>;
 }
