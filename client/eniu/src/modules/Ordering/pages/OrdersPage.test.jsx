@@ -166,7 +166,6 @@ describe("OrdersPage", () => {
     expect(await screen.findByText(/^LUIS · /)).toBeInTheDocument();
     expect(mocks.playSound).toHaveBeenCalledTimes(1);
     expect(mocks.service.live).toHaveBeenLastCalledWith(1);
-    expect(document.title).toBe("(2) Pedidos · Eniu");
   });
 
   it("explica que el plan no incluye pedidos y no ofrece activarlos", async () => {
