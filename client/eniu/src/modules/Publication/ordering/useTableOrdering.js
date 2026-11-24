@@ -33,6 +33,8 @@ export function useTableOrdering(qrToken, products) {
   const [dinerName, setDinerName] = useState(savedDinerName);
   const [cart, setCart] = useState(() => (active ? savedCart(qrToken) : []));
   const [orders, setOrders] = useState([]);
+  // "closed": el restaurante ya cerró la cuenta en la que pidió este teléfono.
+  const [accountStatus, setAccountStatus] = useState(null);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState(null);
   const versionRef = useRef(null);
@@ -71,6 +73,7 @@ export function useTableOrdering(qrToken, products) {
     if (data.changed === false) return;
     versionRef.current = data.account?.version ?? null;
     setOrders(Array.isArray(data.orders) ? data.orders : []);
+    setAccountStatus(data.account?.status ?? null);
   }, [active, qrToken, token]);
 
   // La mesa y lo que este teléfono ya pidió en ella, al abrir.
@@ -230,5 +233,6 @@ export function useTableOrdering(qrToken, products) {
     lines, count, total, quantityOf, add, addByKey, decrement, remove, setNotes,
     orders, send, sending, notice: visibleNotice, dismissNotice: () => setNotice(null),
     loadAccount, refreshOrders: () => loadOrders({ force: true }),
+    accountClosed: accountStatus === "closed",
   };
 }

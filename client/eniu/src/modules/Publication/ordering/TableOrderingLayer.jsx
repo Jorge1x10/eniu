@@ -354,6 +354,8 @@ function AccountSheet({ ordering, palette, onClose }) {
         <p aria-live="polite" className="py-8 text-center text-sm opacity-75">{t("Cargando la cuenta…")}</p>
       ) : state.status === "error" ? (
         <p role="alert" className="py-8 text-center text-sm font-semibold">{t("No pudimos cargar la cuenta. Intenta de nuevo en un momento.")}</p>
+      ) : !state.account && ordering.accountClosed ? (
+        <p className="py-8 text-center text-sm opacity-80">{t("El restaurante ya cerró la cuenta de esta mesa. Si piden algo más, se abre una cuenta nueva.")}</p>
       ) : !state.account || !state.account.lines.length ? (
         <p className="py-8 text-center text-sm opacity-80">{t("Todavía no hay nada en la cuenta. Aquí aparece lo que el restaurante ya recibió.")}</p>
       ) : (

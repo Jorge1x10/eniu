@@ -827,5 +827,6 @@
   "cancelado por el restaurante": "cancelled by the restaurant",
   "en tu pedido": "in your order",
   "{{name}} en tu pedido": "{{name}} in your order",
-  "¡Pedido enviado! Te avisamos aquí cuando el restaurante lo reciba.": "Order sent! We'll let you know here when the restaurant gets it."
+  "¡Pedido enviado! Te avisamos aquí cuando el restaurante lo reciba.": "Order sent! We'll let you know here when the restaurant gets it.",
+  "El restaurante ya cerró la cuenta de esta mesa. Si piden algo más, se abre una cuenta nueva.": "The restaurant has already closed this table's bill. If you order anything else, a new bill will be opened."
 }

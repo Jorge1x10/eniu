@@ -196,4 +196,18 @@ describe("Pedir desde la mesa", () => {
     expect(within(account).getByRole("heading", { name: "David" })).toBeInTheDocument();
     expect(within(account).getByText("Total de la mesa").nextSibling).toHaveTextContent("150.00");
   });
+
+  it("después de que el restaurante cierra la cuenta lo dice, en vez de mostrarla vacía", async () => {
+    localStorage.setItem("eniu.diner.name", "David");
+    mocks.getMyOrders.mockResolvedValue({ ok: true, status: 200, data: {
+      account: { status: "closed", version: 7 },
+      orders: [{ status: "ready", diner_name: "David", created_at: "2026-11-22T20:05:00Z", idempotency_key: "k1", total: "110.00", items: [{ name: "Latte", quantity: 2, line_total: "110.00", notes: null, is_cancelled: false }] }],
+    } });
+    mocks.getTableAccount.mockResolvedValue({ ok: false, status: 404, data: { code: "no_account" } });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Mis pedidos" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ver cuenta de la mesa" }));
+    const account = await screen.findByRole("dialog", { name: "Cuenta de la Mesa 4" });
+    expect(await within(account).findByText(/ya cerró la cuenta de esta mesa/)).toBeInTheDocument();
+  });
 });
