@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Menu } from 'lucide-react';
+import { useLocation } from 'react-router';
 
 import DashboardNav from '../components/DashboardLayout'
 import MotionDiv from '../hooks/MotionDiv';
 import { BusinessProvider } from '../../Business/services/BusinessProvider';
 import { useBusiness } from '../../Business/services/useBusiness';
-import { LiveOrdersProvider } from '../../Ordering/context/LiveOrdersContext';
+import OrderNotifications from '../../Ordering/components/OrderNotifications';
+import { LiveOrdersProvider, useLiveOrdersContext } from '../../Ordering/context/LiveOrdersContext';
 import mobileLogo from '../../../assets/Images/eniu-logo-dark.webp';
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +33,16 @@ function BusinessLiveOrders({ children }) {
 function DashboardShell() {
   const { t } = useTranslation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { pendingCount } = useLiveOrdersContext();
+  const { pathname } = useLocation();
+
+  // Los pedidos por aceptar se ven en el título de la pestaña desde cualquier
+  // pantalla del panel, no sólo desde Pedidos.
+  useEffect(() => {
+    const base = pathname.startsWith('/dashboard/pedidos') ? `${t("Pedidos")} · Eniu` : 'Eniu';
+    document.title = pendingCount ? `(${pendingCount}) ${base}` : base;
+    return () => { document.title = 'Eniu'; };
+  }, [pendingCount, pathname, t]);
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-eniu-bg lg:flex-row">
@@ -52,6 +64,8 @@ function DashboardShell() {
       <main className="h-full min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-6 lg:p-8">
         <MotionDiv />
       </main>
+
+      <OrderNotifications />
     </div>
   )
 }

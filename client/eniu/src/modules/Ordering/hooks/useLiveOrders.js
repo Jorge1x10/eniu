@@ -1,37 +1,43 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useOrderingService } from "../services/orderingService";
+import { diffOrders } from "../notifications/orderEvents";
 
 /** Cada cuánto pregunta el panel si llegó algo. Ver `docs/ORDERING.md`. */
 export const LIVE_POLL_MS = 5000;
+/**
+ * Con la pestaña oculta pregunta cada 15 s: sin eso, quien tiene el panel
+ * detrás de otra pestaña no se enteraría de un pedido nuevo. "Sin cambios" le
+ * cuesta al servidor una lectura por clave primaria. (El navegador puede
+ * espaciarlo más en pestañas que llevan mucho tiempo ocultas.)
+ */
+export const HIDDEN_POLL_EVERY = 3;
 
 const EMPTY = { accounts: [], ordering: null, loaded: false, error: false };
-
-function pendingIds(accounts) {
-  return accounts.flatMap((account) =>
-    account.orders.filter((order) => order.status === "pending").map((order) => order.id));
-}
 
 /**
  * Las cuentas abiertas del negocio, al día.
  *
  * Pregunta cada pocos segundos con la última versión que vio: si nada cambió,
- * el servidor responde sin cargar la base. Sólo pregunta con la pestaña
- * visible, y al volver a ella pregunta en el acto.
+ * el servidor responde sin cargar la base. Con la pestaña oculta pregunta
+ * más espaciado (para poder avisar), y al volver a ella pregunta en el acto.
  *
  * `onNewPending(count)` avisa cuando aparecen pedidos por aceptar que no
  * estaban en la consulta anterior (no en la primera carga: lo que ya había al
- * abrir la pantalla no es "nuevo").
+ * abrir la pantalla no es "nuevo"). `onEvents(events)` entrega todos los
+ * cambios (ver `diffOrders`) para las notificaciones.
  */
-export function useLiveOrders(businessId, { onNewPending } = {}) {
+export function useLiveOrders(businessId, { onNewPending, onEvents } = {}) {
   const { live } = useOrderingService(businessId);
   const [state, setState] = useState(EMPTY);
   const versionRef = useRef(null);
   const seenRef = useRef(null);
   const busyRef = useRef(false);
   const notifyRef = useRef(onNewPending);
+  const eventsRef = useRef(onEvents);
 
   useEffect(() => { notifyRef.current = onNewPending; }, [onNewPending]);
+  useEffect(() => { eventsRef.current = onEvents; }, [onEvents]);
 
   const refresh = useCallback(async ({ force = false } = {}) => {
     if (!businessId || (busyRef.current && !force)) return;
@@ -51,12 +57,11 @@ export function useLiveOrders(businessId, { onNewPending } = {}) {
       return;
     }
     const accounts = data.accounts || [];
-    const pending = pendingIds(accounts);
-    if (seenRef.current) {
-      const fresh = pending.filter((id) => !seenRef.current.has(id));
-      if (fresh.length) notifyRef.current?.(fresh.length);
-    }
-    seenRef.current = new Set(pending);
+    const { current, events } = diffOrders(seenRef.current, accounts);
+    seenRef.current = current;
+    const fresh = events.filter((event) => event.type === "new").length;
+    if (fresh) notifyRef.current?.(fresh);
+    if (events.length) eventsRef.current?.(events);
     setState({ accounts, ordering: data.ordering || null, loaded: true, error: false });
   }, [businessId, live]);
 
@@ -65,8 +70,10 @@ export function useLiveOrders(businessId, { onNewPending } = {}) {
     seenRef.current = null;
     if (!businessId) return undefined;
     const first = window.setTimeout(() => refresh({ force: true }), 0);
+    let tick = 0;
     const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") refresh();
+      tick += 1;
+      if (document.visibilityState === "visible" || tick % HIDDEN_POLL_EVERY === 0) refresh();
     }, LIVE_POLL_MS);
     function onVisible() {
       if (document.visibilityState === "visible") refresh();

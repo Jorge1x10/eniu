@@ -828,5 +828,18 @@
   "en tu pedido": "in your order",
   "{{name}} en tu pedido": "{{name}} in your order",
   "¡Pedido enviado! Te avisamos aquí cuando el restaurante lo reciba.": "Order sent! We'll let you know here when the restaurant gets it.",
-  "El restaurante ya cerró la cuenta de esta mesa. Si piden algo más, se abre una cuenta nueva.": "The restaurant has already closed this table's bill. If you order anything else, a new bill will be opened."
+  "El restaurante ya cerró la cuenta de esta mesa. Si piden algo más, se abre una cuenta nueva.": "The restaurant has already closed this table's bill. If you order anything else, a new bill will be opened.",
+  "Activa los avisos del navegador": "Turn on browser notifications",
+  "Activar avisos": "Turn on notifications",
+  "Ahora no": "Not now",
+  "Avisos de pedidos": "Order notifications",
+  "Cerrar aviso": "Dismiss notification",
+  "Entendido": "Got it",
+  "Listo para llevar · {{table}}": "Ready to serve · {{table}}",
+  "Nuevo pedido": "New order",
+  "Nuevo pedido · {{table}}": "New order · {{table}}",
+  "Nuevo pedido de {{label}}": "New order from {{label}}",
+  "Pedido aceptado · {{table}}": "Order accepted · {{table}}",
+  "Te avisamos de pedidos nuevos y listos aunque estés en otra pestaña.": "We'll let you know about new and ready orders even when you're in another tab.",
+  "Y {{count}} más por aceptar · Ver pedidos": "And {{count}} more to accept · View orders"
 }

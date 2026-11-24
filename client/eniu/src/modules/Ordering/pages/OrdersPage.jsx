@@ -88,13 +88,6 @@ function OrdersBoard({ business }) {
     };
   }, [accounts]);
 
-  // Los pedidos por aceptar se ven también desde otra pestaña.
-  useEffect(() => {
-    const base = `${t("Pedidos")} · Eniu`;
-    document.title = counts.pending ? `(${counts.pending}) ${base}` : base;
-    return () => { document.title = "Eniu"; };
-  }, [counts.pending, t]);
-
   // Las mesas con pedidos por aceptar van primero; después, la más antigua.
   const sortedAccounts = useMemo(() => [...accounts].sort((a, b) =>
     (b.pending_orders > 0) - (a.pending_orders > 0) || a.opened_at.localeCompare(b.opened_at)
