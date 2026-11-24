@@ -10,6 +10,7 @@ import { getLastCatalogue, rememberCatalogue } from "../../Catalogue/utils/lastC
 import OrderingSwitch from "../../Ordering/components/OrderingSwitch";
 import { useLiveOrdersContext } from "../../Ordering/context/LiveOrdersContext";
 import { orderingErrorMessage, useOrderingService } from "../../Ordering/services/orderingService";
+import { lastDays } from "../../Ordering/utils/businessDates";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { usePlan } from "../../auth/hooks/usePlan";
 import { DashboardSkeleton, KpiCard, MenuViewsCard, PendingOrdersCard, ShortcutsCard, TablesNowCard } from "../components/HomeDashboardSections";
@@ -30,7 +31,7 @@ export default function HomePage() {
   const businessId = selectedBusiness?.id || null;
   const loadSummary = useDashboardSummaryService(businessId, selectedBusiness?.timezone, analyticsScope);
   const { create } = useCatalogueService(businessId);
-  const { listTables, setOrdering, setOrderStatus } = useOrderingService(businessId);
+  const { listTables, setOrdering, setOrderStatus, stats } = useOrderingService(businessId);
   const { accounts, ordering, refresh: refreshOrders } = useLiveOrdersContext();
   const navigate = useNavigate();
   const [rawData, setRawData] = useState(null);
@@ -76,12 +77,25 @@ export default function HomePage() {
     return () => controller.abort();
   }, [businessId, listTables]);
 
+  // "Pedidos hoy": los aceptados hoy en la zona del negocio. Se vuelve a
+  // pedir cada vez que la consulta en vivo trae cambios (otro pedido aceptado).
+  const [todayOrders, setTodayOrders] = useState(null);
+  const timezone = selectedBusiness?.timezone;
+  useEffect(() => {
+    if (!businessId) return undefined;
+    const controller = new AbortController();
+    stats(lastDays(1, timezone), { signal: controller.signal }).then((response) => {
+      if (response.aborted || !mountedRef.current) return;
+      setTodayOrders(response.ok ? response.data?.summary?.orders ?? null : null);
+    });
+    return () => controller.abort();
+  }, [businessId, stats, timezone, accounts]);
+
   const viewModel = useMemo(() => buildDashboardViewModel({ ...(rawData || {}), chartDays: 7 }), [rawData]);
   const visibleName = user?.name || user?.username || t("bienvenido");
   const catalogue = viewModel.selectedCatalogue;
   const currency = selectedBusiness?.currency || "MXN";
 
-  const activeOrders = accounts.reduce((sum, account) => sum + account.orders.filter((order) => order.status !== "cancelled").length, 0);
   const pendingOrders = accounts.reduce((sum, account) => sum + (account.pending_orders || 0), 0);
   const toCollect = accounts.reduce((sum, account) => sum + Number(account.total || 0), 0);
   const activeTables = tables ? tables.filter((table) => table.is_active).length : null;
@@ -163,11 +177,9 @@ export default function HomePage() {
       ) : (
         <>
           <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
-            {/* TODO(diseño): el diseño pide "Pedidos hoy", pero el backend sólo
-                entrega las cuentas abiertas; se muestran los pedidos en curso. */}
             <KpiCard
-              title={t("Pedidos en curso")}
-              value={number(activeOrders)}
+              title={t("Pedidos hoy")}
+              value={number(todayOrders)}
               detail={pendingOrders ? t("{{count}} por aceptar", { count: pendingOrders }) : t("Ninguno por aceptar")}
             />
             <KpiCard

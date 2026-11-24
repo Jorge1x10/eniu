@@ -68,6 +68,7 @@ describe("HomePage", () => {
       listTables: vi.fn(async () => ({ ok: true, data: { tables } })),
       setOrdering: vi.fn(async () => ({ ok: true })),
       setOrderStatus: vi.fn(async () => ({ ok: true })),
+      stats: vi.fn(async () => ({ ok: true, data: { summary: { orders: 7 } } })),
     };
     mocks.live = { accounts: [], ordering: { enabled: true, reason: null }, refresh: vi.fn(async () => {}) };
     localStorage.clear();
@@ -100,7 +101,11 @@ describe("HomePage", () => {
     const open = screen.getByText("Cuentas abiertas").closest("article");
     expect(await within(open).findByText("de 2 mesas")).toBeInTheDocument();
     expect(within(open).getByText(/120\.00 por cobrar/)).toBeInTheDocument();
-    expect(screen.getByText("Pedidos en curso").closest("article")).toHaveTextContent("1 por aceptar");
+    const today = screen.getByText("Pedidos hoy").closest("article");
+    expect(await within(today).findByText("7")).toBeInTheDocument();
+    expect(today).toHaveTextContent("1 por aceptar");
+    const [range] = mocks.ordering.stats.mock.calls[0];
+    expect(range.from).toBe(range.to);
     expect(screen.queryByRole("button", { name: /Crear menú/ })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Ver menú como cliente/ })).toHaveAttribute("href", "/m/cafe-real");
     expect(document.body).not.toHaveTextContent("12,840"); expect(document.body).not.toHaveTextContent("Desayunos");

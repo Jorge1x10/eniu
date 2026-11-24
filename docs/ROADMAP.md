@@ -20,14 +20,13 @@ igual que los pedidos.
       rechazarlo), aceptado con su mesa y listo para llevar; avisos del
       navegador con la pestaña oculta.
 
-## En curso
-
 ### 1. Estadísticas de lo más pedido
-- [ ] Endpoint que suma pedidos aceptados por periodo, en la zona horaria del
+- [x] Endpoint que suma pedidos aceptados por periodo, en la zona horaria del
       negocio: pedidos, unidades, ingresos, ticket promedio, productos más
-      pedidos, pedidos por día y por hora.
-- [ ] Sección en Analíticas del panel web.
-- [ ] "Pedidos hoy" en Inicio (pendiente del rediseño).
+      pedidos, pedidos por día y por hora (`GET /orders/stats`).
+- [x] "Ventas y lo más pedido" en Analíticas del panel web.
+- [x] "Pedidos hoy" en Inicio (pendiente del rediseño).
+- [ ] La misma sección en la app (con el resto de la app).
 
 ## Siguiente
 

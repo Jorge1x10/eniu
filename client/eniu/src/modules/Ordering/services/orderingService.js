@@ -63,6 +63,11 @@ export function useOrderingService(businessId) {
     (orderId, itemId) => request({ method: "POST", path: `${base}/orders/${orderId}/items/${itemId}/cancel` }),
     [base, request]
   );
+  // Lo vendido por periodo (`{ from, to }` en AAAA-MM-DD, zona del negocio).
+  const stats = useCallback(
+    (range, options = {}) => request({ method: "GET", path: `${base}/orders/stats?${new URLSearchParams(range)}`, ...options }),
+    [base, request]
+  );
   const closeAccount = useCallback(
     (accountId) => request({ method: "POST", path: `${base}/accounts/${accountId}/close` }),
     [base, request]
@@ -70,6 +75,6 @@ export function useOrderingService(businessId) {
 
   return {
     listTables, createTable, updateTable, deleteTable, regenerateQr,
-    setOrdering, live, setOrderStatus, cancelItem, closeAccount,
+    setOrdering, live, setOrderStatus, cancelItem, closeAccount, stats,
   };
 }
