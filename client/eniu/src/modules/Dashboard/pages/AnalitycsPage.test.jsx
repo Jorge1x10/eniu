@@ -7,6 +7,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AnalitycsPage from "./AnalitycsPage";
 
 const mocks = vi.hoisted(() => ({ getAnalytics: vi.fn(), getSummary: vi.fn(), allowAnalytics: true, analyticsSummary: false, businesses: [] }));
+// La sección de ventas tiene sus propias pruebas (`OrderStatsSection.test.jsx`).
+vi.mock("../../Ordering/components/OrderStatsSection", () => ({
+  default: ({ fullAccess }) => <section aria-label="Ventas y lo más pedido" data-full={String(fullAccess)} />,
+}));
 vi.mock("../services/analyticsService", () => ({ useAnalyticsService: () => mocks.getAnalytics, useAnalyticsSummaryService: () => mocks.getSummary }));
 // El plan se simula para no montar toda la sesión: la página sólo consulta si lo incluye.
 vi.mock("../../auth/hooks/usePlan", () => ({ usePlan: () => ({ limits: { allow_analytics: mocks.allowAnalytics, analytics_summary: mocks.analyticsSummary } }) }));
@@ -43,6 +47,8 @@ describe("AnalitycsPage", () => {
     expect(await screen.findByText("Aumentó 20% respecto al periodo anterior")).toBeInTheDocument();
     expect(within(screen.getByText("Visitas al menú").closest("article")).getByText("12")).toBeInTheDocument();
     expect(screen.getByText("El informe completo viene con Esencial")).toBeInTheDocument();
+    // Las ventas también salen para el gratuito, limitadas a 7 días.
+    expect(screen.getByRole("region", { name: "Ventas y lo más pedido" })).toHaveAttribute("data-full", "false");
     expect(screen.getByRole("link", { name: /Incluido en Esencial/ })).toBeInTheDocument();
     // El periodo lo fija el backend: sólo se manda la zona del negocio.
     expect(mocks.getSummary).toHaveBeenCalledWith("Europe/Madrid", expect.anything());
@@ -71,6 +77,7 @@ describe("AnalitycsPage", () => {
     expect(screen.getByText("Aumentó 20% respecto al periodo anterior")).toBeInTheDocument();
     expect(screen.getByText("Disminuyó 20% respecto al periodo anterior")).toBeInTheDocument();
     expect(screen.queryByText(/Infinity/)).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Ventas y lo más pedido" })).toHaveAttribute("data-full", "true");
     // La zona es la del negocio, no una escrita a mano: un local de Madrid
     // corta sus días a medianoche en Madrid.
     await waitFor(() => expect(mocks.getAnalytics.mock.calls.at(-1)[0]).toEqual(expect.objectContaining({ timezone: "Europe/Madrid" })));

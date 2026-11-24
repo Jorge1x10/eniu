@@ -7,6 +7,7 @@ import { useBusiness } from "../../Business/services/useBusiness";
 import { useAnalyticsService, useAnalyticsSummaryService } from "../services/analyticsService";
 import { useTranslation } from "react-i18next";
 import i18n from "../../../i18n";
+import OrderStatsSection from "../../Ordering/components/OrderStatsSection";
 
 /** Zona del navegador, para el instante en que el negocio aún no ha cargado. */
 function browserTimezone() {
@@ -52,7 +53,8 @@ export default function AnalitycsPage() {
   const { businessId, catalogueId } = useParams(); const getAnalytics = useAnalyticsService(businessId, catalogueId);
   const { limits } = usePlan();
   const { businesses } = useBusiness();
-  const businessTimezone = businesses.find((item) => item.id === businessId)?.timezone || null;
+  const business = businesses.find((item) => item.id === businessId);
+  const businessTimezone = business?.timezone || null;
   // La zona del negocio llega un render después que la página, así que el
   // periodo no se guarda ya resuelto: se guarda la intención —"los últimos 7
   // días" o unas fechas concretas— y se resuelve al vuelo. Así, en cuanto se
@@ -72,8 +74,10 @@ export default function AnalitycsPage() {
   const choosePreset = (days) => { setPeriod({ kind: "preset", days }); setDraft(presetRange(days, timezone)); setDateError(""); };
   const applyCustom = () => { if (!draft.from || !draft.to || draft.from > draft.to) { setDateError(t("Selecciona un periodo de fechas válido.")); return; } const days = Math.round((new Date(`${draft.to}T00:00:00`) - new Date(`${draft.from}T00:00:00`)) / 86400000) + 1; if (days > 90) { setDateError(t("El periodo máximo es de 90 días.")); return; } setDateError(""); setPeriod({ kind: "custom", from: draft.from, to: draft.to }); };
   const hasData = Boolean(data?.summary?.menu_views?.value); const summary = data?.summary; const maxCategory = useMemo(() => Math.max(1, ...(data?.top_categories || []).map((item) => item.selections)), [data]);
-  if (!limits.allow_analytics) return limits.analytics_summary ? <AnalyticsSummary businessId={businessId} catalogueId={catalogueId} timezone={businessTimezone || browserTimezone()} /> : <AnalyticsLocked />;
-  return <section className="mx-auto w-full max-w-7xl space-y-6 pb-8 text-[#111111]"><header><p className="text-sm font-semibold text-[#8A7420]">{t("Rendimiento del menú")}</p><h1 className="mt-1 text-3xl font-black">{t("Analíticas")}</h1><p className="mt-2 text-sm text-[#666666]">{t("Estas métricas representan visitas e interés; no son ventas ni pedidos.")}</p></header>
+  if (!limits.allow_analytics) return limits.analytics_summary ? <AnalyticsSummary businessId={businessId} catalogueId={catalogueId} timezone={businessTimezone || browserTimezone()} currency={business?.currency} /> : <AnalyticsLocked />;
+  return <section className="mx-auto w-full max-w-7xl space-y-6 pb-8 text-[#111111]"><header><p className="text-sm font-semibold text-[#8A7420]">{t("Rendimiento del menú")}</p><h1 className="mt-1 text-3xl font-black">{t("Analíticas")}</h1></header>
+    <OrderStatsSection businessId={businessId} timezone={businessTimezone || browserTimezone()} currency={business?.currency} fullAccess />
+    <div className="border-t border-eniu-warm pt-6"><h2 className="text-2xl font-black tracking-[-0.5px]">{t("Visitas del menú")}</h2><p className="mt-1 text-sm text-[#666666]">{t("Estas métricas representan visitas e interés; no son ventas ni pedidos.")}</p></div>
     <section aria-label={t("Filtros de analíticas")} className="rounded-2xl border border-[#E9DDB7] bg-white p-5"><div className="flex flex-wrap gap-2"><button type="button" onClick={() => choosePreset(1)} className="min-h-11 cursor-pointer rounded-xl border border-[#D9D9D9] px-4 font-semibold">{t("Hoy")}</button><button type="button" onClick={() => choosePreset(7)} className="min-h-11 cursor-pointer rounded-xl border border-[#D9D9D9] px-4 font-semibold">{t("Últimos 7 días")}</button><button type="button" onClick={() => choosePreset(30)} className="min-h-11 cursor-pointer rounded-xl border border-[#D9D9D9] px-4 font-semibold">{t("Últimos 30 días")}</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.4fr_auto]"><label className="text-sm font-semibold">{t("Desde")}<input type="date" value={draft.from} onChange={(event) => setDraft((current) => ({ ...current, from: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-xl border border-[#D9D9D9] px-3" /></label><label className="text-sm font-semibold">{t("Hasta")}<input type="date" value={draft.to} onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-xl border border-[#D9D9D9] px-3" /></label><label className="text-sm font-semibold">{t("Zona horaria")}<select value={timezone} onChange={(event) => setChosenTimezone(event.target.value)} className="mt-1 block min-h-11 w-full rounded-xl border border-[#D9D9D9] px-3"><option value={businessTimezone || browserTimezone()}>{t("Hora del negocio ({{zone}})", { zone: businessTimezone || browserTimezone() })}</option><option value="UTC">UTC</option></select></label><button type="button" onClick={applyCustom} className="min-h-11 cursor-pointer self-end rounded-xl bg-[#FFE05A] px-5 font-bold">{t("Aplicar periodo")}</button></div>{dateError && <p role="alert" className="mt-3 text-sm text-red-700">{dateError}</p>}</section>
     {loading && <div aria-live="polite" aria-label={t("Cargando analíticas")} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }, (_, index) => <div key={index} className="h-36 rounded-2xl bg-white motion-safe:animate-pulse" />)}</div>}
     {!loading && error && <div className="rounded-2xl border border-red-200 bg-white p-8 text-center"><p role="alert" className="font-semibold text-red-700">{error}</p><button type="button" onClick={() => load()} className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-semibold text-white"><RefreshCw size={17} /> {t("Reintentar")}</button></div>}
@@ -92,14 +96,16 @@ export default function AnalitycsPage() {
  * El periodo no se puede mover a propósito —lo fija el backend—, y el resto del
  * informe se anuncia debajo en vez de esconderse: así se ve qué agrega Esencial.
  */
-function AnalyticsSummary({ businessId, catalogueId, timezone }) {
+function AnalyticsSummary({ businessId, catalogueId, timezone, currency }) {
   const { t } = useTranslation();
   const getSummary = useAnalyticsSummaryService(businessId, catalogueId);
   const [data, setData] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const mountedRef = useRef(true);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
   const load = useCallback(async (signal) => { setLoading(true); setError(""); const response = await getSummary(timezone, { signal }); if (response.aborted || !mountedRef.current) return; if (!response.ok) { setError(response.data?.message || t("No pudimos cargar las analíticas. Intenta nuevamente.")); setLoading(false); return; } setData(response.data); setLoading(false); }, [getSummary, timezone, t]);
   useEffect(() => { const controller = new AbortController(); const task = window.setTimeout(() => load(controller.signal), 0); return () => { window.clearTimeout(task); controller.abort(); }; }, [load]);
-  return <section className="mx-auto w-full max-w-7xl space-y-6 pb-8 text-[#111111]"><header><p className="text-sm font-semibold text-[#8A7420]">{t("Rendimiento del menú")}</p><h1 className="mt-1 text-3xl font-black">{t("Analíticas")}</h1><p className="mt-2 text-sm text-[#666666]">{t("Las visitas de tu menú en los últimos 7 días.")}</p></header>
+  return <section className="mx-auto w-full max-w-7xl space-y-6 pb-8 text-[#111111]"><header><p className="text-sm font-semibold text-[#8A7420]">{t("Rendimiento del menú")}</p><h1 className="mt-1 text-3xl font-black">{t("Analíticas")}</h1></header>
+    <OrderStatsSection businessId={businessId} timezone={timezone} currency={currency} fullAccess={false} />
+    <div className="border-t border-eniu-warm pt-6"><h2 className="text-2xl font-black tracking-[-0.5px]">{t("Visitas del menú")}</h2><p className="mt-1 text-sm text-[#666666]">{t("Las visitas de tu menú en los últimos 7 días.")}</p></div>
     {loading && <div aria-live="polite" aria-label={t("Cargando analíticas")} className="grid gap-4 sm:grid-cols-2"><div className="h-36 rounded-2xl bg-white motion-safe:animate-pulse" /><div className="h-36 rounded-2xl bg-white motion-safe:animate-pulse" /></div>}
     {!loading && error && <div className="rounded-2xl border border-red-200 bg-white p-8 text-center"><p role="alert" className="font-semibold text-red-700">{error}</p><button type="button" onClick={() => load()} className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-semibold text-white"><RefreshCw size={17} /> {t("Reintentar")}</button></div>}
     {!loading && !error && data && <><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><MetricCard icon={BarChart3} title={t("Visitas al menú")} value={data.summary.menu_views.value} detail={comparisonText(data.summary.menu_views)} help={t("Últimos 7 días comparados con los 7 anteriores.")} /></div>

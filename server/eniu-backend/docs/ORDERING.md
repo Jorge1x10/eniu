@@ -132,6 +132,24 @@ Respuestas que el cliente debe tratar aparte (todas llevan `code`):
 | `PATCH /api/businesses/<id>/orders/<order_id>` | `{"status": "received"\|"preparing"\|"ready"\|"cancelled"}` |
 | `POST /api/businesses/<id>/orders/<order_id>/items/<item_id>/cancel` | Cancelar un producto |
 | `POST /api/businesses/<id>/accounts/<account_id>/close` | Cerrar la cuenta de la mesa |
+| `GET /api/businesses/<id>/orders/stats?from=AAAA-MM-DD&to=AAAA-MM-DD` | Estadísticas de lo vendido (ver abajo) |
+
+## Estadísticas
+
+`GET /api/businesses/<id>/orders/stats` (código: `app/modules/ordering/stats.py`,
+pruebas: `tests/test_order_stats_api.py`).
+
+- Cuenta sólo lo **aceptado** y sin los productos quitados: la misma regla que
+  la cuenta de la mesa. Pendientes y rechazados no son ventas.
+- Fechas y horas en la zona del negocio (`Business.timezone`). Sin `from`/`to`,
+  los últimos 7 días; como máximo 90.
+- Devuelve `summary` (pedidos, unidades, ingresos, ticket promedio, la
+  comparación con el periodo anterior de la misma duración y la hora con más
+  pedidos), `top_products` (los 10 más pedidos por unidades, con ingresos,
+  pedidos y porcentaje), `by_day` y `by_hour` (las 24 horas).
+- Plan: con `allow_analytics`, cualquier periodo; con `analytics_summary`
+  (gratuito), sólo dentro de los últimos 7 días (`scope: "summary"`); fuera de
+  eso, `403` con `code: "plan_limit"`.
 
 ## Consultar en vivo sin cargar el servidor
 

@@ -23,6 +23,7 @@ from .services import (
     update_table,
     valid_device_token,
 )
+from .stats import order_stats
 
 ordering_bp = Blueprint("ordering", __name__, url_prefix="/api")
 
@@ -152,6 +153,14 @@ def toggle_ordering(business_id):
     if data is None:
         return jsonify({"message": _("Debes enviar información en formato JSON")}), 400
     result, status = set_ordering(get_jwt_identity(), business_id, data.get("enabled"))
+    return jsonify(result), status
+
+
+@ordering_bp.get("/businesses/<business_id>/orders/stats")
+@jwt_required()
+def get_order_stats(business_id):
+    """Lo más pedido, ventas y horas pico de los pedidos aceptados (`?from=&to=`)."""
+    result, status = order_stats(get_jwt_identity(), business_id, request.args)
     return jsonify(result), status
 
 

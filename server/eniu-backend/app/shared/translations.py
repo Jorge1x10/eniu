@@ -57,6 +57,8 @@ _EN = {
     "No fue posible cargar la mesa": "We couldn't load the table",
     "No fue posible cargar las mesas": "We couldn't load the tables",
     "No fue posible cargar los pedidos": "We couldn't load the orders",
+    "No fue posible cargar las estadísticas": "We couldn't load the statistics",
+    "Tu plan incluye las estadísticas de los últimos {days} días.": "Your plan includes statistics for the last {days} days.",
     "No fue posible cargar tus pedidos": "We couldn't load your orders",
     "No fue posible cerrar la cuenta": "We couldn't close the bill",
     "No fue posible crear la mesa": "We couldn't create the table",
