@@ -215,7 +215,10 @@ function AdditionalProductCard({ product, theme, tokens, className, variant }) {
   return (
     <article data-analytics-product-key={product.tracking_key || undefined} className={`overflow-hidden p-3 ${className} ${product.is_available ? "" : "opacity-60"}`} style={{ borderColor: "var(--menu-accent)", backgroundColor: `${tokens.surface}E8` }}>
       {theme.show_product_images && image && <img src={image} alt={t("Imagen de {{name}}", { name: product.name })} className={`mb-3 w-full object-cover ${variant === "luxury" ? "h-36" : "h-24"}`} />}
-      <div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold">{product.name}</h3>{product.description && <p className="mt-1 text-xs leading-5 opacity-65">{product.description}</p>}<div className="flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div></div><strong className="shrink-0 text-sm" style={{ color: tokens.price }}><Price product={product} /></strong></div>
+      {/* El precio va junto al nombre si cabe; en las tarjetas de dos columnas
+          de Impactante y Retro no cabe, y baja a su propia línea en vez de
+          salirse de la tarjeta. En las de ancho completo queda donde estaba. */}
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1"><div className="min-w-0 flex-[1_1_8rem]"><h3 className="font-extrabold [overflow-wrap:anywhere]">{product.name}</h3>{product.description && <p className="mt-1 text-xs leading-5 opacity-65">{product.description}</p>}<div className="flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div></div><strong className="shrink-0 text-sm" style={{ color: tokens.price }}><Price product={product} /></strong></div>
       <OrderControl product={product} block />
     </article>
   );
@@ -393,13 +396,16 @@ function SidebarLayout({ business, catalogue, categories, products, theme, cover
 
 function ReceiptProductRow({ product, tokens }) {
   return (
-    <li data-analytics-product-key={product.tracking_key || undefined} className={`flex items-baseline gap-2 py-2 font-mono text-sm ${product.is_available ? "" : "opacity-50"}`}>
-      <span className="shrink-0">{product.name}</span>
-      <PromoBadge label={product.promo_label} />
-      <span aria-hidden="true" className="min-w-0 flex-1 border-b border-dotted border-current/40" />
-      <span className="shrink-0 font-bold" style={{ color: tokens.price }}><Price product={product} /></span>
-      <Availability available={product.is_available} />
-      <OrderControl product={product} className="shrink-0 self-center" />
+    <li data-analytics-product-key={product.tracking_key || undefined} className={`py-2 font-mono text-sm ${product.is_available ? "" : "opacity-50"}`}>
+      {/* Un nombre largo pasa a dos líneas en vez de empujar el precio fuera. */}
+      <div className="flex items-baseline gap-2">
+        <span className="min-w-0 [overflow-wrap:anywhere]">{product.name}</span>
+        <PromoBadge label={product.promo_label} />
+        <span aria-hidden="true" className="min-w-0 flex-1 border-b border-dotted border-current/40" />
+        <span className="shrink-0 font-bold" style={{ color: tokens.price }}><Price product={product} /></span>
+        <Availability available={product.is_available} />
+      </div>
+      <OrderControl product={product} className="mt-1 flex justify-end" />
     </li>
   );
 }
