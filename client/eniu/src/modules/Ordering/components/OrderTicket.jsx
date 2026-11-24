@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Printer, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { formatCurrency, formatDate } from "../../../i18n/formats";
@@ -10,6 +10,9 @@ const NEXT = {
   received: { status: "preparing", label: "Empezar a preparar" },
   preparing: { status: "ready", label: "Marcar listo" },
 };
+
+// Lo aceptado ya está en cocina: es lo que tiene comanda impresa.
+const PRINTABLE = new Set(["received", "preparing", "ready"]);
 
 const MONO = "font-['ui-monospace','SFMono-Regular','Menlo','Consolas',monospace]";
 
@@ -26,13 +29,24 @@ function time(iso) {
  * mesa). `variant="status"`: con la insignia de la mesa, para la vista por
  * estado.
  */
-export default function OrderTicket({ order, table, currency, variant = "status", onAdvance, onReject, onRemoveItem }) {
+export default function OrderTicket({ order, table, currency, variant = "status", onAdvance, onReject, onRemoveItem, onPrint }) {
   const { t } = useTranslation();
   const [confirming, setConfirming] = useState(null);
   const [busy, setBusy] = useState(null);
   const canRemove = order.status !== "ready" && order.status !== "cancelled";
   const count = order.items.filter((item) => !item.is_cancelled).reduce((sum, item) => sum + item.quantity, 0);
   const next = NEXT[order.status];
+  const printButton = onPrint && PRINTABLE.has(order.status) ? (
+    <button
+      type="button"
+      onClick={onPrint}
+      aria-label={t("Imprimir la comanda de {{name}}", { name: order.diner_name })}
+      title={t("Imprimir comanda")}
+      className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-eniu-ticket-muted hover:bg-black/5 hover:text-eniu-ink"
+    >
+      <Printer size={18} aria-hidden="true" />
+    </button>
+  ) : null;
 
   async function run(key, action) {
     setBusy(key);
@@ -46,8 +60,8 @@ export default function OrderTicket({ order, table, currency, variant = "status"
     <article className="ticket-edges bg-eniu-paper px-4 py-4 text-eniu-ink">
       {variant === "table" ? (
         <header className="flex items-center justify-between gap-3">
-          <p className={`${MONO} text-[13px] font-bold tracking-[0.5px]`}>{order.diner_name.toUpperCase()} · {time(order.created_at)}</p>
-          <StatusChip status={order.status} />
+          <p className={`${MONO} min-w-0 truncate text-[13px] font-bold tracking-[0.5px]`}>{order.diner_name.toUpperCase()} · {time(order.created_at)}</p>
+          <div className="flex shrink-0 items-center gap-1">{printButton}<StatusChip status={order.status} /></div>
         </header>
       ) : (
         <header className="flex items-center gap-3">
@@ -56,6 +70,7 @@ export default function OrderTicket({ order, table, currency, variant = "status"
             <p className={`${MONO} truncate text-[15px] font-extrabold`}>{order.diner_name.toUpperCase()}</p>
             <p className={`${MONO} text-[13px] text-eniu-ticket-muted`}>{time(order.created_at)}{table.name ? ` · ${table.name}` : ""}</p>
           </div>
+          {printButton}
           <StatusChip status={order.status} />
         </header>
       )}

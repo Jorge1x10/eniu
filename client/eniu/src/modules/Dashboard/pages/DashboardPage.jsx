@@ -27,7 +27,7 @@ export default function DashboardPage() {
 function BusinessLiveOrders({ children }) {
   const { selectedBusiness } = useBusiness();
   const businessId = selectedBusiness?.id || null;
-  return <LiveOrdersProvider key={businessId || "none"} businessId={businessId}>{children}</LiveOrdersProvider>;
+  return <LiveOrdersProvider key={businessId || "none"} businessId={businessId} businessName={selectedBusiness?.name || ""}>{children}</LiveOrdersProvider>;
 }
 
 function DashboardShell() {
