@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, BellOff, ClipboardList, WifiOff } from "lucide-react";
+import { Bell, BellOff, ClipboardList, Printer, WifiOff } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +11,9 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import MesaBadge from "../components/MesaBadge";
 import OrderTicket from "../components/OrderTicket";
 import OrderingSwitch from "../components/OrderingSwitch";
+import PrintSettingsDialog from "../components/PrintSettingsDialog";
+import { loadPrintSettings, wasAutoPrinted } from "../printing/printSettings";
+import { printOrderTicket } from "../printing/printTicket";
 import { useLiveOrdersContext } from "../context/LiveOrdersContext";
 import { orderingErrorMessage, useOrderingService } from "../services/orderingService";
 import { orderLabel, tableLabel } from "../utils/labels";
@@ -67,6 +70,8 @@ function OrdersBoard({ business }) {
   const [actionError, setActionError] = useState("");
   const [isToggling, setIsToggling] = useState(false);
   const [confirming, setConfirming] = useState(null);
+  const [printSettingsOpen, setPrintSettingsOpen] = useState(false);
+  const [autoPrint, setAutoPrint] = useState(() => loadPrintSettings().autoPrint);
 
   // El navegador no deja sonar nada hasta que la persona toca la página. Si
   // el sonido estaba activado, se desbloquea con el primer toque.
@@ -148,6 +153,7 @@ function OrdersBoard({ business }) {
     onAdvance: (status) => advance(order, status),
     onReject: () => setConfirming({ kind: "reject", account, order }),
     onRemoveItem: (item) => removeItem(order, item),
+    onPrint: () => printOrderTicket({ order, table: account.table, businessName: business.name, reprint: wasAutoPrinted(order.id) }),
   });
 
   return (
@@ -179,6 +185,16 @@ function OrdersBoard({ business }) {
             className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-eniu-warm bg-eniu-surface hover:bg-eniu-surface-alt"
           >
             {soundOn ? <Bell size={18} aria-hidden="true" /> : <BellOff size={18} aria-hidden="true" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPrintSettingsOpen(true)}
+            aria-label={autoPrint ? t("Impresión de comandas: activada en este equipo") : t("Impresión de comandas")}
+            title={t("Impresión de comandas")}
+            className="relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-eniu-warm bg-eniu-surface hover:bg-eniu-surface-alt"
+          >
+            <Printer size={18} aria-hidden="true" />
+            {autoPrint && <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-eniu-success ring-2 ring-eniu-surface" />}
           </button>
           {canToggle && (
             <OrderingSwitch enabled={ordering.enabled} busy={isToggling} onToggle={toggleOrdering} />
@@ -267,6 +283,13 @@ function OrdersBoard({ business }) {
         </>
       )}
 
+      {printSettingsOpen && (
+        <PrintSettingsDialog
+          businessName={business.name}
+          onClose={() => setPrintSettingsOpen(false)}
+          onChange={(settings) => setAutoPrint(settings.autoPrint)}
+        />
+      )}
       {confirming?.kind === "reject" && (
         <ConfirmDialog
           title={t("¿Rechazar el pedido de {{label}}?", { label: orderLabel(confirming.order, confirming.account.table) })}

@@ -28,17 +28,20 @@ igual que los pedidos.
 - [x] "Pedidos hoy" en Inicio (pendiente del rediseño).
 - [ ] La misma sección en la app (con el resto de la app).
 
-## Siguiente
-
 ### 2. Comanda impresa al aceptar
-- Ticket de 58/80 mm. Primero con la impresión del navegador (Chrome puede
-  imprimir sin diálogo en modo kiosco); después, impresora USB directa
-  (Web Serial/WebUSB) o impresoras que toman trabajos del servidor.
-- Un solo dispositivo marcado como "el que imprime": si no, cada panel
-  abierto imprimiría la misma comanda.
-- Se dispara con el evento "pedido aceptado" que ya usan las notificaciones.
-- Reimprimir desde la comanda.
-- Más adelante: separar por estación (cocina, barra) según la categoría.
+- [x] Ticket de 80 o 58 mm con la impresión del navegador, a la medida del
+      contenido; en Chrome con `--kiosk-printing` sale sin diálogo.
+- [x] Un solo dispositivo marcado como "el que imprime" (ajuste del
+      navegador, no del negocio); candado para no imprimir dos veces en dos
+      pestañas del mismo equipo.
+- [x] Se dispara con el evento "pedido aceptado", lo acepte quien lo acepte.
+- [x] Reimprimir desde la comanda (marcada como REIMPRESIÓN).
+- [ ] Impresoras que toman trabajos del servidor (Star CloudPRNT, Epson
+      Server Direct Print), para no depender de un panel abierto.
+- [ ] Bluetooth de 58 mm desde la app.
+- [ ] Separar por estación (cocina, barra) según la categoría.
+
+## Siguiente
 
 ### 3. Caja, cobro y corte
 - "Cerrar cuenta" pasa a "Cobrar y cerrar": pagos por método (efectivo,
@@ -73,7 +76,9 @@ igual que los pedidos.
 - **Personal y roles:** hoy todos entran con la misma cuenta. Con caja y
   cortes importa quién abrió, cobró o cortó; puede empezar como un PIN por
   empleado (mesero, cocina, cajero).
-- **Impresora:** térmica USB, de red o Bluetooth; 58 u 80 mm.
+- ~~**Impresora**~~: decidido. Cualquier térmica de 80 o 58 mm instalada en el
+  equipo (la más común en México es la Epson TM-T20; Star TSP143 y genéricas
+  ESC/POS también sirven). Bluetooth de 58 mm, con la app.
 - **Cobro:** ¿propinas? ¿dividir la cuenta entre comensales o pagos mixtos
   sobre el total?
 - **Domicilio:** ¿repartidores propios? ¿sólo pago contra entrega o también

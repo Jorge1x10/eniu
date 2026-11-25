@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { useLiveOrders } from "../hooks/useLiveOrders";
 import { closeAllNotifications, closeNotification, showNotification } from "../notifications/browserNotifications";
 import { itemsSummary } from "../notifications/orderEvents";
+import { claimAutoPrint, loadPrintSettings } from "../printing/printSettings";
+import { printOrderTicket } from "../printing/printTicket";
 import { playNewOrderSound, soundPreference } from "../utils/orderSound";
 
 const LiveOrdersContext = createContext(null);
@@ -29,12 +31,17 @@ function pageHidden() {
  * - pedido aceptado, con su mesa: temporal;
  * - pedido listo para llevar a la mesa: hasta que alguien lo da por visto.
  * Con la pestaña oculta, además, sale un aviso del sistema (si hay permiso).
+ *
+ * Al aceptarse un pedido, si este dispositivo está marcado para imprimir
+ * comandas (`printing/printSettings`), imprime la suya.
  */
-export function LiveOrdersProvider({ businessId, children }) {
+export function LiveOrdersProvider({ businessId, businessName = "", children }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [alerts, setAlerts] = useState([]);
   const tRef = useRef(t);
+  const businessNameRef = useRef(businessName);
+  useEffect(() => { businessNameRef.current = businessName; }, [businessName]);
   const navigateRef = useRef(navigate);
 
   useEffect(() => { tRef.current = t; navigateRef.current = navigate; }, [t, navigate]);
@@ -59,6 +66,11 @@ export function LiveOrdersProvider({ businessId, children }) {
         closeNotification(pendingTag(event.orderId));
       }
       if (event.type === "accepted") {
+        // La comanda sale en el dispositivo marcado para imprimir, sea quien
+        // sea el que aceptó el pedido (este panel, otro o la app).
+        if (loadPrintSettings().autoPrint && claimAutoPrint(event.orderId)) {
+          printOrderTicket({ order: event.order, table: event.table, businessName: businessNameRef.current });
+        }
         additions.push({ id: `accepted-${event.orderId}`, kind: "accepted", ...event });
         if (pageHidden()) {
           const shown = showNotification({ tag: acceptedTag(event.orderId), title: tr("Pedido aceptado · {{table}}", { table }), body, onClick: goToOrders });
