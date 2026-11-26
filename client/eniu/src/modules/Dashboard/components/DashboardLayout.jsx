@@ -8,7 +8,8 @@ import BusinessSelector from "../../Business/components/selectBusiness";
 import CreateBusinessModal from "../../Business/components/CreateBusinessModal";
 import { useBusiness } from "../../Business/services/useBusiness";
 import { useAuth } from "../../auth/hooks/useAuth";
-import { getLastCatalogue, rememberCatalogue } from "../../Catalogue/utils/lastCatalogue";
+import { rememberCatalogue } from "../../Catalogue/utils/lastCatalogue";
+import { useCurrentCatalogueId } from "../../Catalogue/hooks/useCurrentCatalogueId";
 import { useTranslation } from "react-i18next";
 import { useLiveOrdersContext } from "../../Ordering/context/LiveOrdersContext";
 
@@ -69,6 +70,11 @@ export default function DashboardNav({ isOpen = false, onClose = () => {} }) {
     }
   }, [routeBusinessId, routeCatalogueId]);
 
+  // Sin menú en la ruta, las secciones de menú abren el recordado o, si no
+  // hay, el primero del negocio. Sólo se cae a la lista cuando no tiene menús.
+  const activeBusinessId = routeBusinessId || selectedBusiness?.id || null;
+  const currentCatalogueId = useCurrentCatalogueId(activeBusinessId, { skip: Boolean(routeCatalogueId) });
+
   if (isLoading) return <p>{t("Cargando usuario")}</p>;
   if (!user) return <p>{t("No se encontraron datos del usuario")}</p>;
 
@@ -76,8 +82,7 @@ export default function DashboardNav({ isOpen = false, onClose = () => {} }) {
   const displayUser = rawName[0]?.toUpperCase() + rawName.slice(1);
   const initial = displayUser.charAt(0).toUpperCase();
 
-  const activeBusinessId = routeBusinessId || selectedBusiness?.id;
-  const activeCatalogueId = routeCatalogueId || getLastCatalogue(activeBusinessId);
+  const activeCatalogueId = routeCatalogueId || currentCatalogueId;
   const catalogueBase = activeBusinessId && activeCatalogueId
     ? `/dashboard/businesses/${activeBusinessId}/catalogues/${activeCatalogueId}`
     : null;
