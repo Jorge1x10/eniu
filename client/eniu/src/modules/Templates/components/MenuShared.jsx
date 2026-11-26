@@ -1,6 +1,6 @@
-import { Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon, Minus, Plus } from "lucide-react";
 
-import { resolveAssetUrl } from "../templates/menuData";
+import { resolveAssetUrl, useMenuOrdering } from "../templates/menuData";
 import { useTranslation } from "react-i18next";
 
 export function MenuCover({ business, catalogue, theme, coverUrl, compact = false, placeholderColor }) {
@@ -42,6 +42,66 @@ export function CategoryNavigation({ sections, active, onSelect, rounded = true,
 export function PromoBadge({ label }) {
   if (!label) return null;
   return <span className="inline-block shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: "var(--menu-accent)", color: "#111111" }}>{label}</span>;
+}
+
+/**
+ * "Agregar" y, ya en el pedido, "− 2 +". Sólo aparece con el QR de una mesa,
+ * con los pedidos activos y en productos que se pueden pedir (disponibles y
+ * con precio); fuera de eso no dibuja nada y la plantilla queda intacta.
+ *
+ * Toma los colores del chip activo de la plantilla (`nav_chip_bg` y
+ * `nav_chip_text`), que ya están pensados para leerse juntos: el botón se ve
+ * de la misma carta y no como un elemento ajeno.
+ */
+export function OrderControl({ product, className = "mt-3", block = false }) {
+  const { t } = useTranslation();
+  const ordering = useMenuOrdering();
+  if (!ordering?.canOrder || !ordering.isOrderable(product)) return null;
+  const quantity = ordering.quantityOf(product.tracking_key);
+  const { background, text } = ordering.colors;
+
+  if (!quantity) {
+    return (
+      <div className={className}>
+        <button
+          type="button"
+          onClick={() => ordering.add(product)}
+          aria-label={t("Agregar {{name}} al pedido", { name: product.name })}
+          className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full px-4 text-sm font-bold ${block ? "w-full" : ""}`}
+          style={{ backgroundColor: background, color: text }}
+        >
+          <Plus size={16} aria-hidden="true" /> {t("Agregar")}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <div role="group" aria-label={t("{{name}} en tu pedido", { name: product.name })} className={`inline-flex items-center gap-1 rounded-full border-2 p-0.5 ${block ? "w-full justify-between" : ""}`} style={{ borderColor: background }}>
+        <button
+          type="button"
+          onClick={() => ordering.decrement(product.tracking_key)}
+          aria-label={t("Quitar uno de {{name}}", { name: product.name })}
+          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full"
+        >
+          <Minus size={16} aria-hidden="true" />
+        </button>
+        <span aria-live="polite" className="min-w-6 text-center text-sm font-black tabular-nums">
+          {quantity}<span className="sr-only"> {t("en tu pedido")}</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => ordering.add(product)}
+          aria-label={t("Agregar otro {{name}}", { name: product.name })}
+          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full"
+          style={{ backgroundColor: background, color: text }}
+        >
+          <Plus size={16} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function Availability({ available }) {

@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 
-import { Availability, CategoryNavigation, EmptyMenu, MenuCover, MenuFooter, PromoBadge } from "../components/MenuShared";
+import { Availability, CategoryNavigation, EmptyMenu, MenuCover, MenuFooter, OrderControl, PromoBadge } from "../components/MenuShared";
 import MenuBackground from "../components/MenuBackground";
 import { FONT_REGISTRY } from "../utils/themeDefaults";
 import { useMenuFonts } from "../utils/menuFonts";
-import { MenuCurrencyContext, buildSections, mainProductImage, useMenuCurrency } from "./menuData";
+import { MenuCurrencyContext, buildSections, mainProductImage, resolveTokens, useMenuCurrency } from "./menuData";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -93,24 +93,6 @@ function useSections(categories, products) {
   );
 }
 
-/**
- * Los 6 tokens que no tienen columna propia (ver `catalog.py` en el backend)
- * llegan resueltos en `theme.tokens` cuando el tema sale de la API. El
- * fallback de cada uno reproduce exactamente lo que la plantilla ya hacía
- * antes de que estos tokens existieran — por eso nadie con la paleta por
- * defecto nota el cambio al desplegar esto.
- */
-function resolveTokens(theme) {
-  return {
-    surface: theme.background_color,
-    price: theme.text_color,
-    category_title: theme.text_color,
-    nav_chip_bg: theme.primary_color,
-    nav_chip_text: theme.text_color,
-    ...theme.tokens,
-  };
-}
-
 // --- Moderna --------------------------------------------------------------
 
 function ModernProductCard({ product, theme, tokens }) {
@@ -132,6 +114,7 @@ function ModernProductCard({ product, theme, tokens }) {
         {product.promo_label && <div className="mt-1"><PromoBadge label={product.promo_label} /></div>}
         {product.description && <p className="mt-1 line-clamp-2 text-xs opacity-65">{product.description}</p>}
         <p className="mt-3 font-black" style={{ color: tokens.price }}><Price product={product} /></p>
+        <OrderControl product={product} className="mt-2" block />
       </div>
     </article>
   );
@@ -166,6 +149,7 @@ function MinimalProductRow({ product, theme, tokens }) {
         <div className="flex items-start justify-between gap-3"><h3 className="font-semibold">{product.name}</h3><strong className="shrink-0 text-sm" style={{ color: tokens.price }}><Price product={product} /></strong></div>
         {product.description && <p className="mt-1 text-xs leading-5 opacity-60">{product.description}</p>}
         <div className="mt-1 flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div>
+        <OrderControl product={product} className="mt-2" />
       </div>
     </article>
   );
@@ -196,7 +180,7 @@ function ElegantProductCard({ product, theme, tokens }) {
     <article data-analytics-product-key={product.tracking_key || undefined} className={`border p-3 ${product.is_available ? "" : "opacity-60"}`} style={{ borderColor: "var(--menu-accent)" }}>
       {theme.show_product_images && image && <img src={image} alt={t("Imagen de {{name}}", { name: product.name })} className="mb-4 h-40 w-full object-cover" />}
       <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1"><h3 className="text-lg italic">{product.name}</h3>{product.description && <p className="mt-2 text-xs leading-5 opacity-65">{product.description}</p>}<div className="mt-2 flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div></div>
+        <div className="min-w-0 flex-1"><h3 className="text-lg italic">{product.name}</h3>{product.description && <p className="mt-2 text-xs leading-5 opacity-65">{product.description}</p>}<div className="mt-2 flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div><OrderControl product={product} /></div>
         <strong className="shrink-0 border-b pb-1 text-sm" style={{ borderColor: "var(--menu-accent)", color: tokens.price }}><Price product={product} /></strong>
       </div>
     </article>
@@ -231,7 +215,11 @@ function AdditionalProductCard({ product, theme, tokens, className, variant }) {
   return (
     <article data-analytics-product-key={product.tracking_key || undefined} className={`overflow-hidden p-3 ${className} ${product.is_available ? "" : "opacity-60"}`} style={{ borderColor: "var(--menu-accent)", backgroundColor: `${tokens.surface}E8` }}>
       {theme.show_product_images && image && <img src={image} alt={t("Imagen de {{name}}", { name: product.name })} className={`mb-3 w-full object-cover ${variant === "luxury" ? "h-36" : "h-24"}`} />}
-      <div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold">{product.name}</h3>{product.description && <p className="mt-1 text-xs leading-5 opacity-65">{product.description}</p>}<div className="flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div></div><strong className="shrink-0 text-sm" style={{ color: tokens.price }}><Price product={product} /></strong></div>
+      {/* El precio va junto al nombre si cabe; en las tarjetas de dos columnas
+          de Impactante y Retro no cabe, y baja a su propia línea en vez de
+          salirse de la tarjeta. En las de ancho completo queda donde estaba. */}
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1"><div className="min-w-0 flex-[1_1_8rem]"><h3 className="font-extrabold [overflow-wrap:anywhere]">{product.name}</h3>{product.description && <p className="mt-1 text-xs leading-5 opacity-65">{product.description}</p>}<div className="flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div></div><strong className="shrink-0 text-sm" style={{ color: tokens.price }}><Price product={product} /></strong></div>
+      <OrderControl product={product} block />
     </article>
   );
 }
@@ -280,6 +268,7 @@ function ChalkboardProductCard({ product, tokens }) {
           <Price product={product} />
         </span>
       </div>
+      <OrderControl product={product} />
     </article>
   );
 }
@@ -326,6 +315,7 @@ function MagazineProductCard({ product, theme, tokens, featured }) {
         {product.promo_label && <div className="mt-1"><PromoBadge label={product.promo_label} /></div>}
         {product.description && <p className={`mt-1 opacity-65 ${featured ? "text-sm" : "line-clamp-2 text-xs"}`}>{product.description}</p>}
         <p className="mt-3 font-black" style={{ color: tokens.price }}><Price product={product} /></p>
+        <OrderControl product={product} className="mt-2" block />
       </div>
     </article>
   );
@@ -364,6 +354,7 @@ function SidebarProductRow({ product, theme, tokens }) {
         <div className="flex items-start justify-between gap-3"><h3 className="text-sm font-semibold">{product.name}</h3><strong className="shrink-0 text-sm" style={{ color: tokens.price }}><Price product={product} /></strong></div>
         {product.description && <p className="mt-1 text-xs leading-5 opacity-60">{product.description}</p>}
         <div className="mt-1 flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div>
+        <OrderControl product={product} className="mt-2" />
       </div>
     </article>
   );
@@ -405,12 +396,16 @@ function SidebarLayout({ business, catalogue, categories, products, theme, cover
 
 function ReceiptProductRow({ product, tokens }) {
   return (
-    <li data-analytics-product-key={product.tracking_key || undefined} className={`flex items-baseline gap-2 py-2 font-mono text-sm ${product.is_available ? "" : "opacity-50"}`}>
-      <span className="shrink-0">{product.name}</span>
-      <PromoBadge label={product.promo_label} />
-      <span aria-hidden="true" className="min-w-0 flex-1 border-b border-dotted border-current/40" />
-      <span className="shrink-0 font-bold" style={{ color: tokens.price }}><Price product={product} /></span>
-      <Availability available={product.is_available} />
+    <li data-analytics-product-key={product.tracking_key || undefined} className={`py-2 font-mono text-sm ${product.is_available ? "" : "opacity-50"}`}>
+      {/* Un nombre largo pasa a dos líneas en vez de empujar el precio fuera. */}
+      <div className="flex items-baseline gap-2">
+        <span className="min-w-0 [overflow-wrap:anywhere]">{product.name}</span>
+        <PromoBadge label={product.promo_label} />
+        <span aria-hidden="true" className="min-w-0 flex-1 border-b border-dotted border-current/40" />
+        <span className="shrink-0 font-bold" style={{ color: tokens.price }}><Price product={product} /></span>
+        <Availability available={product.is_available} />
+      </div>
+      <OrderControl product={product} className="mt-1 flex justify-end" />
     </li>
   );
 }
@@ -448,6 +443,7 @@ function StoryProductCard({ product, theme, tokens }) {
         </div>
         {product.description && <p className="mt-2 text-sm italic leading-6 opacity-70">{product.description}</p>}
         <div className="mt-2 flex items-center gap-2"><Availability available={product.is_available} /><PromoBadge label={product.promo_label} /></div>
+        <OrderControl product={product} />
       </div>
     </article>
   );
