@@ -1,35 +1,48 @@
+import { lazy, Suspense } from "react";
 import {
   Navigate,
   Route,
   Routes,
 } from "react-router";
+import { useTranslation } from "react-i18next";
 
-
-import LoginPage from "../modules/auth/pages/LoginPage";
-import RegisterPage from "../modules/auth/pages/RegisterPage";
 import ProtectedRoute from "./ProtectedRoute";
 import PublicRoute from "./PublicRoute";
-import DashboardPage from "../modules/Dashboard/pages/DashboardPage";
- //rutas dentro del dashboard
-import MenuPage from "../modules/Dashboard/pages/MenuPage";
-import ProductsPage from "../modules/Catalogue/pages/ProductsPage";
-import CategoriesPage from "../modules/Catalogue/pages/CategoriesPage";
-import QrPage from "../modules/Dashboard/pages/QrPage";
-import SettingsPage from "../modules/Settings/pages/SettingsPage";
-import ForgotPasswordPage from "../modules/Settings/pages/ForgotPasswordPage";
-import ResetPasswordPage from "../modules/Settings/pages/ResetPasswordPage";
-import AnalitycsPage from "../modules/Dashboard/pages/AnalitycsPage";
-import HomePage from "../modules/Dashboard/pages/HomePage";
-import BusinessPage from "../modules/Business/pages/BusinessPage";
-import CataloguesPage from "../modules/Catalogue/pages/CataloguesPage";
-import CatalogueDetailPage from "../modules/Catalogue/pages/CatalogueDetailPage";
-import TemplatesPage from "../modules/Templates/pages/TemplatesPage";
-import PromotionsPage from "../modules/Templates/pages/PromotionsPage";
-import PublicMenuPage from "../modules/Publication/pages/PublicMenuPage";
-import PublicationPage from "../modules/Publication/pages/PublicationPage";
+
+const LoginPage = lazy(() => import("../modules/auth/pages/LoginPage"));
+const RegisterPage = lazy(() => import("../modules/auth/pages/RegisterPage"));
+const DashboardPage = lazy(() => import("../modules/Dashboard/pages/DashboardPage"));
+const MenuPage = lazy(() => import("../modules/Dashboard/pages/MenuPage"));
+const ProductsPage = lazy(() => import("../modules/Catalogue/pages/ProductsPage"));
+const CategoriesPage = lazy(() => import("../modules/Catalogue/pages/CategoriesPage"));
+const QrPage = lazy(() => import("../modules/Dashboard/pages/QrPage"));
+const SettingsPage = lazy(() => import("../modules/Settings/pages/SettingsPage"));
+const ForgotPasswordPage = lazy(() => import("../modules/Settings/pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("../modules/Settings/pages/ResetPasswordPage"));
+const AnalitycsPage = lazy(() => import("../modules/Dashboard/pages/AnalitycsPage"));
+const HomePage = lazy(() => import("../modules/Dashboard/pages/HomePage"));
+const BusinessPage = lazy(() => import("../modules/Business/pages/BusinessPage"));
+const CataloguesPage = lazy(() => import("../modules/Catalogue/pages/CataloguesPage"));
+const CatalogueDetailPage = lazy(() => import("../modules/Catalogue/pages/CatalogueDetailPage"));
+const TemplatesPage = lazy(() => import("../modules/Templates/pages/TemplatesPage"));
+const PromotionsPage = lazy(() => import("../modules/Templates/pages/PromotionsPage"));
+const PublicationPage = lazy(() => import("../modules/Publication/pages/PublicationPage"));
+
+// Cada pantalla se descarga al visitarla. Las del dashboard esperan dentro de
+// su propio `Suspense` (`MotionDiv`), así que la barra lateral no parpadea al
+// cambiar de sección; éste cubre las pantallas de acceso.
+function PageFallback() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex min-h-screen items-center justify-center text-[#666666]">
+      {t("Cargando…")}
+    </div>
+  );
+}
 
 export default function AppRoutes() {
   return (
+    <Suspense fallback={<PageFallback />}>
     <Routes>
       <Route element={<PublicRoute />}>
         <Route
@@ -60,8 +73,6 @@ export default function AppRoutes() {
           />
         }
       />
-
-      <Route path="/m/:publicSlug" element={<PublicMenuPage />} />
 
       <Route element={<ProtectedRoute />}>
       
@@ -97,5 +108,6 @@ export default function AppRoutes() {
         }
       />
     </Routes>
+    </Suspense>
   );
 }

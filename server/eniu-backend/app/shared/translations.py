@@ -14,6 +14,12 @@ reordenarlos sin depender de la posición.
 # no nombran precios ni invitan a comprar, porque la app de iOS no puede
 # ofrecer una compra fuera de las reglas de Apple.
 _EN = {
+    # --- Versión de la app ---------------------------------------------------
+    "Hay una versión nueva de Eniu. Actualiza la app para seguir usándola.": (
+        "There's a new version of Eniu. Update the app to keep using it."
+    ),
+    "Plataforma no válida": "Invalid platform",
+
     # --- Sesión y autenticación -------------------------------------------
     "La sesión no es válida": "Your session is not valid",
     "La sesión ya no es válida": "Your session is no longer valid",

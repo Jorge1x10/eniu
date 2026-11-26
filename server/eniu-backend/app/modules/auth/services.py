@@ -162,8 +162,8 @@ def get_user_by_id(user_id):
 def _session_tokens(user):
     identity = str(user.id)
     return {
-        "access_token": create_access_token(identity=identity, expires_delta=timedelta(hours=2)),
-        "refresh_token": create_refresh_token(identity=identity, expires_delta=timedelta(hours=2)),
+        "access_token": create_access_token(identity=identity),
+        "refresh_token": create_refresh_token(identity=identity),
     }
 
 

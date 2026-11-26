@@ -92,3 +92,12 @@ sirve para publicar y nunca toca el servidor.
 npm run typecheck
 npm run lint
 ```
+
+## Versión mínima
+
+Cada petición a la API lleva `X-Eniu-Platform` y `X-Eniu-App-Version`
+(`src/features/app-update/update-store.ts`). Si el backend responde que esta
+versión ya no se admite, `UpdateGate` tapa la app con una pantalla que lleva a
+la tienda; si sólo hay una más nueva, lo sugiere una vez. La versión mínima se
+controla desde el backend con variables de entorno, sin publicar nada: ver
+`server/eniu-backend/docs/API_VERSIONING.md`.

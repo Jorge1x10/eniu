@@ -13,6 +13,7 @@ import { ActiveMenus, DashboardSkeleton, MenuViewsChart, MetricCard, QuickAction
 import { analyticsScopeFor, useDashboardSummaryService } from "../services/dashboardSummaryService";
 import { buildDashboardViewModel } from "../utils/dashboardViewModel";
 import { useTranslation } from "react-i18next";
+import { useMenuFonts } from "../../Templates/utils/menuFonts";
 
 const metricDefinitions = [
   { key: "monthlyViews", title: "Vistas este mes", icon: ScanLine, tone: "yellow" },
@@ -28,6 +29,8 @@ const summaryMetricDefinitions = metricDefinitions.map((metric) => (
 
 export default function HomePage() {
   const { t } = useTranslation();
+  // El inicio usa Manrope; ya no llega con la hoja global de tipografías.
+  useMenuFonts("manrope");
 
   const { user } = useAuth();
   const { limits } = usePlan();

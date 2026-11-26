@@ -1,6 +1,7 @@
 import { fetch as expoFetch } from 'expo/fetch';
 import * as Network from 'expo-network';
 
+import { requiredUpdateFrom, updateStore, versionHeaders } from '@/features/app-update/update-store';
 import { sessionStore } from '@/lib/session-store';
 import i18n from '@/i18n';
 
@@ -39,11 +40,11 @@ async function connectionErrorMessage() {
     // En Android `isInternetReachable` se comprueba de verdad; en iOS
     // coincide con `isConnected`. Si viene indefinido no se supone nada.
     const offline = state.isInternetReachable === false || state.isConnected === false;
-    if (offline) return i18n.t(i18n.t(i18n.t("Sin conexión a internet. Revisa tu red e inténtalo de nuevo.")));
+    if (offline) return i18n.t("Sin conexión a internet. Revisa tu red e inténtalo de nuevo.");
   } catch {
     // Si no se puede consultar el estado de la red, queda el mensaje genérico.
   }
-  return i18n.t(i18n.t(i18n.t("No hay conexión con el servidor.")));
+  return i18n.t("No hay conexión con el servidor.");
 }
 
 async function parseResponse(response: Response) {
@@ -89,6 +90,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, all
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   if (token) headers.set('Authorization', `Bearer ${token}`);
+  for (const [name, value] of Object.entries(versionHeaders())) headers.set(name, value);
 
   let response: Response;
   try {
@@ -109,8 +111,12 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, all
   }
 
   const data = await parseResponse(response);
+  // Esta versión de la app ya no se admite: `UpdateGate` tapa la app con la
+  // pantalla de actualizar. El error sigue su curso para que la pantalla que
+  // hizo la petición no se quede esperando.
+  if (response.status === 426) updateStore.require(requiredUpdateFrom(data));
   if (!response.ok) {
-    throw new ApiError(extractErrorMessage(data) || i18n.t(i18n.t(i18n.t("No fue posible completar la solicitud."))), response.status, data);
+    throw new ApiError(extractErrorMessage(data) || i18n.t("No fue posible completar la solicitud."), response.status, data);
   }
   return data as T;
 }

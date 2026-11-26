@@ -4,7 +4,7 @@ import { Menu } from 'lucide-react';
 import DashboardNav from '../components/DashboardLayout'
 import MotionDiv from '../hooks/MotionDiv';
 import { BusinessProvider } from '../../Business/services/BusinessProvider';
-import mobileLogo from '../../../assets/Images/eniu-DarkBannerNoBack.svg';
+import mobileLogo from '../../../assets/Images/eniu-logo-dark.webp';
 import { useTranslation } from "react-i18next";
 
 export default function DashboardPage() {

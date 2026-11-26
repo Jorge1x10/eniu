@@ -1,0 +1,4 @@
+# Lo que hace falta para desarrollar y correr las pruebas, encima de lo que
+# usa el servidor. Producción (Render) sigue instalando sólo requirements.txt.
+-r requirements.txt
+pytest==9.0.3

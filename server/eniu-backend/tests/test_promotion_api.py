@@ -23,6 +23,7 @@ class PromotionApiTestCase(unittest.TestCase):
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
             "JWT_SECRET_KEY": "promotion-tests-secret-at-least-32-bytes",
+            "ANALYTICS_TOKEN_SECRET": "promotion-analytics-secret-at-least-32-bytes",
         })
 
     def setUp(self):

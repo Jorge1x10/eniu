@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router";
 import { X } from "lucide-react";
 
-import darkLogo from "../../../assets/Images/eniu-DarkBannerNoBack.svg";
+import darkLogo from "../../../assets/Images/eniu-logo-dark.webp";
 import { DASH_ICONS } from "../../../assets/icons/navIcons";
 import BusinessSelector from "../../Business/components/selectBusiness";
 import CreateBusinessModal from "../../Business/components/CreateBusinessModal";

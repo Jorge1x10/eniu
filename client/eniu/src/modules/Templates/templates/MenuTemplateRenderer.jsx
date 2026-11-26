@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Availability, CategoryNavigation, EmptyMenu, MenuCover, MenuFooter, PromoBadge } from "../components/MenuShared";
 import MenuBackground from "../components/MenuBackground";
 import { FONT_REGISTRY } from "../utils/themeDefaults";
+import { useMenuFonts } from "../utils/menuFonts";
 import { MenuCurrencyContext, buildSections, mainProductImage, useMenuCurrency } from "./menuData";
 import { useTranslation } from "react-i18next";
 
@@ -488,6 +489,10 @@ export default function MenuTemplateRenderer({ layoutKey, ...props }) {
   const family = LAYOUT_FAMILY[layoutKey] || "modern";
   const Layout = family === "additional" ? AdditionalLayout : (LAYOUT_COMPONENTS[family] || ModernLayout);
   const layoutProps = family === "additional" ? { ...props, variant: layoutKey } : props;
+  // Sólo la tipografía que este menú dibuja. Elegante cambia Inter por
+  // Playfair (ver `ElegantLayout`).
+  const fontKey = FONT_REGISTRY[props.theme?.font_key] ? props.theme.font_key : "inter";
+  useMenuFonts(family === "elegant" && fontKey === "inter" ? "playfair" : fontKey);
   // La moneda entra por aquí, en la raíz: es el único punto por el que pasan
   // las trece plantillas, y ninguna de ellas tiene que enterarse.
   return (

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { UpdateGate } from '@/features/app-update/update-gate';
 import { AuthProvider } from '@/features/auth/auth-context';
 import { BusinessProvider } from '@/features/business/business-context';
 import { LanguageProvider } from '@/i18n/language-context';
@@ -29,15 +30,18 @@ export default function RootLayout() {
             <BusinessProvider>
               <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
                 <StatusBar style="auto" />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(onboarding)" />
-                  <Stack.Screen name="(tabs)" />
-                  {/* En modal y en la raíz: se abre desde cualquier pestaña
-                      cuando una función bloqueada invita a mejorar el plan. */}
-                  <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
-                </Stack>
+                {/* Encima de todo: si esta versión ya no se admite, tapa la app. */}
+                <UpdateGate>
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(onboarding)" />
+                    <Stack.Screen name="(tabs)" />
+                    {/* En modal y en la raíz: se abre desde cualquier pestaña
+                        cuando una función bloqueada invita a mejorar el plan. */}
+                    <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+                  </Stack>
+                </UpdateGate>
               </ThemeProvider>
             </BusinessProvider>
           </LanguageProvider>

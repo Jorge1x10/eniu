@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { createContext, PropsWithChildren, use, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { forgetPurchases, identifyPurchases } from '@/features/billing/purchases';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { sessionStore } from '@/lib/session-store';
 import type { User } from '@/types/models';
 
@@ -38,8 +38,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // También al volver con una sesión ya guardada: reinstalar la app no
         // debe dejar las compras sin dueño.
         await identifyPurchases(data.user.id);
-      } catch {
-        await sessionStore.clear();
+      } catch (error) {
+        // Sólo se descarta una sesión que el servidor rechazó. Sin red, con el
+        // servidor caído o con la app pidiendo actualizarse (426), la sesión
+        // sigue siendo buena: borrarla obligaba a volver a iniciar sesión
+        // después de recuperar la red o de actualizar la app.
+        if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
+          await sessionStore.clear();
+        }
       } finally {
         if (active) setIsLoading(false);
       }
