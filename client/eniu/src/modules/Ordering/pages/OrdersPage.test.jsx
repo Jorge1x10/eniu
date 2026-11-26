@@ -9,6 +9,7 @@ import { LIVE_POLL_MS } from "../hooks/useLiveOrders";
 
 const mocks = vi.hoisted(() => ({
   service: {},
+  cash: {},
   plan: { limits: {} },
   playSound: vi.fn(),
 }));
@@ -20,6 +21,10 @@ vi.mock("../../auth/hooks/usePlan", () => ({ usePlan: () => mocks.plan }));
 vi.mock("../services/orderingService", async (importOriginal) => ({
   ...(await importOriginal()),
   useOrderingService: () => mocks.service,
+}));
+vi.mock("../../Cash/services/cashService", async (importOriginal) => ({
+  ...(await importOriginal()),
+  useCashService: () => mocks.cash,
 }));
 vi.mock("../utils/orderSound", () => ({
   soundPreference: () => true,
@@ -69,6 +74,11 @@ describe("OrdersPage", () => {
       cancelItem: vi.fn(async () => ({ ok: true })),
       closeAccount: vi.fn(async () => ({ ok: true })),
     };
+    mocks.cash = {
+      current: vi.fn(async () => ({ ok: true, data: { session: { id: "turno-1", status: "open" }, last_closed: null } })),
+      openCash: vi.fn(async () => ({ ok: true, data: {} })),
+      checkout: vi.fn(async () => ({ ok: true, data: {} })),
+    };
   });
 
   afterEach(() => vi.useRealTimers());
@@ -111,22 +121,33 @@ describe("OrdersPage", () => {
     expect(mocks.service.live).toHaveBeenLastCalledWith(null);
   });
 
-  it("no deja cerrar una cuenta con pedidos por aceptar", async () => {
+  it("no deja cobrar una cuenta con pedidos por aceptar", async () => {
     mocks.service.live.mockResolvedValue(snapshot([account("a", 4, [order("o-1", "pending")])]));
     renderPage();
-    const close = await screen.findByRole("button", { name: "Cerrar cuenta" });
-    expect(close).toBeDisabled();
-    expect(close).toHaveAccessibleDescription("Acepta o rechaza los pedidos pendientes para cerrar la cuenta.");
+    const charge = await screen.findByRole("button", { name: "Cobrar" });
+    expect(charge).toBeDisabled();
+    expect(charge).toHaveAccessibleDescription("Acepta o rechaza los pedidos pendientes para cobrar la cuenta.");
   });
 
-  it("cierra la cuenta tras confirmar, mostrando el total", async () => {
+  it("cobra la cuenta con el total y la cierra", async () => {
     mocks.service.live.mockResolvedValue(snapshot([account("a", 4, [order("o-1", "ready")], { total: "110.00" })]));
     renderPage();
-    await userEvent.click(await screen.findByRole("button", { name: "Cerrar cuenta" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Cobrar" }));
 
-    const dialog = screen.getByRole("alertdialog");
-    expect(within(dialog).getByText(/110\.00/)).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cerrar cuenta" }));
+    const dialog = await screen.findByRole("dialog", { name: "Cobrar Mesa 4" });
+    await userEvent.click(await within(dialog).findByRole("button", { name: /Cobrar .*110\.00 y cerrar/ }));
+    expect(mocks.cash.checkout).toHaveBeenCalledWith("a", [{ method: "cash", amount: "110.00", tip: "0.00" }]);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("cierra sin cobrar sólo tras confirmarlo", async () => {
+    mocks.service.live.mockResolvedValue(snapshot([account("a", 4, [order("o-1", "ready")], { total: "110.00" })]));
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Cobrar" }));
+    const dialog = await screen.findByRole("dialog", { name: "Cobrar Mesa 4" });
+    await userEvent.click(await within(dialog).findByRole("button", { name: "Cerrar sin cobrar" }));
+    expect(mocks.service.closeAccount).not.toHaveBeenCalled();
+    await userEvent.click(within(within(dialog).getByRole("group", { name: "Cerrar sin cobrar" })).getByRole("button", { name: "Cerrar sin cobrar" }));
     expect(mocks.service.closeAccount).toHaveBeenCalledWith("a");
   });
 

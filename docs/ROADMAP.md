@@ -41,17 +41,22 @@ igual que los pedidos.
 - [ ] Bluetooth de 58 mm desde la app.
 - [ ] Separar por estación (cocina, barra) según la categoría.
 
-## Siguiente
-
 ### 3. Caja, cobro y corte
-- "Cerrar cuenta" pasa a "Cobrar y cerrar": pagos por método (efectivo,
-  tarjeta, transferencia, otro), mixtos y con propina.
-- Abrir caja con fondo inicial; entradas y retiros de efectivo; corte con
-  esperado contra contado y diferencia.
-- Reporte del turno: totales por método, propinas, cuentas cobradas y
-  canceladas.
-- Los pagos se diseñan ligados a una cuenta de mesa **o** a un pedido a
-  domicilio, para no rehacerlos en el punto 4.
+- [x] "Cerrar cuenta" pasa a "Cobrar": pagos por método (efectivo, tarjeta,
+      transferencia, otro), varios en una cuenta, propina por pago y cambio
+      en efectivo (`server/eniu-backend/docs/CASH.md`).
+- [x] Abrir caja con fondo inicial (también desde el cobro); entradas y
+      retiros de efectivo con motivo.
+- [x] Corte: esperado contra contado, diferencia y notas; reporte impreso en
+      la misma impresora de tickets.
+- [x] Reporte del turno: totales por método, propinas, cobros, cuentas
+      cerradas sin cobrar y canceladas; historial de cortes.
+- [x] Los pagos guardan la mesa y sobreviven si se borra; quedan listos para
+      ligarse a un pedido a domicilio en el punto 4.
+- [ ] Cobro y caja en la app (hoy cierra la cuenta sin cobrar).
+- [ ] Quién abrió, cobró y cortó (con personal y PIN).
+
+## Siguiente
 
 ### 4. Para llevar y a domicilio
 - Canal del pedido: mesa, para llevar o a domicilio. Hoy todo pedido
@@ -73,13 +78,13 @@ igual que los pedidos.
 
 ## Decisiones abiertas
 
-- **Personal y roles:** hoy todos entran con la misma cuenta. Con caja y
-  cortes importa quién abrió, cobró o cortó; puede empezar como un PIN por
-  empleado (mesero, cocina, cajero).
+- **Personal y roles:** hoy todos entran con la misma cuenta. Decidido por
+  ahora: la caja funciona sin PIN. Más adelante, un PIN por empleado (mesero,
+  cocina, cajero) para saber quién abrió, cobró o cortó.
 - ~~**Impresora**~~: decidido. Cualquier térmica de 80 o 58 mm instalada en el
   equipo (la más común en México es la Epson TM-T20; Star TSP143 y genéricas
   ESC/POS también sirven). Bluetooth de 58 mm, con la app.
-- **Cobro:** ¿propinas? ¿dividir la cuenta entre comensales o pagos mixtos
-  sobre el total?
+- ~~**Cobro**~~: decidido. Con propina, y la cuenta se cobra completa con uno
+  o varios métodos (no se divide por comensal).
 - **Domicilio:** ¿repartidores propios? ¿sólo pago contra entrega o también
   en línea? (en línea implica que el dinero llegue a cada restaurante).

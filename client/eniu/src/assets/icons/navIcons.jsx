@@ -10,6 +10,7 @@ import {
   Megaphone,
   ClipboardList,
   Armchair,
+  Wallet,
 } from "lucide-react";
 
 export const DASH_ICONS = {
@@ -24,4 +25,5 @@ export const DASH_ICONS = {
   config: Cog,
   orders: ClipboardList,
   tables: Armchair,
+  cash: Wallet,
 };

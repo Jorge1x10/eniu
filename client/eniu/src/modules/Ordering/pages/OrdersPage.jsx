@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, BellOff, ClipboardList, Printer, WifiOff } from "lucide-react";
+import { Banknote, Bell, BellOff, ClipboardList, Printer, WifiOff } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
@@ -7,6 +7,7 @@ import PlanBadge from "../../auth/components/PlanBadge";
 import { usePlan } from "../../auth/hooks/usePlan";
 import { useBusiness } from "../../Business/services/useBusiness";
 import { formatCurrency, formatDate } from "../../../i18n/formats";
+import CheckoutDialog from "../../Cash/components/CheckoutDialog";
 import ConfirmDialog from "../components/ConfirmDialog";
 import MesaBadge from "../components/MesaBadge";
 import OrderTicket from "../components/OrderTicket";
@@ -16,7 +17,7 @@ import { loadPrintSettings, wasAutoPrinted } from "../printing/printSettings";
 import { printOrderTicket } from "../printing/printTicket";
 import { useLiveOrdersContext } from "../context/LiveOrdersContext";
 import { orderingErrorMessage, useOrderingService } from "../services/orderingService";
-import { orderLabel, tableLabel } from "../utils/labels";
+import { orderLabel } from "../utils/labels";
 import {
   orderSoundReady,
   playNewOrderSound,
@@ -70,6 +71,10 @@ function OrdersBoard({ business }) {
   const [actionError, setActionError] = useState("");
   const [isToggling, setIsToggling] = useState(false);
   const [confirming, setConfirming] = useState(null);
+  // La cuenta que se cobra se busca en vivo: si llega otro pedido mientras
+  // se cobra, el diálogo ve el total nuevo. La copia guardada la mantiene
+  // abierta cuando, ya cobrada, la cuenta sale de la lista (pantalla del cambio).
+  const [checkout, setCheckout] = useState(null);
   const [printSettingsOpen, setPrintSettingsOpen] = useState(false);
   const [autoPrint, setAutoPrint] = useState(() => loadPrintSettings().autoPrint);
 
@@ -148,6 +153,7 @@ function OrdersBoard({ business }) {
   }
 
   const currency = business.currency || "MXN";
+  const checkoutAccount = checkout ? accounts.find((account) => account.id === checkout.id) || checkout : null;
   const canToggle = ordering && ordering.reason !== "plan";
   const ticketHandlers = (account, order) => ({
     onAdvance: (status) => advance(order, status),
@@ -276,7 +282,7 @@ function OrdersBoard({ business }) {
                 account={account}
                 currency={currency}
                 ticketHandlers={ticketHandlers}
-                onClose={() => setConfirming({ kind: "close", account })}
+                onCharge={() => setCheckout(account)}
               />
             ))}
           </div>
@@ -301,16 +307,14 @@ function OrdersBoard({ business }) {
           onClose={() => setConfirming(null)}
         />
       )}
-      {confirming?.kind === "close" && (
-        <ConfirmDialog
-          tone="neutral"
-          title={t("¿Cerrar la cuenta de {{table}}?", { table: tableLabel(confirming.account.table) })}
-          description={t("Total: {{total}}. El siguiente pedido en esta mesa abrirá una cuenta nueva.", { total: formatCurrency(Number(confirming.account.total), currency) })}
-          confirmLabel={t("Cerrar cuenta")}
-          onConfirm={() => closeAccount(confirming.account.id)}
-          errorMessage={(response) => orderingErrorMessage(response, t("No pudimos cerrar la cuenta."))}
-          onDone={confirmed}
-          onClose={() => setConfirming(null)}
+      {checkoutAccount && (
+        <CheckoutDialog
+          businessId={business.id}
+          account={checkoutAccount}
+          currency={currency}
+          onCloseWithoutPayment={() => closeAccount(checkoutAccount.id)}
+          onDone={() => { setCheckout(null); refresh({ force: true }); }}
+          onClose={() => setCheckout(null)}
         />
       )}
     </section>
@@ -353,7 +357,7 @@ function Counter({ label, value, className, labelClass, valueClass = "" }) {
   );
 }
 
-function TableCard({ account, currency, ticketHandlers, onClose }) {
+function TableCard({ account, currency, ticketHandlers, onCharge }) {
   const { t } = useTranslation();
   const hasPending = account.pending_orders > 0;
   const hintId = `close-hint-${account.id}`;
@@ -395,14 +399,14 @@ function TableCard({ account, currency, ticketHandlers, onClose }) {
         </div>
         <button
           type="button"
-          onClick={onClose}
+          onClick={onCharge}
           disabled={hasPending}
           aria-describedby={hasPending ? hintId : undefined}
-          className="mt-3 min-h-12 w-full cursor-pointer rounded-xl border-[1.5px] border-eniu-text font-extrabold hover:bg-eniu-text hover:text-eniu-bg disabled:cursor-not-allowed disabled:border-eniu-warm disabled:text-eniu-muted disabled:hover:bg-transparent"
+          className="mt-3 inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-eniu-text font-extrabold hover:bg-eniu-text hover:text-eniu-bg disabled:cursor-not-allowed disabled:border-eniu-warm disabled:text-eniu-muted disabled:hover:bg-transparent"
         >
-          {t("Cerrar cuenta")}
+          <Banknote size={18} aria-hidden="true" /> {t("Cobrar")}
         </button>
-        {hasPending && <p id={hintId} className="mt-2 text-center text-xs text-eniu-muted">{t("Acepta o rechaza los pedidos pendientes para cerrar la cuenta.")}</p>}
+        {hasPending && <p id={hintId} className="mt-2 text-center text-xs text-eniu-muted">{t("Acepta o rechaza los pedidos pendientes para cobrar la cuenta.")}</p>}
       </footer>
     </article>
   );
