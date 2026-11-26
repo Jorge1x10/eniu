@@ -1,0 +1,33 @@
+# Deja activo el negocio que debe salir en las capturas.
+#
+# La cuenta demo tiene varios negocios y la app abre el creado más
+# recientemente, así que se elige a mano desde «Tus sucursales», al final del
+# inicio, y se vuelve arriba. Antes y después se cierra la hoja de «Nuevo
+# logro»: con las visitas de la demo la app la abre al cargar las analíticas
+# de cada menú, y taparía la captura.
+#
+# Parámetros:
+#   BUSINESS      nombre del negocio (no debe ser el que ya está activo: su
+#                 nombre saldría también arriba, en el selector)
+#   CONTINUE      botón que cierra la hoja: «Seguir» o «Continue»
+#   SWITCH_LABEL  etiqueta del selector de arriba: «Cambiar de negocio» o
+#                 «Switch business»
+appId: com.eniu.app
+---
+- tapOn:
+    text: ${CONTINUE}
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: ${BUSINESS}
+    direction: DOWN
+- tapOn: ${BUSINESS}
+- tapOn:
+    text: ${CONTINUE}
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: ${SWITCH_LABEL}
+    direction: UP
+- waitForAnimationToEnd:
+    timeout: 3000

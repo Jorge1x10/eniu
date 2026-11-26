@@ -15,6 +15,13 @@ appId: com.eniu.app
 # Sin hideKeyboard: ver la nota en appstore-screenshots.yaml.
 - tapOn: "Iniciar sesión"
 - assertVisible: "Inicio"
+# El mismo negocio que las capturas en español (ver appstore-screenshots.yaml).
+- runFlow:
+    file: subflows/select-business.yaml
+    env:
+      BUSINESS: "Casa Nopal"
+      CONTINUE: "Seguir"
+      SWITCH_LABEL: "Cambiar de negocio"
 - waitForAnimationToEnd:
     timeout: 2000
 - tapOn: "Menús"

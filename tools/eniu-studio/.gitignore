@@ -1,0 +1,4 @@
+# Estado local del estudio: base de datos SQLite, fotos subidas, sesiones,
+# secretos de la API local y credenciales de la cuenta demo local.
+.studio/
+__pycache__/
