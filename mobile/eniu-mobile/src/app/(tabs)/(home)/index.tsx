@@ -2,76 +2,175 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Share, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, Share, Text, useColorScheme, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 
-import { AreaChart } from '@/components/area-chart';
 import { BusinessSwitcher } from '@/components/business-switcher';
+import { MesaBadge } from '@/components/orders/mesa-badge';
 import { CreateBusinessCard } from '@/components/create-business-card';
+import { HeroSheet } from '@/components/hero-sheet';
 import { MilestoneSheet } from '@/components/milestone-sheet';
-import { MinusIcon, PlusIcon, ShareIcon, TrendDownIcon, TrendUpIcon } from '@/components/ui/icons';
+import { EniuSwitch } from '@/components/ui/eniu-switch';
+import { ChevronRightIcon, EyeIcon, ImageIcon, ShareIcon, TrendDownIcon, TrendUpIcon } from '@/components/ui/icons';
 import { ErrorState, LoadingState } from '@/components/ui/screen-state';
-import { HeroHeader } from '@/components/hero-header';
-import { HeroScreen } from '@/components/hero-screen';
 import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
 import { useAuth } from '@/features/auth/auth-context';
 import { usePlan } from '@/features/auth/use-plan';
 import { useBusiness } from '@/features/business/business-context';
-import { useBusinessesTodayViews } from '@/features/business/business-views';
 import { catalogueKeys, listCatalogues } from '@/features/catalogues/catalogue-api';
 import { useProductQuickActions } from '@/features/catalogues/product-quick-actions';
+import { useOrders } from '@/features/orders/orders-context';
 import { getLastCelebratedMilestone, getMilestoneNotificationsEnabled, nextUncelebratedMilestone, setLastCelebratedMilestone } from '@/features/milestones/milestone-store';
+import { currentLocale } from '@/i18n/formats';
 import { visitsPath } from '@/lib/analytics-range';
 import { api } from '@/lib/api';
 import { defaultPictureUrl } from '@/lib/product-image';
-import type { Analytics, Product } from '@/types/models';
-import { useTranslation } from 'react-i18next';
-import { currentLocale } from '@/i18n/formats';
+import type { Analytics, Catalogue, DiningTable, Product, TableAccount } from '@/types/models';
 
-function HeroStat({ value, label }: { value: string | number; label: string }) {
+/** Con cuántos productos un menú deja de verse a medias. */
+const ENOUGH_PRODUCTS = 5;
+
+function SectionTitle({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
+  const theme = useEniuTheme();
   return (
-    <View style={{ flex: 1, padding: 13, borderRadius: 16, borderCurve: 'continuous', backgroundColor: 'rgba(255,255,255,0.06)', gap: 3 }}>
-      <Text style={{ color: '#FFFDF5', fontSize: 20, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{value}</Text>
-      <Text numberOfLines={2} style={{ color: '#8C8578', fontSize: 10.5, lineHeight: 14, fontWeight: '500' }}>{label}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 }}>
+      <Text accessibilityRole="header" style={{ color: theme.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{title}</Text>
+      {action ? (
+        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={12}>
+          <Text style={{ color: theme.text, fontSize: 13, fontWeight: '800', textDecorationLine: 'underline' }}>{action}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
-function QuickProductRow({ product, currency, businessId, catalogueId }: { product: Product; currency: Intl.NumberFormat; businessId?: string; catalogueId?: string }) {
+/** Fila de "Cambio rápido": la disponibilidad se cambia con un toque. */
+function QuickProductRow({ product, currency, businessId, catalogueId, divider }: { product: Product; currency: Intl.NumberFormat; businessId: string; catalogueId: string; divider: boolean }) {
   const { t } = useTranslation();
   const theme = useEniuTheme();
-  const { bumpPrice, toggleAvailable } = useProductQuickActions(businessId, catalogueId);
+  const { toggleAvailable } = useProductQuickActions(businessId, catalogueId);
   const uri = defaultPictureUrl(product);
   return (
-    <View style={{ padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+    <View style={{ minHeight: 64, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: divider ? 1 : 0, borderTopColor: theme.border }}>
       {uri ? (
-        <Image source={{ uri }} style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: theme.background }} contentFit="cover" transition={150} />
+        <Image source={{ uri }} style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: theme.surfaceAlt }} contentFit="cover" transition={150} />
       ) : (
-        <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><PlusIcon color={theme.border} size={16} /></View>
+        <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: theme.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}><ImageIcon color={theme.muted} size={17} /></View>
       )}
-      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-        <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14.5, fontWeight: '700' }}>{product.name}</Text>
-        {product.description ? (
-          <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 11.5 }}>{product.description}</Text>
-        ) : null}
-        {/* Tocar la disponibilidad la cambia: es lo que se toca varias veces al
-            día, y por eso vive aquí y no dentro del formulario. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: product.is_available }}
-          onPress={() => toggleAvailable(product)}
-          hitSlop={6}
-          style={({ pressed }) => ({ alignSelf: 'flex-start', minHeight: 24, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 9, borderRadius: 999, backgroundColor: theme.surfaceAlt, opacity: pressed ? 0.7 : 1 })}
-        >
-          <View style={{ width: 6, height: 6, borderRadius: 999, backgroundColor: product.is_available ? theme.success : theme.danger }} />
-          <Text style={{ color: product.is_available ? theme.success : theme.danger, fontSize: 11, fontWeight: '700' }}>{product.is_available ? t("Disponible") : t("Agotado")}</Text>
+      <View style={{ flex: 1, minWidth: 0, gap: 2, opacity: product.is_available ? 1 : 0.55 }}>
+        <Text numberOfLines={1} style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>{product.name}</Text>
+        <Text style={{ color: product.is_available ? theme.muted : theme.danger, fontSize: 13, fontWeight: '600' }}>
+          {product.price == null ? t("Sin precio") : currency.format(Number(product.price))} · {product.is_available ? t("Disponible") : t("Agotado")}
+        </Text>
+      </View>
+      <EniuSwitch value={product.is_available} onValueChange={() => toggleAvailable(product)} accessibilityLabel={t("{{name}} disponible", { name: product.name })} />
+    </View>
+  );
+}
+
+/** Anillo de progreso "2/4". */
+function ProgressRing({ done, total }: { done: number; total: number }) {
+  const theme = useEniuTheme();
+  const size = 56, stroke = 6, radius = (size - stroke) / 2, length = 2 * Math.PI * radius;
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+        <Circle cx={size / 2} cy={size / 2} r={radius} stroke={theme.surfaceAlt} strokeWidth={stroke} fill="none" />
+        <Circle cx={size / 2} cy={size / 2} r={radius} stroke={theme.yellow} strokeWidth={stroke} fill="none" strokeLinecap="round" strokeDasharray={`${(done / total) * length} ${length}`} />
+      </Svg>
+      <Text style={{ color: theme.text, fontSize: 14, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{done}/{total}</Text>
+    </View>
+  );
+}
+
+/** Bloque "N pedidos por aceptar" con el primero listo para aceptar. */
+function PendingCard({ accounts, onAccept }: { accounts: TableAccount[]; onAccept: (orderId: string) => Promise<void> }) {
+  const { t } = useTranslation();
+  const theme = useEniuTheme();
+  const [busy, setBusy] = useState(false);
+  const pending = accounts.flatMap((account) => account.orders.filter((order) => order.status === 'pending').map((order) => ({ order, account })))
+    .sort((a, b) => a.order.created_at.localeCompare(b.order.created_at));
+  if (!pending.length) {
+    return (
+      <View style={{ ...cardStyle(theme, 22), padding: 18, gap: 4 }}>
+        <Text style={{ color: theme.text, fontSize: 17, fontWeight: '800' }}>{t("Todo al día.")}</Text>
+        {/* TODO(diseño): el diseño dice "Te avisamos con un sonido"; la app vibra. */}
+        <Text style={{ color: theme.muted, fontSize: 14, lineHeight: 20 }}>{t("Te avisamos cuando llegue otro pedido.")}</Text>
+      </View>
+    );
+  }
+  const { order, account } = pending[0];
+  const summary = order.items.filter((item) => !item.is_cancelled).map((item) => `${item.quantity}× ${item.name}`).join(', ');
+  async function accept() {
+    setBusy(true);
+    try { await onAccept(order.id); } finally { setBusy(false); }
+  }
+  return (
+    <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: theme.yellow, padding: 18, gap: 14 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={{ color: theme.onYellow, fontSize: 20, fontWeight: '900' }}>{pending.length === 1 ? t("1 pedido por aceptar") : t("{{count}} pedidos por aceptar", { count: pending.length })}</Text>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/(tabs)/(orders)')} hitSlop={12}>
+          <Text style={{ color: theme.onYellow, fontSize: 14, fontWeight: '800', textDecorationLine: 'underline' }}>{t("Ver todos")}</Text>
         </Pressable>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t("Bajar el precio")} onPress={() => bumpPrice(product, -1)} style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 10, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}><MinusIcon color={theme.text} size={12} /></Pressable>
-        <Text style={{ minWidth: 52, textAlign: 'center', color: theme.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{product.price == null ? 'S/P' : currency.format(Number(product.price))}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={t("Subir el precio")} onPress={() => bumpPrice(product, 1)} style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 10, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}><PlusIcon color={theme.onYellow} size={12} /></Pressable>
+      <View style={{ borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.55)', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <MesaBadge number={account.table.number} />
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <Text numberOfLines={1} style={{ color: theme.onYellow, fontSize: 16, fontWeight: '800' }}>{order.diner_name}</Text>
+          <Text numberOfLines={2} style={{ color: 'rgba(17,17,17,0.7)', fontSize: 13 }}>{summary}</Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Aceptar el pedido de {{name}}", { name: order.diner_name })} disabled={busy} onPress={accept} style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#111111', justifyContent: 'center', opacity: busy ? 0.6 : pressed ? 0.85 : 1 })}>
+          <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>{t("Aceptar")}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+/** "Mesas ahora": por aceptar en amarillo, con cuenta abierta en negro, libres en crema. */
+function TablesNow({ tables, accounts }: { tables: DiningTable[]; accounts: TableAccount[] }) {
+  const { t } = useTranslation();
+  const theme = useEniuTheme();
+  // "Cuenta abierta" es negro en claro; en oscuro se invierte a crema, o se
+  // perdería contra la tarjeta.
+  const isDark = useColorScheme() === 'dark';
+  const openBg = isDark ? theme.text : '#111111';
+  const openText = isDark ? theme.background : '#FBF7EC';
+  const byTable = new Map(accounts.map((account) => [account.table.id, account]));
+  const legend = [
+    { color: theme.yellow, label: t("Por aceptar") },
+    { color: openBg, label: t("Cuenta abierta") },
+    { color: theme.surfaceAlt, label: t("Libre") },
+  ];
+  return (
+    <View style={{ gap: 10 }}>
+      <SectionTitle title={t("Mesas ahora")} />
+      <View style={{ ...cardStyle(theme, 20), padding: 14, gap: 12 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {tables.filter((table) => table.is_active).map((table) => {
+            const account = byTable.get(table.id);
+            const state = account?.pending_orders ? 'pending' : account ? 'open' : 'free';
+            const background = state === 'pending' ? theme.yellow : state === 'open' ? openBg : theme.surfaceAlt;
+            const color = state === 'pending' ? theme.onYellow : state === 'open' ? openText : theme.text;
+            const label = state === 'pending' ? t("por aceptar") : state === 'open' ? t("cuenta abierta") : t("libre");
+            return (
+              <View key={table.id} accessible accessibilityLabel={`${t("Mesa {{number}}", { number: table.number })}, ${label}`} style={{ width: '14.5%', aspectRatio: 1, minWidth: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: background }}>
+                <Text style={{ color, fontSize: 15, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{table.number}</Text>
+              </View>
+            );
+          })}
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+          {legend.map((item) => (
+            <View key={item.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={{ width: 12, height: 12, borderRadius: 4, backgroundColor: item.color, borderWidth: 1, borderColor: theme.border }} />
+              <Text style={{ color: theme.muted, fontSize: 13 }}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -79,37 +178,45 @@ function QuickProductRow({ product, currency, businessId, catalogueId }: { produ
 
 export default function HomeScreen() {
   const { t } = useTranslation();
-
   const theme = useEniuTheme();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
   const { user } = useAuth();
-  const { limits, analyticsScope } = usePlan();
-  const { businesses, selectedBusiness, selectBusiness, isLoading: loadingBusinesses } = useBusiness();
-  const businessSummaries = useBusinessesTodayViews(businesses, limits.allow_analytics);
+  const { analyticsScope } = usePlan();
+  const { selectedBusiness, isLoading: loadingBusinesses } = useBusiness();
+  const orders = useOrders();
+  const tablesQuery = useQuery({ queryKey: ['tables', selectedBusiness?.id] as const, queryFn: () => api.get<{ tables: DiningTable[] }>(`businesses/${selectedBusiness?.id}/tables`), enabled: Boolean(selectedBusiness) && orders.available });
+  // "Con pedidos": el negocio los tiene activos o tiene mesas atendiéndose.
+  const withOrders = orders.available && orders.loaded && (Boolean(orders.ordering?.enabled) || orders.accounts.length > 0);
   const catalogues = useQuery({ queryKey: catalogueKeys.all(selectedBusiness?.id), queryFn: () => listCatalogues(selectedBusiness!.id), enabled: Boolean(selectedBusiness) });
-  const selectedCatalogue = catalogues.data?.catalogues[0];
-  // El gratuito lee el resumen de 7 días; el de pago, el informe de 30. Antes
-  // los dos pedían el informe, y al gratuito el 403 le dejaba Inicio en cero.
+  const selectedCatalogue: Catalogue | undefined = catalogues.data?.catalogues[0];
+  // El gratuito lee el resumen de 7 días; el de pago, el informe de 30.
   const isSummary = analyticsScope !== 'full';
   const visitsScope = isSummary ? 'summary' : 'full';
   const analytics = useQuery({ queryKey: ['analytics', visitsScope, selectedBusiness?.id, selectedCatalogue?.id, 30, selectedBusiness?.timezone], queryFn: () => api.get<Analytics>(visitsPath(visitsScope, selectedBusiness!.id, selectedCatalogue!.id, 30, selectedBusiness!.timezone)), enabled: Boolean(selectedBusiness && selectedCatalogue) && analyticsScope !== 'none' });
-  const productsKey = ['products', selectedBusiness?.id, selectedCatalogue?.id] as const;
-  const products = useQuery({ queryKey: productsKey, queryFn: () => api.get<{ products: Product[] }>(`businesses/${selectedBusiness?.id}/catalogues/${selectedCatalogue?.id}/products`), enabled: Boolean(selectedBusiness && selectedCatalogue) });
-  const publicationKey = ['publication', selectedBusiness?.id, selectedCatalogue?.id] as const;
-  const publication = useQuery({ queryKey: publicationKey, queryFn: () => api.get<{ publication: { is_published: boolean; public_url?: string | null } }>(`businesses/${selectedBusiness?.id}/catalogues/${selectedCatalogue?.id}/publication`), enabled: Boolean(selectedBusiness && selectedCatalogue) });
+  const products = useQuery({ queryKey: ['products', selectedBusiness?.id, selectedCatalogue?.id] as const, queryFn: () => api.get<{ products: Product[] }>(`businesses/${selectedBusiness?.id}/catalogues/${selectedCatalogue?.id}/products`), enabled: Boolean(selectedBusiness && selectedCatalogue) });
+  const publication = useQuery({ queryKey: ['publication', selectedBusiness?.id, selectedCatalogue?.id] as const, queryFn: () => api.get<{ publication: { is_published: boolean; public_url?: string | null } }>(`businesses/${selectedBusiness?.id}/catalogues/${selectedCatalogue?.id}/publication`), enabled: Boolean(selectedBusiness && selectedCatalogue) });
 
-  const visits = analytics.data?.visits_over_time ?? [];
-  const series = visits.map((point) => Number(point.views || 0));
+  const series = (analytics.data?.visits_over_time ?? []).map((point) => Number(point.views || 0));
   const viewsToday = series.length ? series[series.length - 1] : 0;
   const viewsYesterday = series.length > 1 ? series[series.length - 2] : 0;
-  const delta = viewsYesterday > 0 ? Math.round(((viewsToday - viewsYesterday) / viewsYesterday) * 100) : viewsToday > 0 ? 100 : 0;
+  const delta = viewsYesterday > 0 ? Math.round(((viewsToday - viewsYesterday) / viewsYesterday) * 100) : null;
+  const weekViews = series.slice(-7).reduce((total, value) => total + value, 0);
   const periodViews = series.reduce((total, value) => total + value, 0);
   const qrViews = analytics.data?.sources?.find((source) => source.key === 'qr')?.views ?? 0;
-  const publishedCount = (catalogues.data?.catalogues ?? []).filter((item) => item.is_published).length;
-  const showDemoBadge = Boolean(selectedCatalogue) && !analytics.isLoading && periodViews === 0;
+  const productList = products.data?.products ?? [];
   const currency = new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: selectedBusiness?.currency || 'MXN' });
   const publicUrl = publication.data?.publication.is_published ? publication.data.publication.public_url : null;
+  const number = (value: number) => value.toLocaleString(currentLocale());
+
+  // "Siguiente paso": cuatro hitos que se calculan con lo que la app ya sabe.
+  const steps = [
+    { done: Boolean(publicUrl), label: t("Publica tu menú"), action: t("Publicar"), go: goToPublication },
+    { done: productList.length >= ENOUGH_PRODUCTS, label: t("Agrega al menos {{count}} productos", { count: ENOUGH_PRODUCTS }), action: t("Agregar"), go: goToProducts },
+    { done: productList.some((product) => Boolean(defaultPictureUrl(product))), label: t("Ponle foto a un producto"), action: t("Agregar foto"), go: goToProducts },
+    { done: periodViews > 0, label: t("Recibe tus primeras visitas"), action: t("Compartir"), go: share },
+  ];
+  const doneSteps = steps.filter((step) => step.done).length;
+  const nextStep = steps.find((step) => !step.done);
 
   const [milestone, setMilestone] = useState<number | null>(null);
   useEffect(() => {
@@ -134,155 +241,165 @@ export default function HomeScreen() {
     if (selectedCatalogue) router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/publication', params: { catalogueId: selectedCatalogue.id } });
     else router.push('/(tabs)/(menus)');
   }
+  function goToProducts() {
+    if (selectedCatalogue) router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/products', params: { catalogueId: selectedCatalogue.id } });
+  }
+  function share() {
+    if (publicUrl && selectedCatalogue) Share.share({ title: selectedCatalogue.name, message: publicUrl, url: publicUrl });
+    else goToPublication();
+  }
 
-  const inset = width < 380 ? 16 : 20;
-  // La cabecera oscura sube hasta el borde de la pantalla y se mete bajo la
-  // barra de estado, así que el ScrollView no debe insertar nada por su cuenta:
-  // el área segura la respeta el contenido de la cabecera, no el contenedor.
   const safeTop = Math.max(insets.top, 12);
+  if (loadingBusinesses || !selectedBusiness || catalogues.isLoading || catalogues.isError) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.background, paddingHorizontal: 20, paddingTop: safeTop + 16, gap: 16 }}>
+        {loadingBusinesses ? <LoadingState label={t("Cargando tus negocios…")} />
+          : !selectedBusiness ? (
+            <>
+              <Text accessibilityRole="header" style={{ color: theme.text, fontSize: 34, fontWeight: '900', letterSpacing: -1.2 }}>{t("Hola,")} {user?.name || user?.username}</Text>
+              <View style={{ alignItems: 'center', gap: 16, paddingVertical: 24 }}>
+                <Text style={{ color: theme.text, fontSize: 22, fontWeight: '900', textAlign: 'center' }}>{t("Crea tu primer negocio")}</Text>
+                <Text style={{ color: theme.muted, textAlign: 'center', lineHeight: 21 }}>{t("Necesitas un negocio para comenzar a crear menús.")}</Text>
+                <CreateBusinessCard />
+              </View>
+            </>
+          ) : catalogues.isLoading ? <LoadingState label={t("Preparando resumen…")} />
+          : <ErrorState message={t("No pudimos cargar el resumen de tu negocio.")} error={catalogues.error} onRetry={() => catalogues.refetch()} />}
+      </View>
+    );
+  }
 
   return (
-    <HeroScreen contentContainerStyle={{ paddingBottom: 120 }}>
-      <View style={{ width: '100%', maxWidth: 760, alignSelf: 'center' }}>
-        {loadingBusinesses ? (
-          <View style={{ paddingHorizontal: inset, paddingTop: safeTop + 12, gap: 5 }}><LoadingState label={t("Cargando tus negocios…")} /></View>
-        ) : !selectedBusiness ? (
-          <View style={{ paddingHorizontal: inset, paddingTop: safeTop + 12, gap: 16 }}>
-            <View style={{ gap: 5 }}><Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>{t("Hola,")} {user?.name || user?.username}</Text><Text style={{ color: theme.muted, lineHeight: 20 }}>{t("Así se están comportando tus menús hoy.")}</Text></View>
-            <View style={{ alignItems: 'center', gap: 16, paddingVertical: 30 }}>
-              <Text style={{ color: theme.text, fontSize: 22, fontWeight: '900', textAlign: 'center' }}>{t("Crea tu primer negocio")}</Text>
-              <Text style={{ color: theme.muted, textAlign: 'center', lineHeight: 21 }}>{t("Necesitas un negocio para comenzar a crear menús.")}</Text>
-              <CreateBusinessCard />
-            </View>
-          </View>
-        ) : catalogues.isLoading ? (
-          <View style={{ paddingHorizontal: inset, paddingTop: safeTop + 12 }}><LoadingState label={t("Preparando resumen…")} /></View>
-        ) : catalogues.isError ? (
-          <View style={{ paddingHorizontal: inset, paddingTop: safeTop + 12 }}><ErrorState message={t("No pudimos cargar el resumen de tu negocio.")} error={catalogues.error} onRetry={() => catalogues.refetch()} /></View>
-        ) : <>
-          <HeroHeader paddingHorizontal={inset} paddingBottom={26} gap={4} elevated>
+    <>
+      <HeroSheet
+        heroMinHeight={208}
+        hero={withOrders ? (
+          <View style={{ gap: 22 }}>
             <BusinessSwitcher variant="dark" />
-
-            <View style={{ height: 22 }} />
+            <View style={{ flexDirection: 'row', gap: 16 }}>
+              <View style={{ flex: 1 }}>
+                {/* TODO(diseño): el diseño pide "Pedidos hoy", pero el backend sólo
+                    entrega las cuentas abiertas; se muestran los pedidos en curso. */}
+                <Text style={{ color: theme.heroMuted, fontSize: 12, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Pedidos en curso")}</Text>
+                <Text style={{ color: theme.heroText, fontSize: 44, lineHeight: 48, fontWeight: '900', letterSpacing: -1.5, fontVariant: ['tabular-nums'] }}>{orders.accounts.reduce((sum, account) => sum + account.orders.filter((order) => order.status !== 'cancelled').length, 0)}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.heroMuted, fontSize: 12, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Cuentas abiertas")}</Text>
+                <Text style={{ color: theme.heroText, fontSize: 44, lineHeight: 48, fontWeight: '900', letterSpacing: -1.5, fontVariant: ['tabular-nums'] }}>{orders.accounts.length}</Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={{ gap: 22 }}>
+            <BusinessSwitcher variant="dark" />
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14 }}>
-              <View style={{ gap: 2 }}>
-                <Text style={{ color: theme.heroMuted, fontSize: 10, fontWeight: '800', letterSpacing: 1.3, textTransform: 'uppercase' }}>{t("Vistas hoy")}</Text>
-                <Text style={{ color: '#FFFDF5', fontSize: 56, lineHeight: 58, fontWeight: '900', fontVariant: ['tabular-nums'], letterSpacing: -2 }}>{viewsToday.toLocaleString(currentLocale())}</Text>
+              <View>
+                <Text style={{ color: theme.heroMuted, fontSize: 12, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Vistas hoy")}</Text>
+                <Text accessibilityLabel={t("{{count}} vistas hoy", { count: viewsToday })} style={{ color: theme.heroText, fontSize: 64, lineHeight: 68, fontWeight: '900', letterSpacing: -2, fontVariant: ['tabular-nums'] }}>{number(viewsToday)}</Text>
               </View>
-              <View style={{ alignItems: 'flex-end', gap: 6, paddingBottom: 5 }}>
-                <View style={{ minHeight: 24, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, borderRadius: 999, backgroundColor: 'rgba(255,224,90,0.16)' }}>
-                  {delta >= 0 ? <TrendUpIcon color={theme.yellow} size={10} /> : <TrendDownIcon color={theme.yellow} size={10} />}
-                  <Text style={{ color: theme.yellow, fontSize: 11, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{delta >= 0 ? '+' : ''}{delta}%</Text>
-                </View>
-                <Text style={{ color: theme.heroMuted, fontSize: 10.5, fontWeight: '500' }}>{t("vs. ayer")}</Text>
+              <View style={{ alignItems: 'flex-end', gap: 6, paddingBottom: 10 }}>
+                {delta !== null ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, minHeight: 24, borderRadius: 99, backgroundColor: 'rgba(255,224,90,0.16)' }}>
+                    {delta >= 0 ? <TrendUpIcon color={theme.yellow} size={10} /> : <TrendDownIcon color={theme.yellow} size={10} />}
+                    <Text style={{ color: theme.yellow, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{delta >= 0 ? '+' : ''}{delta}% {t("vs. ayer")}</Text>
+                  </View>
+                ) : null}
+                <Text style={{ color: theme.heroMuted, fontSize: 13, fontWeight: '600' }}>{t("Últimos 7 días")}</Text>
+                <Text style={{ color: theme.heroText, fontSize: 22, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{number(weekViews)}</Text>
               </View>
             </View>
-
-            <View style={{ height: 14 }} />
-            <AreaChart series={series} height={70} color={theme.yellow} dotStroke={theme.hero} />
-
-            <View style={{ height: 18 }} />
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <HeroStat value={periodViews.toLocaleString(currentLocale())} label={isSummary ? t("vistas · 7 días") : t("vistas · 30 días")} />
-              {/* De dónde llegan las visitas es parte del informe completo: el
-                  resumen del gratuito no lo trae, y un cero aquí mentiría. */}
-              {isSummary ? null : <HeroStat value={qrViews.toLocaleString(currentLocale())} label={t("escaneos de QR")} />}
-              <HeroStat value={publishedCount} label={publishedCount === 1 ? t("menú publicado") : t("menús publicados")} />
-            </View>
-          </HeroHeader>
-
-          <View style={{ paddingHorizontal: inset, paddingTop: 22, gap: 22 }}>
-            {showDemoBadge ? <View style={{ borderRadius: 16, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}><View style={{ minHeight: 24, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 999, backgroundColor: theme.yellow, paddingHorizontal: 9 }}><Text style={{ color: '#111111', fontSize: 10, fontWeight: '800', letterSpacing: 0.6 }}>{t("EJEMPLO")}</Text></View><Text style={{ flex: 1, color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Todavía no tienes visitas reales. Esto es cómo se verá tu panel cuando tus clientes empiecen a escanear.")}</Text></View> : null}
-
-            {selectedCatalogue && products.data?.products.length ? (
-              <View style={{ gap: 11 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <Text style={{ color: theme.muted, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.3, textTransform: 'uppercase' }}>{t("Cambio rápido")}</Text>
-                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/products', params: { catalogueId: selectedCatalogue.id } })}><Text style={{ color: theme.yellowPressed, fontSize: 11.5, fontWeight: '800' }}>{t("Ver los {{count}}", { count: products.data.products.length })}</Text></Pressable>
-                </View>
-                <View style={{ ...cardStyle(theme), overflow: 'hidden' }}>
-                  {products.data.products.slice(0, 3).map((product) => <QuickProductRow key={product.id} product={product} currency={currency} businessId={selectedBusiness.id} catalogueId={selectedCatalogue.id} />)}
-                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/(menus)/[catalogueId]/products', params: { catalogueId: selectedCatalogue.id } })} style={({ pressed }) => ({ padding: 13, flexDirection: 'row', alignItems: 'center', gap: 11, opacity: pressed ? 0.75 : 1 })}>
-                    <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: theme.yellow, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><PlusIcon color={theme.onYellow} size={18} /></View>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={{ color: theme.text, fontSize: 14.5, fontWeight: '800' }}>{t("Agregar producto")}</Text>
-                      <Text style={{ color: theme.muted, fontSize: 11.5 }}>{t("A {{name}}", { name: selectedCatalogue.name })}</Text>
-                    </View>
-                  </Pressable>
-                </View>
-              </View>
-            ) : null}
-
-            {selectedCatalogue ? (
-              <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: theme.yellow, padding: 20, gap: 16 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                  <View style={{ gap: 3, flex: 1, minWidth: 0 }}>
-                    <Text style={{ color: 'rgba(17,17,17,0.6)', fontSize: 10, fontWeight: '800', letterSpacing: 1.3, textTransform: 'uppercase' }}>{t("Tu menú en vivo")}</Text>
-                    <Text numberOfLines={1} style={{ color: '#111111', fontSize: 22, fontWeight: '900' }}>{selectedCatalogue.name}</Text>
-                    <Text numberOfLines={1} style={{ color: 'rgba(17,17,17,0.65)', fontSize: 12, fontWeight: '500' }}>{publicUrl ? publicUrl.replace(/^https?:\/\//, '') : t("Sin publicar todavía")}</Text>
-                  </View>
-                  <View style={{ width: 62, height: 62, borderRadius: 14, backgroundColor: '#111111', padding: 7, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {publicUrl ? <QRCode value={`${publicUrl}?src=qr`} size={48} color="#FFE05A" backgroundColor="#111111" /> : <Text style={{ color: '#8C8578', fontSize: 9, fontWeight: '700', textAlign: 'center' }}>{t("Borrador")}</Text>}
-                  </View>
-                </View>
-                <View style={{ flexDirection: 'row', gap: 9 }}>
-                  <Pressable onPress={goToPublication} style={({ pressed }) => ({ flex: 1, minHeight: 46, borderRadius: 14, backgroundColor: '#111111', alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}><Text style={{ color: theme.yellow, fontWeight: '800', fontSize: 14 }}>{t("Ver como cliente")}</Text></Pressable>
-                  <Pressable
-                    disabled={!publicUrl}
-                    onPress={() => { if (publicUrl) Share.share({ title: selectedCatalogue.name, message: publicUrl, url: publicUrl }); }}
-                    style={({ pressed }) => ({ width: 52, minHeight: 46, borderRadius: 14, backgroundColor: 'rgba(17,17,17,0.1)', alignItems: 'center', justifyContent: 'center', opacity: !publicUrl ? 0.4 : pressed ? 0.7 : 1 })}
-                  >
-                    <ShareIcon color="#111111" size={18} />
-                  </Pressable>
-                </View>
-              </View>
-            ) : (
-              <Pressable onPress={() => router.push('/(tabs)/(menus)')} style={({ pressed }) => ({ ...cardStyle(theme), padding: 20, alignItems: 'center', gap: 8, opacity: pressed ? 0.8 : 1 })}>
-                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>{t("Crea tu primer menú")}</Text>
-                <Text style={{ color: theme.muted, fontSize: 12.5, textAlign: 'center' }}>{t("Necesitas un menú para empezar a compartirlo con tus clientes.")}</Text>
-              </Pressable>
-            )}
-
-            {businesses.length > 1 ? (
-              <View style={{ gap: 11 }}>
-                <Text style={{ color: theme.muted, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.3, textTransform: 'uppercase' }}>{t("Tus sucursales")}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 11, paddingBottom: 2 }}>
-                  {businesses.map((business) => {
-                    const selected = business.id === selectedBusiness.id;
-                    const summary = businessSummaries.get(business.id);
-                    return (
-                      <Pressable key={business.id} onPress={() => selectBusiness(business.id)} style={({ pressed }) => ({ width: 150, padding: 14, borderRadius: 20, borderCurve: 'continuous', backgroundColor: theme.surface, borderWidth: 1.5, borderColor: selected ? theme.yellowPressed : theme.border, gap: 10, opacity: pressed ? 0.8 : 1, ...(selected ? {} : theme.cardShadow) })}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <View style={{ width: 32, height: 32, borderRadius: 11, backgroundColor: selected ? theme.yellow : theme.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: theme.onYellow, fontSize: 14, fontWeight: '900' }}>{business.name.trim().charAt(0).toUpperCase()}</Text></View>
-                        </View>
-                        <Text numberOfLines={2} style={{ color: theme.text, fontSize: 13.5, lineHeight: 17, fontWeight: '800' }}>{business.name}</Text>
-                        {limits.allow_analytics ? (
-                          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 5 }}>
-                            <Text style={{ color: theme.text, fontSize: 19, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{summary?.isLoading ? '—' : (summary?.views ?? 0)}</Text>
-                            <Text style={{ color: theme.muted, fontSize: 10.5, fontWeight: '500' }}>{t("vistas hoy")}</Text>
-                          </View>
-                        ) : null}
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
+            {periodViews === 0 && !analytics.isLoading ? (
+              <Text style={{ color: theme.heroMuted, fontSize: 14, lineHeight: 20, marginTop: -10 }}>{t("Aún sin visitas. Comparte tu QR para recibir las primeras.")}</Text>
             ) : null}
           </View>
-        </>}
-      </View>
+        )}
+      >
+        {withOrders ? (
+          <>
+            <PendingCard accounts={orders.accounts} onAccept={(orderId) => orders.setStatus(orderId, 'received')} />
+            {tablesQuery.data?.tables.length ? <TablesNow tables={tablesQuery.data.tables} accounts={orders.accounts} /> : null}
+            {selectedCatalogue ? (
+              <Pressable accessibilityRole="button" onPress={goToPublication} style={({ pressed }) => ({ ...cardStyle(theme, 20), padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.8 : 1 })}>
+                <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#111111', alignItems: 'center', justifyContent: 'center' }}>
+                  {publicUrl ? <QRCode value={`${publicUrl}?src=qr`} size={36} color="#FFE05A" backgroundColor="#111111" /> : null}
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text numberOfLines={1} style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>{t("Menú {{name}}", { name: selectedCatalogue.name })} · {publicUrl ? t("en vivo") : t("sin publicar")}</Text>
+                  <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 13 }}>{publicUrl ? publicUrl.replace(/^https?:\/\//, '') : t("Ver el QR y el enlace")}</Text>
+                </View>
+                <ChevronRightIcon color={theme.muted} size={12} />
+              </Pressable>
+            ) : null}
+          </>
+        ) : (
+          <>
+        {selectedCatalogue ? (
+          <View style={{ borderRadius: 24, borderCurve: 'continuous', backgroundColor: theme.yellow, padding: 18, gap: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+              <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                <Text style={{ color: 'rgba(17,17,17,0.66)', fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Tu menú en vivo")}</Text>
+                <Text numberOfLines={1} style={{ color: theme.onYellow, fontSize: 22, fontWeight: '900' }}>{selectedCatalogue.name}</Text>
+                <Text numberOfLines={1} style={{ color: 'rgba(17,17,17,0.7)', fontSize: 13, fontWeight: '600' }}>{publicUrl ? publicUrl.replace(/^https?:\/\//, '') : t("Sin publicar todavía")}</Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("Ver el QR y el enlace")} onPress={goToPublication} style={{ width: 64, height: 64, borderRadius: 14, backgroundColor: '#111111', padding: 7, alignItems: 'center', justifyContent: 'center' }}>
+                {publicUrl ? <QRCode value={`${publicUrl}?src=qr`} size={50} color="#FFE05A" backgroundColor="#111111" /> : <Text style={{ color: theme.heroMuted, fontSize: 10, fontWeight: '700', textAlign: 'center' }}>{t("Borrador")}</Text>}
+              </Pressable>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable accessibilityRole="button" onPress={share} style={({ pressed }) => ({ flex: 1, minHeight: 48, borderRadius: 14, borderCurve: 'continuous', backgroundColor: '#111111', flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}>
+                <ShareIcon color={theme.yellow} size={16} />
+                <Text style={{ color: theme.yellow, fontWeight: '800', fontSize: 15 }}>{publicUrl ? t("Compartir menú") : t("Publicar menú")}</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("Ver como cliente")} onPress={goToPublication} style={({ pressed }) => ({ width: 48, height: 48, borderRadius: 14, borderCurve: 'continuous', backgroundColor: 'rgba(17,17,17,0.1)', alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}>
+                <EyeIcon color="#111111" size={19} />
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/(menus)')} style={({ pressed }) => ({ ...cardStyle(theme), padding: 20, alignItems: 'center', gap: 8, opacity: pressed ? 0.8 : 1 })}>
+            <Text style={{ color: theme.text, fontSize: 17, fontWeight: '800' }}>{t("Crea tu primer menú")}</Text>
+            <Text style={{ color: theme.muted, fontSize: 14, textAlign: 'center' }}>{t("Necesitas un menú para empezar a compartirlo con tus clientes.")}</Text>
+          </Pressable>
+        )}
+
+        {selectedCatalogue && nextStep && !products.isLoading ? (
+          <View style={{ gap: 10 }}>
+            <SectionTitle title={t("Siguiente paso")} />
+            <Pressable accessibilityRole="button" accessibilityLabel={`${nextStep.label}. ${t("{{done}} de {{total}} pasos", { done: doneSteps, total: steps.length })}`} onPress={nextStep.go} style={({ pressed }) => ({ ...cardStyle(theme, 20), padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, opacity: pressed ? 0.8 : 1 })}>
+              <ProgressRing done={doneSteps} total={steps.length} />
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>{nextStep.label}</Text>
+                <Text style={{ color: theme.muted, fontSize: 13 }}>{t("{{done}} de {{total}} pasos para dejar tu menú listo", { done: doneSteps, total: steps.length })}</Text>
+              </View>
+              <ChevronRightIcon color={theme.muted} size={12} />
+            </Pressable>
+          </View>
+        ) : null}
+
+        {selectedCatalogue && productList.length ? (
+          <View style={{ gap: 10 }}>
+            <SectionTitle title={t("Cambio rápido")} action={productList.length > 3 ? t("Ver los {{count}}", { count: productList.length }) : undefined} onAction={goToProducts} />
+            <View style={{ ...cardStyle(theme, 20), overflow: 'hidden' }}>
+              {productList.slice(0, 3).map((product, index) => (
+                <QuickProductRow key={product.id} product={product} currency={currency} businessId={selectedBusiness.id} catalogueId={selectedCatalogue.id} divider={index > 0} />
+              ))}
+            </View>
+          </View>
+        ) : null}
+          </>
+        )}
+      </HeroSheet>
       {selectedCatalogue && milestone ? (
         <MilestoneSheet
           visible
           milestone={milestone}
           catalogueName={selectedCatalogue.name}
           isPublished={selectedCatalogue.is_published}
-          // El resumen del gratuito no dice de dónde llegan las visitas: sin ese
-          // dato, la casilla del primer escaneo se quedaría vacía para siempre.
+          // El resumen del gratuito no dice de dónde llegan las visitas.
           hasScans={isSummary ? null : qrViews > 0}
           onDismiss={dismissMilestone}
         />
       ) : null}
-    </HeroScreen>
+    </>
   );
 }

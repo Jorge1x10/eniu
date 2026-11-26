@@ -1,36 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Box, Plus, QrCode, RefreshCw, ScanLine } from "lucide-react";
-import { useNavigate } from "react-router";
+import { ExternalLink, RefreshCw } from "lucide-react";
+import { Link, useNavigate } from "react-router";
 
 import CreateBusinessModal from "../../Business/components/CreateBusinessModal";
 import { useBusiness } from "../../Business/services/useBusiness";
 import CreateCatalogueModal from "../../Catalogue/components/CreateCatalogueModal";
 import { useCatalogueService } from "../../Catalogue/services/catalogueService";
 import { getLastCatalogue, rememberCatalogue } from "../../Catalogue/utils/lastCatalogue";
+import OrderingSwitch from "../../Ordering/components/OrderingSwitch";
+import { useLiveOrdersContext } from "../../Ordering/context/LiveOrdersContext";
+import { orderingErrorMessage, useOrderingService } from "../../Ordering/services/orderingService";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { usePlan } from "../../auth/hooks/usePlan";
-import { ActiveMenus, DashboardSkeleton, MenuViewsChart, MetricCard, QuickActions, RecentActivity } from "../components/HomeDashboardSections";
+import { DashboardSkeleton, KpiCard, MenuViewsCard, PendingOrdersCard, ShortcutsCard, TablesNowCard } from "../components/HomeDashboardSections";
 import { analyticsScopeFor, useDashboardSummaryService } from "../services/dashboardSummaryService";
 import { buildDashboardViewModel } from "../utils/dashboardViewModel";
 import { useTranslation } from "react-i18next";
-import { useMenuFonts } from "../../Templates/utils/menuFonts";
+import { formatCurrency, formatDate, formatNumber } from "../../../i18n/formats";
 
-const metricDefinitions = [
-  { key: "monthlyViews", title: "Vistas este mes", icon: ScanLine, tone: "yellow" },
-  { key: "activeMenus", title: "Menús activos", icon: BookOpen, tone: "cream" },
-  { key: "products", title: "Productos", icon: Box, tone: "sand" },
-  { key: "qrScans", title: "Escaneos QR", icon: QrCode, tone: "yellow", titleHint: "Atribución aproximada basada en enlaces con origen QR." },
-];
-
-// El gratuito ve sus visitas de los últimos 7 días, no las del mes.
-const summaryMetricDefinitions = metricDefinitions.map((metric) => (
-  metric.key === "monthlyViews" ? { ...metric, key: "weeklyViews", title: "Vistas en 7 días" } : metric
-));
+const number = (value) => value === null || value === undefined ? "—" : formatNumber(value);
 
 export default function HomePage() {
   const { t } = useTranslation();
-  // El inicio usa Manrope; ya no llega con la hoja global de tipografías.
-  useMenuFonts("manrope");
 
   const { user } = useAuth();
   const { limits } = usePlan();
@@ -39,11 +30,15 @@ export default function HomePage() {
   const businessId = selectedBusiness?.id || null;
   const loadSummary = useDashboardSummaryService(businessId, selectedBusiness?.timezone, analyticsScope);
   const { create } = useCatalogueService(businessId);
+  const { listTables, setOrdering, setOrderStatus } = useOrderingService(businessId);
+  const { accounts, ordering, refresh: refreshOrders } = useLiveOrdersContext();
   const navigate = useNavigate();
   const [rawData, setRawData] = useState(null);
-  const [chartDays, setChartDays] = useState(7);
+  const [tables, setTables] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [isToggling, setIsToggling] = useState(false);
   const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [isCreateBusinessOpen, setIsCreateBusinessOpen] = useState(false);
   const mountedRef = useRef(true);
@@ -61,7 +56,7 @@ export default function HomePage() {
     if (!response.ok) { setError(t("No pudimos cargar el resumen de tu negocio.")); setIsLoading(false); return; }
     if (response.data.selectedCatalogue) rememberCatalogue(businessId, response.data.selectedCatalogue.id);
     setRawData(response.data); setIsLoading(false);
-  }, [businessId, loadSummary]);
+  }, [businessId, loadSummary, t]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -69,47 +64,143 @@ export default function HomePage() {
     return () => { window.clearTimeout(task); controller.abort(); };
   }, [load]);
 
-  const viewModel = useMemo(() => buildDashboardViewModel({ ...(rawData || {}), chartDays }), [chartDays, rawData]);
-  const visibleName = user?.name || user?.username || "bienvenido";
-  const isSummary = viewModel.analyticsScope === "summary";
-  const selectedMenuDetail = rawData?.analytics ? t("Menú seleccionado: {{name}}", { name: viewModel.selectedCatalogue?.name }) : t("Sin información disponible");
-  const metricDetails = {
-    monthlyViews: selectedMenuDetail,
-    weeklyViews: selectedMenuDetail,
-    activeMenus: t("{{count}} en borrador", { count: viewModel.metrics.draftMenus }),
-    // Con el tope del plan a la vista, quien se acerca a los 40 productos lo
-    // sabe antes de toparse con él al crear el siguiente.
-    products: viewModel.metrics.products === null
-      ? t("Sin resumen agregado disponible")
-      : limits.max_products_per_catalogue
-        ? t("Tu plan permite hasta {{limit}} por menú", { limit: limits.max_products_per_catalogue })
-        : t("Menú seleccionado: {{name}}", { name: viewModel.selectedCatalogue?.name }),
-    qrScans: isSummary ? t("Incluido en Esencial") : rawData?.analytics ? t("Atribución aproximada en el periodo") : t("Sin información disponible"),
-  };
+  // Las mesas sólo alimentan "Mesas ahora" y "de N mesas": si fallan, Inicio
+  // sigue en pie con esas dos piezas vacías.
+  useEffect(() => {
+    if (!businessId) return undefined;
+    const controller = new AbortController();
+    listTables({ signal: controller.signal }).then((response) => {
+      if (response.aborted || !mountedRef.current) return;
+      setTables(response.ok ? response.data?.tables || [] : []);
+    });
+    return () => controller.abort();
+  }, [businessId, listTables]);
 
-  function openCreateMenu() {
-    if (businessId) setIsCreateMenuOpen(true);
+  const viewModel = useMemo(() => buildDashboardViewModel({ ...(rawData || {}), chartDays: 7 }), [rawData]);
+  const visibleName = user?.name || user?.username || t("bienvenido");
+  const catalogue = viewModel.selectedCatalogue;
+  const currency = selectedBusiness?.currency || "MXN";
+
+  const activeOrders = accounts.reduce((sum, account) => sum + account.orders.filter((order) => order.status !== "cancelled").length, 0);
+  const pendingOrders = accounts.reduce((sum, account) => sum + (account.pending_orders || 0), 0);
+  const toCollect = accounts.reduce((sum, account) => sum + Number(account.total || 0), 0);
+  const activeTables = tables ? tables.filter((table) => table.is_active).length : null;
+  const productLimit = limits?.max_products_per_catalogue;
+
+  async function toggleOrdering() {
+    setIsToggling(true); setActionError("");
+    const response = await setOrdering(!ordering?.enabled);
+    setIsToggling(false);
+    if (!response.ok) { setActionError(orderingErrorMessage(response, t("No pudimos cambiar el estado de los pedidos."))); return; }
+    refreshOrders({ force: true });
   }
 
-  function handleCreated(catalogue) {
+  async function acceptOrder(order) {
+    setActionError("");
+    const response = await setOrderStatus(order.id, "received");
+    if (!response.ok) setActionError(orderingErrorMessage(response, t("No pudimos actualizar el pedido.")));
+    await refreshOrders({ force: true });
+  }
+
+  function handleCreated(created) {
     setIsCreateMenuOpen(false);
-    rememberCatalogue(businessId, catalogue.id);
-    navigate(`/dashboard/businesses/${businessId}/catalogues/${catalogue.id}`, { state: { catalogue } });
+    rememberCatalogue(businessId, created.id);
+    navigate(`/dashboard/businesses/${businessId}/catalogues/${created.id}`, { state: { catalogue: created } });
   }
 
-  if (isLoadingBusinesses || isLoading) return <div className="p-2 sm:p-4"><DashboardSkeleton /></div>;
+  if (isLoadingBusinesses || isLoading) return <DashboardSkeleton />;
 
   if (!selectedBusiness) {
-    return <section className="flex min-h-[70vh] items-center justify-center p-4 text-center"><div className="max-w-lg rounded-[18px] border border-[#E9DDB7] bg-[#FFFDF5] p-8"><h1 className="text-2xl font-extrabold">{t("Selecciona un negocio")}</h1><p className="mt-3 text-sm text-[#666666]">{t("Selecciona un negocio desde la barra lateral o crea uno para comenzar a administrar tus menús.")}</p><button type="button" onClick={() => setIsCreateBusinessOpen(true)} className="mt-6 min-h-11 cursor-pointer rounded-xl bg-[#FFE05A] px-5 font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111111]">{t("Crear negocio")}</button><CreateBusinessModal isOpen={isCreateBusinessOpen} onClose={() => setIsCreateBusinessOpen(false)} /></div></section>;
+    return (
+      <section className="flex min-h-[70vh] items-center justify-center p-4 text-center">
+        <div className="max-w-lg rounded-3xl border border-eniu-warm bg-eniu-surface p-8">
+          <h1 className="text-2xl font-black">{t("Selecciona un negocio")}</h1>
+          <p className="mt-3 text-sm text-eniu-muted">{t("Selecciona un negocio desde la barra lateral o crea uno para comenzar a administrar tus menús.")}</p>
+          <button type="button" onClick={() => setIsCreateBusinessOpen(true)} className="mt-6 min-h-11 cursor-pointer rounded-xl bg-eniu-yellow px-5 font-bold text-eniu-ink">{t("Crear negocio")}</button>
+          <CreateBusinessModal isOpen={isCreateBusinessOpen} onClose={() => setIsCreateBusinessOpen(false)} />
+        </div>
+      </section>
+    );
   }
 
-  return <section className="min-w-0 space-y-6 overflow-x-hidden p-2 text-[#111111] font-['Manrope',ui-sans-serif,system-ui] sm:p-4">
-    <header className="flex flex-col gap-3 rounded-xl bg-white sm:flex-row sm:items-start sm:justify-between sm:gap-5 p-3 items-center justify-center sm:h-20"><div><h1 className="text-[25px] font-extrabold leading-tight">{t("Hola,")} {visibleName} 👋</h1><p className="mt-1 text-xs text-[#2A2A2A]">{t("Así se están comportando tus menús hoy.")}</p></div><button type="button" onClick={openCreateMenu} className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#FFE05A] px-4.5 text-sm font-bold hover:bg-[#E8C93D] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111111] sm:w-auto"><Plus aria-hidden="true" size={18} /> {t("Crear menú")}</button></header>
-    {error ? <div className="rounded-2xl border border-red-200 bg-white p-8 text-center"><p role="alert" className="font-semibold">{t("No pudimos cargar el resumen de tu negocio.")}</p><button type="button" onClick={() => load()} className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-[#2A2A2A] px-4 font-bold text-white"><RefreshCw aria-hidden="true" size={17} /> {t("Reintentar")}</button></div> : <>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{(isSummary ? summaryMetricDefinitions : metricDefinitions).map(({ key, ...metric }) => <MetricCard key={key} {...metric} value={viewModel.metrics[key]} detail={metricDetails[key]} />)}</div>
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,376px)]"><MenuViewsChart points={viewModel.chart} total={viewModel.chartTotal} period={viewModel.period} days={chartDays} onDaysChange={setChartDays} selectable={!isSummary} /><QuickActions businessId={businessId} catalogueId={viewModel.selectedCatalogue?.id} onCreateMenu={openCreateMenu} /></div>
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,376px)]"><ActiveMenus menus={viewModel.menus} businessId={businessId} onCreateMenu={openCreateMenu} /><RecentActivity /></div>
-    </>}
-    {isCreateMenuOpen && <CreateCatalogueModal onClose={() => setIsCreateMenuOpen(false)} onCreate={create} onCreated={handleCreated} />}
-  </section>;
+  const today = formatDate(new Date(), { weekday: "long", day: "numeric", month: "long" });
+  const publicPath = catalogue?.is_published && catalogue?.public_slug ? `/m/${catalogue.public_slug}` : null;
+
+  return (
+    <section className="mx-auto w-full max-w-[1400px] min-w-0 space-y-5 text-eniu-text">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-extrabold uppercase tracking-[1.2px] text-eniu-gold">{today}</p>
+          <h1 className="mt-1 text-[34px] font-black leading-tight tracking-[-1.2px]">{t("Hola, {{name}}", { name: visibleName })}</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {ordering && ordering.reason !== "plan" && (
+            <OrderingSwitch enabled={ordering.enabled} busy={isToggling} onToggle={toggleOrdering} />
+          )}
+          {publicPath ? (
+            <a href={publicPath} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-eniu-hero px-4 font-bold text-eniu-cream hover:bg-eniu-hero-hover">
+              {t("Ver menú como cliente")} <ExternalLink size={16} aria-hidden="true" />
+            </a>
+          ) : catalogue ? (
+            <Link to={`/dashboard/businesses/${businessId}/catalogues/${catalogue.id}/qr`} className="inline-flex min-h-11 items-center rounded-xl bg-eniu-hero px-4 font-bold text-eniu-cream hover:bg-eniu-hero-hover">
+              {t("Publicar menú")}
+            </Link>
+          ) : (
+            <button type="button" onClick={() => setIsCreateMenuOpen(true)} className="min-h-11 cursor-pointer rounded-xl bg-eniu-hero px-4 font-bold text-eniu-cream hover:bg-eniu-hero-hover">
+              {t("Crea tu primer menú")}
+            </button>
+          )}
+        </div>
+      </header>
+
+      {actionError && <p role="alert" className="rounded-xl bg-eniu-danger-soft px-4 py-3 text-sm font-semibold text-eniu-danger">{actionError}</p>}
+
+      {error ? (
+        <div className="rounded-3xl border border-eniu-warm bg-eniu-surface p-8 text-center">
+          <p role="alert" className="font-semibold">{t("No pudimos cargar el resumen de tu negocio.")}</p>
+          <button type="button" onClick={() => load()} className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-eniu-hero px-4 font-bold text-eniu-cream"><RefreshCw aria-hidden="true" size={17} /> {t("Reintentar")}</button>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
+            {/* TODO(diseño): el diseño pide "Pedidos hoy", pero el backend sólo
+                entrega las cuentas abiertas; se muestran los pedidos en curso. */}
+            <KpiCard
+              title={t("Pedidos en curso")}
+              value={number(activeOrders)}
+              detail={pendingOrders ? t("{{count}} por aceptar", { count: pendingOrders }) : t("Ninguno por aceptar")}
+            />
+            <KpiCard
+              title={t("Cuentas abiertas")}
+              value={number(accounts.length)}
+              accessory={activeTables !== null ? t("de {{count}} mesas", { count: activeTables }) : null}
+              detail={t("{{amount}} por cobrar", { amount: formatCurrency(toCollect, currency) })}
+            />
+            <KpiCard
+              title={t("Vistas en 7 días")}
+              value={number(rawData?.analytics ? viewModel.chartTotal : null)}
+              detail={rawData?.analytics ? t("Menú {{name}}", { name: catalogue?.name }) : t("Sin información disponible")}
+            />
+            <KpiCard
+              title={t("Productos")}
+              value={number(viewModel.metrics.products)}
+              accessory={productLimit && viewModel.metrics.products !== null ? t("de {{count}}", { count: productLimit }) : null}
+              detail={productLimit ? t("Límite por menú de tu plan") : catalogue ? t("Menú {{name}}", { name: catalogue.name }) : t("Sin información disponible")}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <PendingOrdersCard accounts={accounts} ordering={ordering} onAccept={acceptOrder} />
+            <TablesNowCard tables={tables} accounts={accounts} />
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <MenuViewsCard points={viewModel.chart} total={viewModel.chartTotal} hasData={Boolean(rawData?.analytics)} />
+            <ShortcutsCard businessId={businessId} catalogueId={catalogue?.id} />
+          </div>
+        </>
+      )}
+      {isCreateMenuOpen && <CreateCatalogueModal onClose={() => setIsCreateMenuOpen(false)} onCreate={create} onCreated={handleCreated} />}
+    </section>
+  );
 }

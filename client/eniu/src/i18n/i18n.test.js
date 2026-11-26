@@ -18,7 +18,7 @@ describe("catálogo de traducción", () => {
   it("ninguna entrada se quedó vacía o sin traducir", () => {
     // Estas se escriben igual en los dos idiomas; que coincidan no es un
     // descuido, así que se declaran para que el resto sí se vigile.
-    const identical = new Set(["Natural", "Retro", "Visible", "WhatsApp"]);
+    const identical = new Set(["Natural", "No", "Retro", "Visible", "WhatsApp"]);
     const untouched = Object.entries(en)
       .filter(([source, translated]) =>
         !translated.trim() || (source === translated && !identical.has(source)))

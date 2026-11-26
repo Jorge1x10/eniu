@@ -24,8 +24,10 @@ export default function MenusLayout() {
       {/* Sin header nativo: esta pantalla dibuja su propia cabecera oscura, que
           sube hasta el borde y lleva el interruptor de visibilidad. */}
       <Stack.Screen name="[catalogueId]/index" options={{ headerShown: false, title: t("Menú") }} />
-      <Stack.Screen name="[catalogueId]/products" options={{ title: 'Productos' }} />
-      <Stack.Screen name="[catalogueId]/categories" options={{ title: t("Categorías") }} />
+      {/* Productos y Categorías dibujan su propio encabezado, con el botón de
+          crear a la derecha. */}
+      <Stack.Screen name="[catalogueId]/products" options={{ headerShown: false, title: t("Productos") }} />
+      <Stack.Screen name="[catalogueId]/categories" options={{ headerShown: false, title: t("Categorías") }} />
       <Stack.Screen name="[catalogueId]/template" options={{ title: t("Diseño del menú") }} />
       <Stack.Screen name="[catalogueId]/promotions" options={{ title: t("Promociones") }} />
       <Stack.Screen name="[catalogueId]/publication" options={{ title: t("Publicar y compartir") }} />

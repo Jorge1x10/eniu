@@ -1,191 +1,144 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from 'react-native';
-
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Alert, Platform, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { BusinessPhotoField } from '@/components/business-photo';
-import { BusinessSwitcher } from '@/components/business-switcher';
-import { Button } from '@/components/ui/button';
-import { ChoiceField } from '@/components/ui/choice-field';
-import { Feedback } from '@/components/ui/feedback';
-import { FormField } from '@/components/ui/form-field';
-import { cardStyle, useEniuTheme } from '@/constants/eniu-theme';
-import { PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '@/constants/legal';
+import { EniuSwitch } from '@/components/ui/eniu-switch';
+import { GroupedList, ListRow } from '@/components/ui/grouped-list';
+import { BellIcon, ChevronRightIcon, ClockIcon, GlobeIcon, HelpIcon, MoonIcon, StoreIcon } from '@/components/ui/icons';
+import { useEniuTheme } from '@/constants/eniu-theme';
 import { useScreenTopPadding } from '@/constants/layout';
 import { useAuth } from '@/features/auth/auth-context';
 import { useBusiness } from '@/features/business/business-context';
-import { currentLocale } from '@/i18n/formats';
-import { useLanguage } from '@/i18n/language-context';
 import { getMilestoneNotificationsEnabled, setMilestoneNotificationsEnabled } from '@/features/milestones/milestone-store';
-import { api } from '@/lib/api';
-import { deviceTimezone } from '@/lib/analytics-range';
-import { currencyChoices, timezoneChoices } from '@/lib/regions';
-import type { Business, User } from '@/types/models';
-import { useTranslation } from 'react-i18next';
-
-function LinkRow({ label, url }: { label: string; url: string }) {
-  const theme = useEniuTheme();
-  return (
-    <Pressable accessibilityRole="link" onPress={() => Linking.openURL(url)} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-      <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5, textDecorationLine: 'underline' }}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function Section({ label, children }: React.PropsWithChildren<{ label: string }>) {
-  const theme = useEniuTheme();
-  return <View style={{ gap: 11 }}><Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{label}</Text><View style={{ padding: 18, gap: 14, ...cardStyle(theme) }}>{children}</View></View>;
-}
+import { useLanguage } from '@/i18n/language-context';
 
 const LANGUAGE_OPTIONS = [
   { code: 'es', label: 'Español' },
   { code: 'en', label: 'English' },
 ] as const;
 
+/** "CDMX" en vez de "America/Mexico_City": la ciudad es lo que se reconoce. */
+function cityOf(timezone?: string | null) {
+  if (!timezone) return '';
+  if (timezone === 'America/Mexico_City') return 'CDMX';
+  return timezone.split('/').pop()?.replace(/_/g, ' ') ?? timezone;
+}
+
 export default function SettingsScreen() {
   const { t } = useTranslation();
-
   const theme = useEniuTheme();
+  const isDark = useColorScheme() === 'dark';
   const topPadding = useScreenTopPadding();
-  const { user, setUser, logout } = useAuth();
-  const { selectedBusiness, updateBusiness } = useBusiness();
+  const { user, logout } = useAuth();
+  const { selectedBusiness } = useBusiness();
   const { language, changeLanguage, isSaving: isSavingLanguage } = useLanguage();
-  const [profile, setProfile] = useState({ name: user?.name || '', username: user?.username || '', phone_number: user?.phone_number || '' });
-  const [business, setBusiness] = useState(() => selectedBusiness ? { name: selectedBusiness.name, description: selectedBusiness.description || '', phone: selectedBusiness.phone || '', whatsapp: selectedBusiness.whatsapp || '', address: selectedBusiness.address || '', currency: selectedBusiness.currency || 'MXN', timezone: selectedBusiness.timezone || deviceTimezone() } : null);
-  const [saving, setSaving] = useState<'profile' | 'business' | null>(null); const [error, setError] = useState(''); const [success, setSuccess] = useState('');
-  const [milestoneNotifications, setMilestoneNotifications] = useState(true);
-  const [deleteValue, setDeleteValue] = useState(''); const [deleting, setDeleting] = useState(false);
-  // Con contraseña se pide la contraseña; quien entró con Google o Apple no
-  // tiene ninguna, y exigírsela lo dejaría sin poder borrar su cuenta.
-  const hasPassword = Boolean(user?.auth_methods?.password);
-  const canDelete = hasPassword ? deleteValue.length > 0 : deleteValue.trim().toUpperCase() === 'ELIMINAR';
-  const updateProfile = (key: keyof typeof profile) => (value: string) => setProfile((current) => ({ ...current, [key]: value }));
-  const updateBusinessField = (key: keyof NonNullable<typeof business>) => (value: string) => setBusiness((current) => current ? ({ ...current, [key]: value }) : current);
-  // Ciento sesenta monedas y cuatrocientas zonas: construirlas en cada
-  // pulsación del formulario se nota, y sólo cambian con el idioma.
-  const locale = currentLocale();
-  const currencies = useMemo(() => currencyChoices(locale), [locale]);
-  const timezones = useMemo(() => timezoneChoices(), []);
+  const [milestones, setMilestones] = useState(true);
+  useEffect(() => { getMilestoneNotificationsEnabled().then(setMilestones); }, []);
 
-  useEffect(() => {
-    const task = setTimeout(() => setBusiness(selectedBusiness ? { name: selectedBusiness.name, description: selectedBusiness.description || '', phone: selectedBusiness.phone || '', whatsapp: selectedBusiness.whatsapp || '', address: selectedBusiness.address || '', currency: selectedBusiness.currency || 'MXN', timezone: selectedBusiness.timezone || deviceTimezone() } : null), 0);
-    return () => clearTimeout(task);
-  }, [selectedBusiness]);
-  useEffect(() => { getMilestoneNotificationsEnabled().then(setMilestoneNotifications); }, []);
+  async function toggleMilestones(value: boolean) { setMilestones(value); await setMilestoneNotificationsEnabled(value); }
 
-  async function saveProfile() {
-    setSaving('profile'); setError(''); setSuccess('');
-    try { const data = await api.patch<{ user: User }>('users/me', { name: profile.name.trim(), username: profile.username.trim(), phone_number: profile.phone_number.trim() }); setUser(data.user); setSuccess(t("Tu perfil se actualizó correctamente.")); }
-    catch (requestError) { setError(requestError instanceof Error ? requestError.message : t("No fue posible guardar el perfil.")); }
-    finally { setSaving(null); }
-  }
-  async function saveBusiness() {
-    if (!selectedBusiness || !business) return;
-    setSaving('business'); setError(''); setSuccess('');
-    try { const data = await api.patch<{ business: Business }>(`businesses/${selectedBusiness.id}`, { ...business, name: business.name.trim(), currency: business.currency.trim().toUpperCase() }); updateBusiness(data.business); setSuccess(t("Los datos del negocio se actualizaron correctamente.")); }
-    catch (requestError) { setError(requestError instanceof Error ? requestError.message : t("No fue posible guardar el negocio.")); }
-    finally { setSaving(null); }
-  }
-  async function toggleMilestoneNotifications(value: boolean) { setMilestoneNotifications(value); await setMilestoneNotificationsEnabled(value); }
-
-  function confirmDelete() {
-    if (!canDelete || deleting) return;
-    Alert.alert(
-      t("Eliminar tu cuenta"),
-      t("Se eliminan tus negocios, menús, productos y fotos, y tus menús publicados dejan de estar disponibles. Si tienes una suscripción activa se cancela. No se puede deshacer."),
-      [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Eliminar"), style: 'destructive', onPress: deleteAccount }],
-    );
-  }
-
-  async function deleteAccount() {
-    setDeleting(true); setError(''); setSuccess('');
-    try {
-      await api.delete('users/me', hasPassword ? { password: deleteValue } : { confirmation: deleteValue });
-      await logout();
-    } catch (requestError) {
-      setDeleting(false);
-      setError(requestError instanceof Error ? requestError.message : t("No fue posible eliminar la cuenta."));
+  function confirmLogout() {
+    // En web `Alert` no muestra botones; allí se confirma con el diálogo del navegador.
+    if (Platform.OS === 'web') {
+      if (globalThis.confirm?.(t("¿Quieres salir de Eniu en este dispositivo?"))) logout();
+      return;
     }
+    Alert.alert(t("Cerrar sesión"), t("¿Quieres salir de Eniu en este dispositivo?"), [
+      { text: t("Cancelar"), style: 'cancel' },
+      { text: t("Cerrar sesión"), style: 'destructive', onPress: logout },
+    ]);
   }
+
+  const name = user?.name || user?.username || '';
+  const accountCard = isDark ? theme.surfaceAlt : theme.authHero;
+  const onCard = isDark ? theme.text : theme.heroText;
+  const onCardMuted = isDark ? theme.muted : theme.heroMuted;
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 18, paddingTop: topPadding, paddingBottom: 120, gap: 20 }}>
-      <Text style={{ color: theme.text, fontSize: 25, fontWeight: '900' }}>{t("Ajustes")}</Text>
-      <Feedback message={error} /><Feedback message={success} tone="success" />
+    <ScrollView contentInsetAdjustmentBehavior="automatic" style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: topPadding, paddingBottom: 24, gap: 20 }}>
+      <Text accessibilityRole="header" style={{ color: theme.text, fontSize: 34, fontWeight: '900', letterSpacing: -1.2 }}>{t("Ajustes")}</Text>
 
-      <View style={{ borderRadius: 22, borderCurve: 'continuous', backgroundColor: theme.hero, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-        <View style={{ width: 54, height: 54, borderRadius: 18, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: theme.yellow, flexShrink: 0 }}><Text style={{ color: theme.onYellow, fontSize: 22, fontWeight: '900' }}>{(user?.name || user?.username || 'E').charAt(0).toUpperCase()}</Text></View>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text numberOfLines={1} style={{ color: '#FFFDF5', fontSize: 16, fontWeight: '800' }}>{user?.name || user?.username}</Text>
-          <Text numberOfLines={1} style={{ color: theme.heroMuted, fontSize: 12.5 }}>{user?.email}</Text>
+      <View style={{ borderRadius: 22, borderCurve: 'continuous', backgroundColor: accountCard, overflow: 'hidden' }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("{{name}}. Perfil y cuenta", { name })}
+          onPress={() => router.push('/(tabs)/(settings)/profile')}
+          style={({ pressed }) => ({ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, opacity: pressed ? 0.8 : 1 })}
+        >
+          <View style={{ width: 52, height: 52, borderRadius: 99, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.yellow }}>
+            <Text style={{ color: theme.onYellow, fontSize: 22, fontWeight: '900' }}>{(name || 'E').charAt(0).toUpperCase()}</Text>
+          </View>
+          <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+            <Text numberOfLines={1} style={{ color: onCard, fontSize: 18, fontWeight: '800' }}>{name}</Text>
+            {/* TODO(diseño): el diseño dice "Perfil, contraseña y cuenta", pero la
+                app no tiene cambio de contraseña; no se promete lo que no hay. */}
+            <Text style={{ color: onCardMuted, fontSize: 13 }}>{t("Perfil y cuenta")}</Text>
+          </View>
+          <ChevronRightIcon color={onCardMuted} size={12} />
+        </Pressable>
+        <View style={{ height: 1, backgroundColor: isDark ? theme.border : 'rgba(251,247,236,0.1)' }} />
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={{ flex: 1, color: onCard, fontSize: 15, fontWeight: '700' }}>{user?.plan?.name || t("Plan gratuito")}</Text>
+          {user?.plan?.has_access ? (
+            <Text style={{ color: onCardMuted, fontSize: 13 }}>{t("Activo")}</Text>
+          ) : (
+            <Pressable accessibilityRole="button" onPress={() => router.push('/paywall')} style={({ pressed }) => ({ minHeight: 36, paddingHorizontal: 14, borderRadius: 99, backgroundColor: theme.yellow, justifyContent: 'center', opacity: pressed ? 0.8 : 1 })}>
+              <Text style={{ color: theme.onYellow, fontSize: 14, fontWeight: '800' }}>{t("Mejorar plan")}</Text>
+            </Pressable>
+          )}
         </View>
       </View>
+      {user?.plan?.has_access ? <Text style={{ color: theme.muted, fontSize: 13, lineHeight: 18, marginTop: -10, paddingHorizontal: 4 }}>{t("Administra o cancela tu suscripción desde los ajustes de suscripciones de tu dispositivo.")}</Text> : null}
 
-      <Section label={t("Mi plan")}>
-        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>{user?.plan?.name || t("Plan gratuito")}</Text>
-          {user?.plan?.has_access ? <Text style={{ color: theme.muted, fontSize: 12.5 }}>{t("Activo")}</Text> : null}
-        </View>
-        {user?.plan?.has_access
-          ? <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{t("Administra o cancela tu suscripción desde los ajustes de suscripciones de tu dispositivo.")}</Text>
-          : <Button onPress={() => router.push('/paywall')}>{t("Ver planes")}</Button>}
-      </Section>
+      {selectedBusiness ? (
+        <GroupedList title={t("Negocio")}>
+          <ListRow icon={<StoreIcon color={theme.onYellow} size={18} />} title={t("Mi negocio")} value={selectedBusiness.name} onPress={() => router.push('/(tabs)/(settings)/business-profile')} />
+          <ListRow icon={<ClockIcon color={theme.onYellow} size={18} />} title={t("Moneda y horario")} value={`${selectedBusiness.currency || 'MXN'} · ${cityOf(selectedBusiness.timezone)}`} onPress={() => router.push('/(tabs)/(settings)/regional')} />
+        </GroupedList>
+      ) : null}
 
-      <Section label={t("Mi perfil")}><FormField label={t("Nombre visible")} value={profile.name} onChangeText={updateProfile('name')} /><FormField label={t("Nombre de usuario")} value={profile.username} onChangeText={updateProfile('username')} autoCapitalize="none" /><FormField label={t("Teléfono")} value={profile.phone_number} onChangeText={updateProfile('phone_number')} keyboardType="phone-pad" /><FormField label={t("Correo electrónico")} value={user?.email || ''} editable={false} /><Button loading={saving === 'profile'} onPress={saveProfile}>{t("Guardar perfil")}</Button></Section>
+      <GroupedList title={t("Aplicación")}>
+        <ListRow
+          icon={<GlobeIcon color={theme.onYellow} size={18} />}
+          title={t("Idioma")}
+          trailing={(
+            <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', gap: 4, backgroundColor: theme.surfaceAlt, borderRadius: 11, borderCurve: 'continuous', padding: 3 }}>
+              {LANGUAGE_OPTIONS.map((option) => {
+                const on = option.code === language;
+                return (
+                  <Pressable
+                    key={option.code}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: on, disabled: isSavingLanguage }}
+                    disabled={isSavingLanguage}
+                    onPress={() => void changeLanguage(option.code)}
+                    style={({ pressed }) => ({ minHeight: 36, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', borderRadius: 9, borderCurve: 'continuous', backgroundColor: on ? theme.surface : 'transparent', opacity: pressed || isSavingLanguage ? 0.7 : 1 })}
+                  >
+                    <Text style={{ color: on ? theme.text : theme.muted, fontSize: 13, fontWeight: '800' }}>{option.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        />
+        <ListRow icon={<MoonIcon color={theme.onYellow} size={18} />} title={t("Apariencia")} value={t("Automática")} />
+        <ListRow
+          icon={<BellIcon color={theme.onYellow} size={18} />}
+          title={t("Avisos de logros")}
+          subtitle={t("Cuando alcances una meta de vistas")}
+          trailing={<EniuSwitch value={milestones} onValueChange={toggleMilestones} accessibilityLabel={t("Avisos de logros")} />}
+        />
+      </GroupedList>
 
-      <View style={{ gap: 11 }}>
-        <Text style={{ color: theme.yellowPressed, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>{t("Mi negocio")}</Text>
-        <BusinessSwitcher />
-        {business ? <View style={{ padding: 18, gap: 14, ...cardStyle(theme) }}><BusinessPhotoField onError={setError} /><FormField label={t("Nombre")} value={business.name} onChangeText={updateBusinessField('name')} /><FormField label={t("Descripción")} value={business.description} onChangeText={updateBusinessField('description')} multiline /><FormField label={t("Teléfono")} value={business.phone} onChangeText={updateBusinessField('phone')} keyboardType="phone-pad" /><FormField label={t("WhatsApp")} value={business.whatsapp} onChangeText={updateBusinessField('whatsapp')} keyboardType="phone-pad" /><FormField label={t("Dirección")} value={business.address} onChangeText={updateBusinessField('address')} /><ChoiceField label={t("Moneda")} hint={t("En esta moneda ven los precios tus clientes.")} value={business.currency} options={currencies} searchLabel={t("Buscar moneda")} onChange={updateBusinessField('currency')} /><ChoiceField label={t("Zona horaria")} hint={t("Decide dónde empieza y termina el día en tus analíticas.")} value={business.timezone} options={timezones} searchLabel={t("Buscar zona horaria")} onChange={updateBusinessField('timezone')} /><Button loading={saving === 'business'} onPress={saveBusiness}>{t("Guardar negocio")}</Button></View> : <Text style={{ color: theme.muted }}>{t("Crea un negocio desde Inicio para configurarlo.")}</Text>}
-      </View>
+      <GroupedList>
+        <ListRow icon={<HelpIcon color={theme.onYellow} size={18} />} title={t("Ayuda y soporte")} onPress={() => router.push('/(tabs)/(settings)/help')} />
+        <ListRow title={t("Cerrar sesión")} destructive onPress={confirmLogout} />
+      </GroupedList>
 
-      <Section label={t("Aplicación")}>
-        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>{t("Apariencia")}</Text><Text style={{ color: theme.muted, fontSize: 12.5 }}>{t("Automática")}</Text></View>
-        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <View style={{ flex: 1, gap: 2 }}><Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>{t("Avisos de logros")}</Text><Text style={{ color: theme.muted, fontSize: 11.5 }}>{t("Cuando alcances una meta de vistas")}</Text></View>
-          <Switch value={milestoneNotifications} onValueChange={toggleMilestoneNotifications} trackColor={{ true: theme.yellowPressed }} />
-        </View>
-        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14.5 }}>{t("Idioma")}</Text>
-            <Text style={{ color: theme.muted, fontSize: 11.5 }}>{t("En toda la app y en los correos")}</Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 4, backgroundColor: theme.surfaceAlt, borderRadius: 11, borderCurve: 'continuous', padding: 3 }}>
-            {LANGUAGE_OPTIONS.map((option) => {
-              const on = option.code === language;
-              return (
-                <Pressable
-                  key={option.code}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on, disabled: isSavingLanguage }}
-                  disabled={isSavingLanguage}
-                  onPress={() => void changeLanguage(option.code)}
-                  style={({ pressed }) => ({ minHeight: 34, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderRadius: 9, borderCurve: 'continuous', backgroundColor: on ? theme.yellow : 'transparent', opacity: pressed || isSavingLanguage ? 0.7 : 1 })}
-                >
-                  <Text style={{ color: on ? theme.onYellow : theme.muted, fontSize: 12.5, fontWeight: '800' }}>{option.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-        <LinkRow label={t("Ayuda y soporte")} url={SUPPORT_URL} />
-        <LinkRow label={t("Términos y condiciones")} url={TERMS_URL} />
-        <LinkRow label={t("Aviso de privacidad")} url={PRIVACY_URL} />
-        {/* La versión es lo primero que se pide al reportar un fallo, y quien
-            lo reporta no tiene otro sitio donde consultarla. */}
-        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><Text style={{ color: theme.muted, fontWeight: '700', fontSize: 12.5 }}>{t("Versión")}</Text><Text style={{ color: theme.muted, fontSize: 12.5 }}>{Constants.expoConfig?.version ?? '—'}</Text></View>
-      </Section>
-
-      <Button variant="danger" onPress={() => Alert.alert(t("Cerrar sesión"), t("¿Quieres salir de Eniu en este dispositivo?"), [{ text: t("Cancelar"), style: 'cancel' }, { text: t("Cerrar sesión"), style: 'destructive', onPress: logout }])}>{t("Cerrar sesión")}</Button>
-
-      <Section label={t("Eliminar cuenta")}>
-        <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 18 }}>{t("Se eliminan tus negocios, menús, productos y fotos, y tus menús publicados dejan de estar disponibles. Si tienes una suscripción activa se cancela antes de borrar nada. No se puede deshacer.")}</Text>
-        {hasPassword
-          ? <FormField label={t("Confirma con tu contraseña")} value={deleteValue} onChangeText={setDeleteValue} secureTextEntry autoComplete="current-password" placeholder={t("Tu contraseña")} />
-          : <FormField label={t("Escribe ELIMINAR para confirmar")} value={deleteValue} onChangeText={setDeleteValue} autoCapitalize="characters" placeholder="ELIMINAR" />}
-        <Button variant="danger" loading={deleting} disabled={!canDelete} onPress={confirmDelete}>{t("Eliminar mi cuenta")}</Button>
-      </Section>
+      {/* La versión es lo primero que se pide al reportar un fallo. */}
+      <Text style={{ color: theme.muted, fontSize: 13, textAlign: 'center' }}>{t("Eniu · versión {{version}}", { version: Constants.expoConfig?.version ?? '—' })}</Text>
     </ScrollView>
   );
 }

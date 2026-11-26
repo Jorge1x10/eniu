@@ -1,21 +1,33 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
+import { BrandLine } from '@/components/brand-line';
 import { Button } from '@/components/ui/button';
 import { Feedback } from '@/components/ui/feedback';
 import { FormField } from '@/components/ui/form-field';
+import { ArrowRightIcon, StoreIcon } from '@/components/ui/icons';
 import { useEniuTheme } from '@/constants/eniu-theme';
 import { useBusiness } from '@/features/business/business-context';
 import { useOnboarding } from '@/features/onboarding/onboarding-context';
+import { OnboardingHeader } from '@/features/onboarding/onboarding-header';
 import { businessTypes, type BusinessType } from '@/features/onboarding/starter-menus';
-import { useTranslation } from 'react-i18next';
+
+/** Cómo se nombra cada tipo en "…para tu taquería". Se traduce al pintar. */
+const STARTER_FOR: Record<BusinessType, string> = {
+  taqueria: 'Cargamos categorías y productos de ejemplo para tu taquería. Cambias nombres y precios, y listo.',
+  cafeteria: 'Cargamos categorías y productos de ejemplo para tu cafetería. Cambias nombres y precios, y listo.',
+  restaurante: 'Cargamos categorías y productos de ejemplo para tu restaurante. Cambias nombres y precios, y listo.',
+  fonda: 'Cargamos categorías y productos de ejemplo para tu fonda. Cambias nombres y precios, y listo.',
+  bar: 'Cargamos categorías y productos de ejemplo para tu bar. Cambias nombres y precios, y listo.',
+  otro: 'Cargamos categorías y productos de ejemplo para tu negocio. Cambias nombres y precios, y listo.',
+};
 
 export default function OnboardingBusinessScreen() {
   const { t } = useTranslation();
-
   const theme = useEniuTheme();
   const insets = useSafeAreaInsets();
   const { businesses } = useBusiness();
@@ -44,44 +56,61 @@ export default function OnboardingBusinessScreen() {
 
   return (
     <KeyboardAvoidingView behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: theme.background }}>
-      <ScrollView contentInsetAdjustmentBehavior="never" keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, gap: 28, flexGrow: 1 }}>
-        <View style={{ gap: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ color: theme.yellowPressed, fontWeight: '700', fontSize: 14 }}>{t("Paso 1 de 3")}</Text>
-            <Pressable onPress={skip}><Text style={{ color: theme.muted, fontWeight: '700', fontSize: 14 }}>{t("Saltar")}</Text></Pressable>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 5 }}>
-            <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.yellow }} />
-            <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.surfaceAlt }} />
-            <View style={{ flex: 1, height: 4, borderRadius: 99, backgroundColor: theme.surfaceAlt }} />
-          </View>
-        </View>
+      <ScrollView contentInsetAdjustmentBehavior="never" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 24, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16, gap: 24, flexGrow: 1 }}>
+        <OnboardingHeader step={1} onSkip={skip} />
 
-        <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 8 }}>
-          <Text style={{ color: theme.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.6, lineHeight: 36 }}>{t("¿Cómo se llama tu negocio?")}</Text>
-          <Text style={{ color: theme.muted, fontSize: 14, lineHeight: 21 }}>{t("Así lo verán tus clientes en el menú.")}</Text>
+        <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 8, marginTop: 12 }}>
+          <Text accessibilityRole="header" style={{ color: theme.text, fontSize: 32, lineHeight: 35, fontWeight: '900', letterSpacing: -1.1 }}>{t("¿Cómo se llama tu negocio?")}</Text>
+          <Text style={{ color: theme.muted, fontSize: 15, lineHeight: 22 }}>{t("Así lo verán tus clientes en el menú.")}</Text>
         </Animated.View>
 
-        <Feedback message={error} />
         <Animated.View entering={FadeInDown.duration(320).delay(60)}>
-          <FormField label={t("Nombre")} value={name} onChangeText={setName} maxLength={64} placeholder={t("Taquería Doña Mague")} />
+          <FormField
+            label={t("Nombre del negocio")}
+            value={name}
+            onChangeText={(value) => { setName(value); setError(''); }}
+            maxLength={64}
+            placeholder={t("Taquería Doña Mague")}
+            icon={<StoreIcon color={theme.muted} size={19} />}
+            returnKeyType="next"
+            onSubmitEditing={submit}
+          />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.duration(320).delay(120)} style={{ gap: 10 }}>
           <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>{t("Tipo de negocio")}</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{businessTypes.map((option) => {
-            const selected = option.key === type;
-            return <Animated.View key={option.key} layout={LinearTransition.duration(180)}><Pressable onPress={() => setType(option.key)} style={({ pressed }) => ({ minHeight: 40, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 99, backgroundColor: selected ? theme.yellow : theme.surface, borderWidth: 1, borderColor: selected ? theme.yellowPressed : theme.border, opacity: pressed ? 0.75 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}><Text style={{ color: selected ? theme.onYellow : theme.text, fontSize: 13, fontWeight: selected ? '700' : '600' }}>{option.label}</Text></Pressable></Animated.View>;
-          })}</View>
+          <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {businessTypes.map((option) => {
+              const selected = option.key === type;
+              return (
+                <Pressable
+                  key={option.key}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => setType(option.key)}
+                  style={({ pressed }) => ({
+                    width: '31.5%', flexGrow: 1, height: 48, borderRadius: 14, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: selected ? theme.yellow : theme.surface,
+                    borderWidth: selected ? 2 : 1, borderColor: selected ? theme.onYellow : theme.border,
+                    opacity: pressed ? 0.75 : 1,
+                  })}
+                >
+                  <Text style={{ color: selected ? theme.onYellow : theme.text, fontSize: 14, fontWeight: selected ? '800' : '600' }}>{t(option.label)}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </Animated.View>
 
-        <Animated.View entering={FadeIn.duration(320).delay(180)} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border, padding: 16, gap: 6 }}>
-          <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>{t("Te armamos el menú de arranque")}</Text>
-          <Text style={{ color: theme.muted, fontSize: 12.5, lineHeight: 19 }}>{t("Cargamos categorías y productos de ejemplo según tu tipo de negocio. Cambias los nombres y precios y listo.")}</Text>
+        <Animated.View entering={FadeIn.duration(320).delay(180)} style={{ borderRadius: 20, borderCurve: 'continuous', backgroundColor: theme.authHero, padding: 18, gap: 6, overflow: 'hidden' }}>
+          <BrandLine color={theme.yellow} width={120} height={112} withTail={false} style={{ position: 'absolute', right: -34, bottom: -46, opacity: 0.5 }} />
+          <Text style={{ color: theme.heroText, fontSize: 16, fontWeight: '800', paddingRight: 60 }}>{t("Te armamos el menú de arranque")}</Text>
+          <Text style={{ color: theme.heroMuted, fontSize: 13, lineHeight: 19, paddingRight: 60 }}>{t(STARTER_FOR[type])}</Text>
         </Animated.View>
 
+        <Feedback message={error} />
         <View style={{ flex: 1, minHeight: 12 }} />
-        <Button onPress={submit}>{t("Continuar")}</Button>
+        <Button size="lg" onPress={submit} trailingIcon={<ArrowRightIcon color={theme.onYellow} size={18} />}>{t("Continuar")}</Button>
       </ScrollView>
     </KeyboardAvoidingView>
   );
