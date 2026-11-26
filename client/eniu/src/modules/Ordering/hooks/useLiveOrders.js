@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useOrderingService } from "../services/orderingService";
 import { diffOrders } from "../notifications/orderEvents";
+import { withPlace } from "../utils/labels";
 
 /** Cada cuánto pregunta el panel si llegó algo. Ver `docs/ORDERING.md`. */
 export const LIVE_POLL_MS = 5000;
@@ -56,7 +57,7 @@ export function useLiveOrders(businessId, { onNewPending, onEvents } = {}) {
       setState((current) => (current.error ? { ...current, error: false } : current));
       return;
     }
-    const accounts = data.accounts || [];
+    const accounts = (data.accounts || []).map(withPlace);
     const { current, events } = diffOrders(seenRef.current, accounts);
     seenRef.current = current;
     const fresh = events.filter((event) => event.type === "new").length;

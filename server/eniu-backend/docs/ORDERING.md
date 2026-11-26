@@ -120,6 +120,40 @@ Respuestas que el cliente debe tratar aparte (todas llevan `code`):
 | `too_many_pending` | 429 | Esperar a que el negocio acepte lo enviado |
 | `no_account` | 404 | (cuenta) Aún no ha pedido en esta mesa |
 
+## Para llevar
+
+El cliente pide desde el enlace del menú, sin QR de mesa:
+`{PUBLIC_WEB_BASE_URL}/m/<slug>/para-llevar`. Con los pedidos para llevar
+activos, el menú público (`/m/<slug>`) muestra además un botón "Pedir para
+llevar" (`menu.ordering.takeaway` en `/api/public/menus/<slug>`).
+
+- **Activación:** `Business.takeaway_enabled`, apagado por defecto, con
+  `PATCH /api/businesses/<id>/ordering` y `{"takeaway": true}`. Se suma a
+  `ordering_enabled` y al plan: pausar pedidos pausa también los para llevar.
+  `ordering.takeaway` llega en `orders/live`.
+- **Una cuenta por pedido:** cada pedido para llevar abre su propia cuenta
+  (`channel: "takeaway"`, sin mesa) con el nombre y el teléfono de quien pide.
+  En `orders/live` llega con `table: null` y `customer: {name, phone}`. La
+  base exige mesa en las cuentas de mesa y ninguna en las de llevar
+  (`ck_table_accounts_channel_table`).
+- **Mismos estados:** Enviado → Recibido → Preparando → Listo (para
+  recoger). Se paga al recoger, en efectivo o con terminal, con el mismo
+  "Cobrar" de la caja; cobrar cierra la cuenta, y para el cliente eso es
+  "Entregado". Cerrar sin cobrar también existe.
+- **Límites más estrictos**, porque no hay nadie sentado detrás: 3 pedidos sin
+  aceptar por teléfono en el negocio, 5 envíos por minuto por teléfono y 60
+  por hora por menú.
+- **Teléfono:** obligatorio; de 8 a 15 dígitos, con `+`, espacios, guiones o
+  paréntesis (se guardan sin ellos).
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /api/public/takeaway/<slug>` | Nombre del negocio y si acepta pedidos para llevar ahora |
+| `POST /api/public/takeaway/<slug>/orders` | Manda el pedido. Mismo cuerpo que en la mesa, más `"phone"` |
+| `GET /api/public/takeaway/<slug>/orders` | Los pedidos para llevar de este teléfono en las últimas 12 horas, con `account.status` (`closed` = entregado) y `account.total` |
+
+Los códigos de error son los mismos que en la mesa.
+
 ## API del negocio (con sesión)
 
 | Método y ruta | Qué hace |
@@ -127,7 +161,7 @@ Respuestas que el cliente debe tratar aparte (todas llevan `code`):
 | `GET/POST /api/businesses/<id>/tables` | Listar y crear mesas (`number`, `name`, `catalogue_id`) |
 | `PATCH/DELETE /api/businesses/<id>/tables/<table_id>` | Editar, desactivar (`is_active`) o borrar. No se borra con la cuenta abierta |
 | `POST /api/businesses/<id>/tables/<table_id>/regenerate-qr` | QR nuevo; el impreso deja de funcionar |
-| `PATCH /api/businesses/<id>/ordering` | `{"enabled": true\|false}`: activar o pausar pedidos |
+| `PATCH /api/businesses/<id>/ordering` | `{"enabled": true\|false}` activa o pausa los pedidos; `{"takeaway": true\|false}`, los para llevar |
 | `GET /api/businesses/<id>/orders/live?version=N` | Cuentas abiertas con sus pedidos |
 | `PATCH /api/businesses/<id>/orders/<order_id>` | `{"status": "received"\|"preparing"\|"ready"\|"cancelled"}` |
 | `POST /api/businesses/<id>/orders/<order_id>/items/<item_id>/cancel` | Cancelar un producto |

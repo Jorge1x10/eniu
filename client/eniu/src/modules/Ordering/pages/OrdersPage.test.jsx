@@ -95,7 +95,7 @@ describe("OrdersPage", () => {
     expect(screen.getByText("1 por aceptar")).toBeInTheDocument();
     expect(screen.getByText(/^DAVID · /)).toBeInTheDocument();
     expect(screen.getAllByText("↳ Con avena")).toHaveLength(2);
-    expect(screen.getByText("Mesas con cuenta abierta · 2")).toBeInTheDocument();
+    expect(screen.getByText("Cuentas abiertas · 2")).toBeInTheDocument();
     expect(screen.getByText("Por aceptar", { selector: "dt" }).nextSibling).toHaveTextContent("1");
   });
 

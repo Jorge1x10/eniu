@@ -117,7 +117,7 @@ function PendingCard({ accounts, onAccept }: { accounts: TableAccount[]; onAccep
         </Pressable>
       </View>
       <View style={{ borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.55)', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <MesaBadge number={account.table.number} />
+        <MesaBadge number={account.table.number} takeaway={account.table.takeaway} />
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <Text numberOfLines={1} style={{ color: theme.onYellow, fontSize: 16, fontWeight: '800' }}>{order.diner_name}</Text>
           <Text numberOfLines={2} style={{ color: 'rgba(17,17,17,0.7)', fontSize: 13 }}>{summary}</Text>
@@ -139,7 +139,7 @@ function TablesNow({ tables, accounts }: { tables: DiningTable[]; accounts: Tabl
   const isDark = useColorScheme() === 'dark';
   const openBg = isDark ? theme.text : '#111111';
   const openText = isDark ? theme.background : '#FBF7EC';
-  const byTable = new Map(accounts.map((account) => [account.table.id, account]));
+  const byTable = new Map(accounts.filter((account) => account.table.id).map((account) => [account.table.id, account]));
   const legend = [
     { color: theme.yellow, label: t("Por aceptar") },
     { color: openBg, label: t("Cuenta abierta") },

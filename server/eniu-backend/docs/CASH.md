@@ -37,7 +37,8 @@ Métodos: `cash` (efectivo), `card` (tarjeta), `transfer` (transferencia) y
   reporte del turno muestra aparte esas cuentas (`accounts_unpaid`) y las que
   se cerraron en cero porque todo se canceló (`accounts_cancelled`).
 - **El pago sobrevive a la mesa.** Si se borra una mesa, sus cuentas se borran,
-  pero los pagos no: `account_id` pasa a nulo y queda `table_number`. Los
+  pero los pagos no: `account_id` pasa a nulo y quedan `table_number`,
+  `channel` y, para llevar, `customer_name`. Los
   pagos de un mismo cobro comparten `checkout_id`.
 - Importes: texto o número, sin signo ni notación científica, hasta 2
   decimales y menores a 1,000,000 (`"150"`, `"150.5"`, `150.50`).
@@ -98,6 +99,8 @@ mayor que cero. Una cuenta en cero (todo cancelado) se cobra con
 - **Quién:** hoy todos entran con la misma cuenta, así que no se registra quién
   abrió, cobró o cortó. Cuando haya personal con PIN, cada turno, pago y
   movimiento llevará a su autor.
-- **Domicilio:** los pagos de pedidos a domicilio llevarán su propia columna
-  junto a `account_id`.
+- **Domicilio:** los pedidos para llevar ya son cuentas sin mesa
+  (`channel: "takeaway"`) y se cobran igual; los pagos guardan `channel` y
+  `customer_name`. A domicilio será otro canal de cuenta, sin columnas nuevas
+  en los pagos.
 - **App móvil:** sigue cerrando cuentas sin cobrar; adoptará el cobro y la caja.

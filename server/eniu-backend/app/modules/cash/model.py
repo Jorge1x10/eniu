@@ -114,6 +114,10 @@ class Payment(BaseModel):
     )
     checkout_id = db.Column(UUID(as_uuid=True), nullable=False)
     table_number = db.Column(db.Integer, nullable=True)
+    # Copia del canal de la cuenta ("table", "takeaway"): el corte distingue
+    # un cobro para llevar de una mesa borrada.
+    channel = db.Column(db.String(16), nullable=False, default="table", server_default="table")
+    customer_name = db.Column(db.String(40), nullable=True)
     method = db.Column(db.String(16), nullable=False)
     # Lo que se abona a la cuenta, sin la propina.
     amount = db.Column(db.Numeric(10, 2), nullable=False)

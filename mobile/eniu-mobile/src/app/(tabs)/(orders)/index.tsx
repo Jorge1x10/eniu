@@ -54,7 +54,9 @@ export default function OrdersScreen() {
 
   function close(account: TableAccount) {
     confirmAction({
-      title: t("¿Cerrar la cuenta de la mesa {{number}}?", { number: account.table.number }),
+      title: account.table.takeaway
+        ? t("¿Cerrar el pedido para llevar de {{name}}?", { name: account.table.name ?? '' })
+        : t("¿Cerrar la cuenta de la mesa {{number}}?", { number: account.table.number }),
       message: t("Total: {{total}}. El siguiente pedido en esta mesa abrirá una cuenta nueva.", { total: currency.format(Number(account.total)) }),
       confirmLabel: t("Cerrar cuenta"),
       onConfirm: () => guarded(() => closeAccount(account.id), t("No fue posible cerrar la cuenta.")),
@@ -160,10 +162,10 @@ export default function OrdersScreen() {
           <View style={{ ...cardStyle(theme, 20), overflow: 'hidden' }}>
             {accounts.map((account, index) => (
               <View key={account.id} style={{ minHeight: 68, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: index ? 1 : 0, borderTopColor: theme.border }}>
-                <MesaBadge number={account.table.number} />
+                <MesaBadge number={account.table.number} takeaway={account.table.takeaway} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{currency.format(Number(account.total))}</Text>
-                  <Text style={{ color: theme.muted, fontSize: 13 }}>{account.pending_orders ? t("Tiene pedidos por aceptar") : t("Cuenta de la mesa")}</Text>
+                  <Text style={{ color: theme.muted, fontSize: 13 }}>{account.pending_orders ? t("Tiene pedidos por aceptar") : account.table.takeaway ? t("Para llevar · {{name}}", { name: account.table.name ?? '' }) : t("Cuenta de la mesa")}</Text>
                 </View>
                 <Pressable accessibilityRole="button" disabled={account.pending_orders > 0} onPress={() => close(account)} style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.border, justifyContent: 'center', opacity: account.pending_orders ? 0.4 : pressed ? 0.7 : 1 })}>
                   <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800' }}>{t("Cerrar cuenta")}</Text>

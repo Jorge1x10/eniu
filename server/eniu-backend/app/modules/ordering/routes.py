@@ -24,6 +24,7 @@ from .services import (
     valid_device_token,
 )
 from .stats import order_stats
+from .takeaway import diner_takeaway_orders, get_public_takeaway, place_takeaway_order
 
 ordering_bp = Blueprint("ordering", __name__, url_prefix="/api")
 
@@ -102,6 +103,31 @@ def public_diner_account(qr_token):
     return _private(*diner_account(qr_token, _device_token()))
 
 
+def _menu_limit_key():
+    return f"takeaway:{request.view_args.get('public_slug', '')}"
+
+
+@ordering_bp.get("/public/takeaway/<public_slug>")
+@limiter.limit("60 per minute", key_func=_device_limit_key)
+def public_takeaway(public_slug):
+    return _private(*get_public_takeaway(public_slug))
+
+
+@ordering_bp.post("/public/takeaway/<public_slug>/orders")
+@limiter.limit("5 per minute", key_func=_device_limit_key)
+@limiter.limit("60 per hour", key_func=_menu_limit_key)
+def public_place_takeaway_order(public_slug):
+    if request.content_length and request.content_length > 32 * 1024:
+        return _private({"message": _("El pedido es demasiado grande")}, 413)
+    return _private(*place_takeaway_order(public_slug, _device_token(), request.get_json(silent=True)))
+
+
+@ordering_bp.get("/public/takeaway/<public_slug>/orders")
+@limiter.limit("30 per minute", key_func=_device_limit_key)
+def public_takeaway_orders(public_slug):
+    return _private(*diner_takeaway_orders(public_slug, _device_token()))
+
+
 # --- Negocio ----------------------------------------------------------------------
 
 
@@ -152,7 +178,7 @@ def toggle_ordering(business_id):
     data = _json_body()
     if data is None:
         return jsonify({"message": _("Debes enviar información en formato JSON")}), 400
-    result, status = set_ordering(get_jwt_identity(), business_id, data.get("enabled"))
+    result, status = set_ordering(get_jwt_identity(), business_id, data)
     return jsonify(result), status
 
 

@@ -39,6 +39,7 @@ from .model import (
     ACCEPTED_STATUSES,
     ACCOUNT_CLOSED,
     ACCOUNT_OPEN,
+    CHANNEL_TAKEAWAY,
     ORDER_CANCELLED,
     ORDER_FLOW,
     ORDER_PENDING,
@@ -211,7 +212,13 @@ def _account_payload_for_business(account):
     return {
         "id": str(account.id),
         "status": account.status,
-        "table": {"id": str(account.table_id), **_table_label(account.table)},
+        "channel": account.channel,
+        # Una cuenta para llevar no tiene mesa: trae a quién se entrega.
+        "table": {"id": str(account.table_id), **_table_label(account.table)} if account.table else None,
+        "customer": (
+            {"name": account.customer_name, "phone": account.customer_phone}
+            if account.channel == CHANNEL_TAKEAWAY else None
+        ),
         "opened_at": _iso(account.created_at),
         "closed_at": _iso(account.closed_at),
         "total": _money(account_total(account)),
@@ -243,11 +250,12 @@ def _ordering_state(business):
     `paused`: el negocio los apagó. `plan`: su plan no los incluye (por
     ejemplo, terminó la prueba gratuita). El panel muestra uno u otro aviso.
     """
+    takeaway = bool(business.takeaway_enabled)
     if not _plan_allows_orders(business):
-        return {"enabled": False, "reason": "plan"}
+        return {"enabled": False, "reason": "plan", "takeaway": takeaway}
     if not business.ordering_enabled:
-        return {"enabled": False, "reason": "paused"}
-    return {"enabled": True, "reason": None}
+        return {"enabled": False, "reason": "paused", "takeaway": takeaway}
+    return {"enabled": True, "reason": None, "takeaway": takeaway}
 
 
 def _ordering_enabled(business):
@@ -291,10 +299,10 @@ def _orderable_products(catalogue):
     }
 
 
-def _parse_order(data):
+def _parse_order(data, extra_fields=()):
     if not isinstance(data, dict):
         raise OrderingError(_("Debes enviar información en formato JSON"))
-    unknown = set(data) - {"diner_name", "idempotency_key", "items"}
+    unknown = set(data) - {"diner_name", "idempotency_key", "items", *extra_fields}
     if unknown:
         raise OrderingError(_("Se enviaron campos no permitidos"), fields=sorted(unknown))
 
@@ -367,7 +375,7 @@ def place_order(qr_token, device_token, data):
         # Un reintento del mismo envío devuelve el pedido que ya existe.
         existing = Order.query.filter_by(device_hash=device, idempotency_key=idempotency_key).first()
         if existing:
-            if existing.account.table_id != table.id:
+            if existing.account.table_id is None or existing.account.table_id != table.id:
                 return {"message": _("El pedido no tiene un identificador válido")}, 409
             return {"order": order_payload(existing)}, 200
 
@@ -654,17 +662,24 @@ def delete_table(owner_id, business_id, table_id):
         return {"message": _("No fue posible eliminar la mesa")}, 500
 
 
-def set_ordering(owner_id, business_id, enabled):
-    """Enciende o pausa los pedidos del negocio."""
-    if not isinstance(enabled, bool):
+def set_ordering(owner_id, business_id, data):
+    """Enciende o pausa los pedidos del negocio (`enabled`) y los para llevar (`takeaway`)."""
+    changes = {key: data[key] for key in ("enabled", "takeaway") if key in data}
+    if not changes:
         return {"message": _("{field} debe ser verdadero o falso", field="enabled")}, 400
+    for key, value in changes.items():
+        if not isinstance(value, bool):
+            return {"message": _("{field} debe ser verdadero o falso", field=key)}, 400
     try:
         business, error = _business_access(owner_id, business_id)
         if error:
             return error
-        if enabled and not _plan_allows_orders(business):
+        if changes.get("enabled") and not _plan_allows_orders(business):
             return {"message": _("Tu plan actual no incluye pedidos desde la mesa"), "code": "plan_limit"}, 403
-        business.ordering_enabled = enabled
+        if "enabled" in changes:
+            business.ordering_enabled = changes["enabled"]
+        if "takeaway" in changes:
+            business.takeaway_enabled = changes["takeaway"]
         db.session.flush()
         _touch(business.id)
         db.session.commit()

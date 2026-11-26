@@ -65,10 +65,10 @@ export default function OrderTicket({ order, table, currency, variant = "status"
         </header>
       ) : (
         <header className="flex items-center gap-3">
-          <MesaBadge number={table.number} tone="paper" />
+          <MesaBadge number={table.number} takeaway={table.takeaway} tone="paper" />
           <div className="min-w-0 flex-1">
             <p className={`${MONO} truncate text-[15px] font-extrabold`}>{order.diner_name.toUpperCase()}</p>
-            <p className={`${MONO} text-[13px] text-eniu-ticket-muted`}>{time(order.created_at)}{table.name ? ` · ${table.name}` : ""}</p>
+            <p className={`${MONO} text-[13px] text-eniu-ticket-muted`}>{time(order.created_at)}{table.takeaway ? (table.phone ? ` · ${table.phone}` : "") : table.name ? ` · ${table.name}` : ""}</p>
           </div>
           {printButton}
           <StatusChip status={order.status} />

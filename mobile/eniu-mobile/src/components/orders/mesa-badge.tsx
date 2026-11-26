@@ -5,11 +5,24 @@ import { useEniuTheme } from '@/constants/eniu-theme';
 
 /**
  * "MESA 4" en un cuadro. Siempre del mismo color, sin importar el estado: el
- * estado lo dice el chip, y un color más aquí competiría con él.
+ * estado lo dice el chip, y un color más aquí competiría con él. Con
+ * `takeaway`, "PARA LLEVAR" en lugar del número.
  */
-export function MesaBadge({ number, size = 46, onDark = false }: { number: number; size?: number; onDark?: boolean }) {
+export function MesaBadge({ number, takeaway = false, size = 46, onDark = false }: { number: number | null; takeaway?: boolean; size?: number; onDark?: boolean }) {
   const { t } = useTranslation();
   const theme = useEniuTheme();
+  if (takeaway) {
+    return (
+      <View
+        accessible
+        accessibilityLabel={t("Para llevar")}
+        style={{ width: size, height: size, borderRadius: 12, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: onDark ? '#3A3631' : theme.surfaceAlt }}
+      >
+        <Text style={{ color: onDark ? theme.heroMuted : theme.muted, fontSize: 8, fontWeight: '800', letterSpacing: 1 }}>{t("PARA")}</Text>
+        <Text style={{ color: onDark ? theme.heroText : theme.text, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}>{t("LLEVAR")}</Text>
+      </View>
+    );
+  }
   return (
     <View
       accessible

@@ -170,7 +170,9 @@ export default function CheckoutDialog({ businessId, account, currency, onCloseW
     onDone();
   }
 
-  const title = t("Cobrar {{table}}", { table: tableLabel(account.table) });
+  const title = account.table?.takeaway
+    ? t("Cobrar a {{name}} · para llevar", { name: account.table.name })
+    : t("Cobrar {{table}}", { table: tableLabel(account.table) });
 
   if (result) {
     return (

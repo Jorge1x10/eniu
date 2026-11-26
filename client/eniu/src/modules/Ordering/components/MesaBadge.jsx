@@ -1,3 +1,4 @@
+import { ShoppingBag } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 const TONES = {
@@ -11,11 +12,24 @@ const TONES = {
 
 /**
  * "MESA 4" en un cuadro, siempre del mismo color: el estado lo dice el chip.
- * `as="h2"` lo usa como título de la tarjeta de una mesa.
+ * `as="h2"` lo usa como título de la tarjeta de una mesa. Con `takeaway`,
+ * una bolsa y "LLEVAR" en lugar del número.
  */
-export default function MesaBadge({ number, size = 46, tone = "surface", as: Tag = "div" }) {
+export default function MesaBadge({ number, takeaway = false, size = 46, tone = "surface", as: Tag = "div" }) {
   const { t } = useTranslation();
   const colors = TONES[tone] || TONES.surface;
+  if (takeaway) {
+    return (
+      <Tag
+        aria-label={t("Para llevar")}
+        style={{ width: size, height: size }}
+        className={`flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl ${colors.box}`}
+      >
+        <span aria-hidden="true" className={`text-[8px] font-extrabold tracking-[1px] ${colors.label}`}>{t("LLEVAR")}</span>
+        <ShoppingBag aria-hidden="true" size={size >= 50 ? 20 : 18} strokeWidth={2.5} />
+      </Tag>
+    );
+  }
   return (
     <Tag
       aria-label={t("Mesa {{number}}", { number })}

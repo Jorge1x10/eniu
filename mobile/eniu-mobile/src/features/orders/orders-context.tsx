@@ -35,6 +35,20 @@ const OrdersContext = createContext<OrdersContextValue | null>(null);
  * Pregunta con la última versión que vio: si nada cambió, el servidor responde
  * sin cargar la base. Sólo pregunta con la app en primer plano.
  */
+
+/**
+ * Una cuenta para llevar llega sin mesa (`table: null`). Para que las
+ * pantallas la dibujen como una mesa, se le pone una marcada con
+ * `takeaway: true` y el nombre y teléfono de quien pide.
+ */
+function withPlace(account: TableAccount): TableAccount {
+  if (account.table) return account;
+  return {
+    ...account,
+    table: { id: null, number: null, takeaway: true, name: account.customer?.name ?? null, phone: account.customer?.phone ?? null },
+  };
+}
+
 export function OrdersProvider({ children }: PropsWithChildren) {
   const { limits } = usePlan();
   const { selectedBusiness } = useBusiness();
@@ -64,7 +78,7 @@ export function OrdersProvider({ children }: PropsWithChildren) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       seenRef.current = new Set(pending);
-      setAccounts(data.accounts);
+      setAccounts(data.accounts.map(withPlace));
       setOrderingState(data.ordering);
     } catch {
       // Se conserva lo último que se vio: un fallo de red no vacía la pantalla.

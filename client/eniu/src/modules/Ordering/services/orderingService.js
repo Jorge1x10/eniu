@@ -47,6 +47,10 @@ export function useOrderingService(businessId) {
     (enabled) => request({ method: "PATCH", path: `${base}/ordering`, data: { enabled } }),
     [base, request]
   );
+  const setTakeaway = useCallback(
+    (takeaway) => request({ method: "PATCH", path: `${base}/ordering`, data: { takeaway } }),
+    [base, request]
+  );
   const live = useCallback(
     (version, options = {}) => request({
       method: "GET",
@@ -75,6 +79,6 @@ export function useOrderingService(businessId) {
 
   return {
     listTables, createTable, updateTable, deleteTable, regenerateQr,
-    setOrdering, live, setOrderStatus, cancelItem, closeAccount, stats,
+    setOrdering, setTakeaway, live, setOrderStatus, cancelItem, closeAccount, stats,
   };
 }

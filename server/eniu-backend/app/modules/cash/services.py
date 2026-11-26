@@ -139,6 +139,8 @@ def session_report(session):
         checkout = checkouts.setdefault(payment.checkout_id, {
             "id": str(payment.checkout_id),
             "table_number": payment.table_number,
+            "channel": payment.channel,
+            "customer_name": payment.customer_name,
             "paid_at": _iso(payment.created_at),
             "amount": Decimal("0"),
             "tip": Decimal("0"),
@@ -166,7 +168,9 @@ def session_report(session):
         else:
             unpaid.append({
                 "id": str(account.id),
-                "table": {"number": account.table.number, "name": account.table.name},
+                "channel": account.channel,
+                "table": {"number": account.table.number, "name": account.table.name} if account.table else None,
+                "customer_name": account.customer_name,
                 "total": _money(total),
                 "closed_at": _iso(account.closed_at),
             })
@@ -454,7 +458,8 @@ def checkout_account(owner_id, business_id, account_id, data):
         for payment in payments:
             db.session.add(Payment(
                 business_id=business.id, session_id=session.id, account_id=account.id,
-                checkout_id=checkout_id, table_number=account.table.number, **payment,
+                checkout_id=checkout_id, table_number=account.table.number if account.table else None,
+                channel=account.channel, customer_name=account.customer_name, **payment,
             ))
         db.session.flush()
         _touch(business.id, account)

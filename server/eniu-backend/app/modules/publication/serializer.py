@@ -176,6 +176,15 @@ def serialize_public_menu(catalogue):
         "branding": {
             "show_eniu_badge": plans.limits_for(plan_key)["show_eniu_badge"],
         },
+        # Si el menú ofrece "Pedir para llevar". Va aquí para no sumar una
+        # petición a la ruta más visitada; el caché de unos segundos basta.
+        "ordering": {
+            "takeaway": bool(
+                catalogue.business.takeaway_enabled
+                and catalogue.business.ordering_enabled
+                and plans.allows_orders(plan_key)
+            ),
+        },
         "categories": category_payload,
         "uncategorized_products": uncategorized_payload,
     }

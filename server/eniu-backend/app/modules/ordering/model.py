@@ -4,7 +4,8 @@
   imprime. El QR lleva `qr_token`, aleatorio y regenerable si se filtra.
 - **Cuenta** (`TableAccount`): se abre sola con el primer pedido de una mesa
   y sólo el negocio la cierra. Es una para toda la mesa: todos los comensales
-  suman a la misma.
+  suman a la misma. Un pedido **para llevar** abre su propia cuenta, sin mesa
+  (`channel = "takeaway"`), con el nombre y el teléfono de quien pide.
 - **Pedido** (`Order`): cada vez que un comensal manda su carrito. Lleva su
   nombre para que en el panel se lea "David | Mesa 4".
 - **Línea** (`OrderItem`): un producto del pedido, con copia del nombre y del
@@ -17,6 +18,11 @@ from app.database.basemodel import BaseModel, UUID
 
 ACCOUNT_OPEN = "open"
 ACCOUNT_CLOSED = "closed"
+
+# Por dónde llegó la cuenta. "delivery" (a domicilio) viene después.
+CHANNEL_TABLE = "table"
+CHANNEL_TAKEAWAY = "takeaway"
+CHANNELS = (CHANNEL_TABLE, CHANNEL_TAKEAWAY)
 
 ORDER_PENDING = "pending"        # Enviado: esperando que el negocio lo acepte.
 ORDER_RECEIVED = "received"      # Recibido: el negocio lo aceptó.
@@ -64,10 +70,11 @@ class DiningTable(BaseModel):
 class TableAccount(BaseModel):
     __tablename__ = "table_accounts"
 
+    # Nulo en las cuentas para llevar.
     table_id = db.Column(
         UUID(as_uuid=True),
         db.ForeignKey("dining_tables.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     business_id = db.Column(
         UUID(as_uuid=True),
@@ -75,6 +82,10 @@ class TableAccount(BaseModel):
         nullable=False,
     )
     status = db.Column(db.String(16), nullable=False, default=ACCOUNT_OPEN, server_default=ACCOUNT_OPEN)
+    channel = db.Column(db.String(16), nullable=False, default=CHANNEL_TABLE, server_default=CHANNEL_TABLE)
+    # Sólo para llevar: a quién se le entrega y cómo avisarle.
+    customer_name = db.Column(db.String(40), nullable=True)
+    customer_phone = db.Column(db.String(20), nullable=True)
     closed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     # Sube con cada cambio de la cuenta o de sus pedidos. El comensal lo manda
     # al consultar y, si no cambió, la respuesta no carga nada más.
@@ -100,6 +111,10 @@ class TableAccount(BaseModel):
             sqlite_where=db.text("status = 'open'"),
         ),
         db.Index("ix_table_accounts_business_status", "business_id", "status"),
+        db.CheckConstraint(
+            "(channel = 'table') = (table_id IS NOT NULL)",
+            name="ck_table_accounts_channel_table",
+        ),
     )
 
 

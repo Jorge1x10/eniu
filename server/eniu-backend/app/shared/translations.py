@@ -38,6 +38,13 @@ _EN = {
     "{field} es obligatorio": "{field} is required",
     "{field} no puede tener más de {limit} caracteres": "{field} can't be longer than {limit} characters",
     # --- Pedidos desde la mesa -----------------------------------------------
+    "Escribe un teléfono para avisarte cuando tu pedido esté listo": (
+        "Enter a phone number so we can let you know when your order is ready"
+    ),
+    "Escribe un teléfono válido, de 8 a 15 dígitos": "Enter a valid phone number, 8 to 15 digits",
+    "Este negocio no está recibiendo pedidos para llevar en este momento": (
+        "This business isn't taking pickup orders right now"
+    ),
     "Acepta o cancela los pedidos pendientes antes de cerrar la cuenta": (
         "Accept or cancel the pending orders before closing the bill"
     ),

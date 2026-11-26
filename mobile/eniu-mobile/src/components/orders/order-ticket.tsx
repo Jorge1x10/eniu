@@ -89,10 +89,10 @@ export function OrderTicket({ order, table, currency, variant = 'status', backdr
           </View>
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <MesaBadge number={table.number} />
+            <MesaBadge number={table.number} takeaway={table.takeaway} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text numberOfLines={1} style={{ fontFamily: MONO, color: ink, fontSize: 15, fontWeight: '800' }}>{order.diner_name.toUpperCase()}</Text>
-              <Text style={{ fontFamily: MONO, color: inkMuted, fontSize: 13 }}>{time}{table.name ? ` · ${table.name}` : ''}</Text>
+              <Text style={{ fontFamily: MONO, color: inkMuted, fontSize: 13 }}>{time}{table.takeaway ? (table.phone ? ` · ${table.phone}` : '') : table.name ? ` · ${table.name}` : ''}</Text>
             </View>
             <StatusChip status={order.status} />
           </View>

@@ -237,12 +237,19 @@ export type Order = {
   total: string;
 };
 
-export type TableLabel = { id?: string; number: number; name: string | null };
+/**
+ * La mesa de una cuenta. Las cuentas para llevar no tienen mesa: el contexto
+ * de pedidos les pone `takeaway: true`, `number: null` y el nombre y teléfono
+ * de quien pide (ver `withPlace` en `orders-context`).
+ */
+export type TableLabel = { id?: string | null; number: number | null; name: string | null; takeaway?: boolean; phone?: string | null };
 
 export type TableAccount = {
   id: string;
   status: 'open' | 'closed';
+  channel?: 'table' | 'takeaway';
   table: TableLabel;
+  customer?: { name: string; phone: string | null } | null;
   opened_at: string;
   closed_at: string | null;
   total: string;
@@ -250,7 +257,7 @@ export type TableAccount = {
   orders: Order[];
 };
 
-export type OrderingState = { enabled: boolean; reason: 'paused' | 'plan' | null };
+export type OrderingState = { enabled: boolean; reason: 'paused' | 'plan' | null; takeaway?: boolean };
 
 export type LiveOrders =
   | { changed: false; version: number }
