@@ -11,6 +11,7 @@ from app.modules.system.routes import system_bp
 from app.modules.billing.routes import billing_bp
 from app.modules.promotion.routes import promotion_bp
 from app.modules.ordering.routes import ordering_bp
+from app.modules.cash.routes import cash_bp
 
 def register_routes(app):
     app.register_blueprint(auth_bp)
@@ -26,3 +27,4 @@ def register_routes(app):
     app.register_blueprint(billing_bp)
     app.register_blueprint(promotion_bp)
     app.register_blueprint(ordering_bp)
+    app.register_blueprint(cash_bp)

@@ -1,7 +1,7 @@
 import i18n from "../../../i18n";
 import { formatDate } from "../../../i18n/formats";
 
-function escapeHtml(value) {
+export function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   })[character]);

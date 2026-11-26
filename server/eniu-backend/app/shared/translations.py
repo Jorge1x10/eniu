@@ -14,6 +14,29 @@ reordenarlos sin depender de la posición.
 # no nombran precios ni invitan a comprar, porque la app de iOS no puede
 # ofrecer una compra fuera de las reglas de Apple.
 _EN = {
+    # --- Caja, cobro y corte -------------------------------------------------
+    "Abre la caja antes de cobrar": "Open the register before charging",
+    "Abre la caja antes de registrar movimientos": "Open the register before recording cash movements",
+    "Cada pago debe tener un importe": "Each payment must have an amount",
+    "El efectivo recibido no alcanza para el pago": "The cash received doesn't cover the payment",
+    "El método de pago no es válido": "The payment method is not valid",
+    "El tipo de movimiento no es válido": "The movement type is not valid",
+    "La caja ya está abierta": "The register is already open",
+    "La caja ya está cerrada": "The register is already closed",
+    "Los pagos deben sumar el total de la cuenta": "The payments must add up to the bill total",
+    "Los pagos no son válidos": "The payments are not valid",
+    "No fue posible abrir la caja": "We couldn't open the register",
+    "No fue posible cargar el corte": "We couldn't load the register report",
+    "No fue posible cargar la caja": "We couldn't load the register",
+    "No fue posible cargar los cortes": "We couldn't load the register reports",
+    "No fue posible cobrar la cuenta": "We couldn't charge the bill",
+    "No fue posible hacer el corte": "We couldn't close the register",
+    "No fue posible registrar el movimiento": "We couldn't record the cash movement",
+    "Turno de caja no encontrado": "Register shift not found",
+    "{field} debe ser mayor que cero": "{field} must be greater than zero",
+    "{field} debe ser un importe válido": "{field} must be a valid amount",
+    "{field} es obligatorio": "{field} is required",
+    "{field} no puede tener más de {limit} caracteres": "{field} can't be longer than {limit} characters",
     # --- Pedidos desde la mesa -----------------------------------------------
     "Acepta o cancela los pedidos pendientes antes de cerrar la cuenta": (
         "Accept or cancel the pending orders before closing the bill"

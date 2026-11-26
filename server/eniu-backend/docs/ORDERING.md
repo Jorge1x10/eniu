@@ -131,7 +131,7 @@ Respuestas que el cliente debe tratar aparte (todas llevan `code`):
 | `GET /api/businesses/<id>/orders/live?version=N` | Cuentas abiertas con sus pedidos |
 | `PATCH /api/businesses/<id>/orders/<order_id>` | `{"status": "received"\|"preparing"\|"ready"\|"cancelled"}` |
 | `POST /api/businesses/<id>/orders/<order_id>/items/<item_id>/cancel` | Cancelar un producto |
-| `POST /api/businesses/<id>/accounts/<account_id>/close` | Cerrar la cuenta de la mesa |
+| `POST /api/businesses/<id>/accounts/<account_id>/close` | Cerrar la cuenta de la mesa **sin cobrar** (cortesías, errores). Para cobrar: `.../checkout`, en [`CASH.md`](CASH.md) |
 | `GET /api/businesses/<id>/orders/stats?from=AAAA-MM-DD&to=AAAA-MM-DD` | Estadísticas de lo vendido (ver abajo) |
 
 ## Estadísticas

@@ -25,6 +25,7 @@ const NAV_GROUPS = [
   ] },
   { key: "service", title: "Servicio", items: [
     { key: "orders", label: "Pedidos", path: "/dashboard/pedidos", icon: DASH_ICONS.orders },
+    { key: "cash", label: "Caja", path: "/dashboard/caja", icon: DASH_ICONS.cash },
     { key: "tables", label: "Mesas", path: "/dashboard/mesas", icon: DASH_ICONS.tables },
   ] },
   { key: "menu", title: "Tu menú", items: [

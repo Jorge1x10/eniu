@@ -79,6 +79,7 @@ def create_app(test_config=None):
     from app.modules.billing.model import BillingSubscription, StripeWebhookEvent
     from app.modules.promotion.model import Promotion
     from app.modules.ordering.model import DiningTable, Order, OrderItem, TableAccount
+    from app.modules.cash.model import CashMovement, CashSession, Payment
     from app.modules.auth.jwt_security import configure_jwt_security
 
     configure_jwt_security()
