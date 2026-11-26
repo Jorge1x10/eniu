@@ -53,6 +53,8 @@ def create_app(test_config=None):
             "Authorization",
             "X-Eniu-Platform",
             "X-Eniu-App-Version",
+            # Token del teléfono del comensal en los pedidos desde la mesa.
+            "X-Eniu-Diner",
         ],
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     )
@@ -76,6 +78,7 @@ def create_app(test_config=None):
     from app.modules.auth.model import PasswordResetToken
     from app.modules.billing.model import BillingSubscription, StripeWebhookEvent
     from app.modules.promotion.model import Promotion
+    from app.modules.ordering.model import DiningTable, Order, OrderItem, TableAccount
     from app.modules.auth.jwt_security import configure_jwt_security
 
     configure_jwt_security()

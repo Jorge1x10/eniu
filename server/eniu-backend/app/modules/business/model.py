@@ -17,6 +17,14 @@ class Business(BaseModel):
     photo_filename = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, nullable = False, default=True)
     currency = db.Column(db.String, nullable=False, default="MXN")
+    # Pedidos desde la mesa. Apagado por defecto: un negocio que sólo publica
+    # su menú no ve nada nuevo hasta que lo enciende. También es el botón de
+    # "pausar pedidos" cuando la cocina se satura.
+    ordering_enabled = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # Sube con cada cambio en las cuentas o pedidos del negocio. El panel lo
+    # manda al consultar los pedidos en vivo y, si no cambió, la respuesta no
+    # carga nada más: es lo que hace barata la consulta cada pocos segundos.
+    orders_version = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     catalogues = db.relationship(
         "Catalogue",
         back_populates="business",
@@ -41,6 +49,7 @@ class Business(BaseModel):
             ),
             "is_active": self.is_active,
             "currency": self.currency,
+            "ordering_enabled": self.ordering_enabled,
             "created_at": (
                 self.created_at.isoformat()
                 if self.created_at
