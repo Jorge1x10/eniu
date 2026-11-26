@@ -30,6 +30,13 @@ describe("la comanda", () => {
     expect(text).toContain("3 productos");
   });
 
+  it("para llevar lleva PARA LLEVAR y el teléfono en lugar de la mesa", () => {
+    const html = buildTicketHtml({ order, table: { takeaway: true, number: null, name: "David", phone: "5512345678" }, businessName: "Café Luna" });
+    expect(html).toContain("PARA LLEVAR");
+    expect(html).toContain("Tel. 5512345678");
+    expect(html).not.toContain("MESA");
+  });
+
   it("no deja pasar HTML del comensal", () => {
     const doc = parse(buildTicketHtml({ order, table: { number: 4 }, businessName: "Café" }));
     expect(doc.querySelector("img")).toBeNull();

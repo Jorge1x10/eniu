@@ -59,12 +59,20 @@ igual que los pedidos.
 ## Siguiente
 
 ### 4. Para llevar y a domicilio
-- Canal del pedido: mesa, para llevar o a domicilio. Hoy todo pedido
-  pertenece a la cuenta de una mesa; hay que separarlo.
-- Pedir desde el enlace del menú sin QR de mesa: nombre, teléfono,
-  dirección y referencias; en efectivo, con cuánto paga.
-- Configuración del negocio: zonas, costo de envío, pedido mínimo, horario.
-- Estados nuevos: En camino y Entregado. Filtro de domicilio en Pedidos.
+- [x] **Para llevar:** el cliente pide desde `/m/<slug>/para-llevar` (o el
+      botón "Pedir para llevar" del menú) con nombre y teléfono; cada pedido
+      es su propia cuenta sin mesa, con los mismos estados, comanda
+      "PARA LLEVAR" y cobro al recoger (efectivo o terminal) en la caja.
+- [x] Ajuste "Pedidos para llevar" en Pedidos, con el enlace y el QR para
+      compartir; la app móvil los muestra.
+- [ ] **A domicilio** con repartidores propios: dirección y referencias,
+      pago contra entrega (efectivo, con cuánto paga, o terminal).
+- [ ] Zonas por colonia o código postal, cada una con su costo de envío;
+      pedido mínimo y horario.
+- [ ] Estados En camino y Entregado; filtro por canal en Pedidos.
+- [ ] Rappi, Uber Eats y DiDi Food: integración como proveedor de POS
+      (DiDi y Rappi primero) o por un agregador. Requiere que Eniu pida
+      acceso a cada plataforma.
 
 ## Pendientes ya identificados
 
@@ -86,5 +94,6 @@ igual que los pedidos.
   ESC/POS también sirven). Bluetooth de 58 mm, con la app.
 - ~~**Cobro**~~: decidido. Con propina, y la cuenta se cobra completa con uno
   o varios métodos (no se divide por comensal).
-- **Domicilio:** ¿repartidores propios? ¿sólo pago contra entrega o también
-  en línea? (en línea implica que el dinero llegue a cada restaurante).
+- ~~**Domicilio**~~: decidido. Repartidores propios, pago al entregar
+  (efectivo o terminal) y zonas por colonia. Más adelante, Rappi, Uber Eats y
+  DiDi Food.

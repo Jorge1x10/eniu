@@ -1,6 +1,6 @@
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCw } from "lucide-react";
-import { useLocation, useParams } from "react-router";
+import { RefreshCw, ShoppingBag } from "lucide-react";
+import { Link, useLocation, useParams } from "react-router";
 
 import { getPublicMenu } from "../services/publicMenuService";
 import { adaptPublicMenu } from "../utils/publicMenuAdapter";
@@ -13,11 +13,12 @@ import { FONT_REGISTRY } from "../../Templates/utils/themeDefaults";
 import TableOrderingLayer from "../ordering/TableOrderingLayer";
 import { isOrderable, useTableOrdering } from "../ordering/useTableOrdering";
 
-export default function PublicMenuPage() {
+export default function PublicMenuPage({ takeaway = false }) {
   const { t } = useTranslation();
 
   // `qrToken` llega cuando el menú se abre con el QR de una mesa
   // (`/m/<slug>/mesa/<qr>`): entonces se puede pedir desde la plantilla.
+  // `takeaway` (`/m/<slug>/para-llevar`): se pide para llevar, sin mesa.
   const { publicSlug, qrToken } = useParams();
   const location = useLocation();
   const [menu, setMenu] = useState(null);
@@ -63,7 +64,7 @@ export default function PublicMenuPage() {
     };
   }, [loadMenu]);
 
-  const ordering = useTableOrdering(qrToken, menu?.products);
+  const ordering = useTableOrdering(qrToken, menu?.products, takeaway && !qrToken ? publicSlug : null);
   const tokens = useMemo(() => (menu ? resolveTokens(menu.theme) : null), [menu]);
   const orderingContext = useMemo(() => (ordering.active && tokens ? {
     canOrder: ordering.canOrder,
@@ -92,9 +93,22 @@ export default function PublicMenuPage() {
       {/* Hueco para que la barra de la mesa no tape el pie del menú. */}
       <div aria-hidden="true" className="h-28" style={{ backgroundColor: menu.theme.background_color }} />
       <MenuCurrencyContext.Provider value={menu.business?.currency || "MXN"}>
-        <TableOrderingLayer ordering={ordering} palette={palette} qrToken={qrToken} />
+        <TableOrderingLayer ordering={ordering} palette={palette} />
       </MenuCurrencyContext.Provider>
     </>}
+    {/* El menú sin mesa invita a pedir para llevar si el negocio lo ofrece. */}
+    {!ordering.active && menu.takeaway && palette && <div aria-hidden="true" className="h-24" style={{ backgroundColor: menu.theme.background_color }} />}
+    {!ordering.active && menu.takeaway && palette && (
+      <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <Link
+          to={`/m/${publicSlug}/para-llevar${location.search}`}
+          className="flex min-h-[54px] items-center gap-2 rounded-full px-6 font-extrabold shadow-[0_8px_30px_rgba(0,0,0,0.25)]"
+          style={{ backgroundColor: palette.button, color: palette.buttonText, fontFamily: palette.font }}
+        >
+          <ShoppingBag size={18} aria-hidden="true" /> {t("Pedir para llevar")}
+        </Link>
+      </div>
+    )}
     {menu.splash?.enabled && <MenuSplash splash={menu.splash} theme={menu.theme} businessName={menu.business?.name} />}
   </main>;
 }

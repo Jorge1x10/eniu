@@ -824,5 +824,10 @@
   "Sí, quitar": "Yes, remove",
   "Quitar {{name}} del pedido": "Remove {{name}} from the order",
   "Quitado por el restaurante": "Removed by the restaurant",
-  "Tiene pedidos por aceptar": "Has orders to accept"
+  "Tiene pedidos por aceptar": "Has orders to accept",
+  "PARA": "PICK",
+  "LLEVAR": "UP",
+  "Para llevar": "Pickup",
+  "Para llevar · {{name}}": "Pickup · {{name}}",
+  "¿Cerrar el pedido para llevar de {{name}}?": "Close {{name}}'s pickup order?"
 }

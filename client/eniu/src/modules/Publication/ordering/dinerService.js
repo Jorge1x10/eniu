@@ -49,3 +49,23 @@ export function getMyOrders(qrToken, { token, version, signal } = {}) {
 export function getTableAccount(qrToken, { token, signal } = {}) {
   return call(`${tablePath(qrToken)}/account`, { token, signal });
 }
+
+// --- Para llevar: desde el enlace del menú, sin mesa ---------------------------
+
+const takeawayPath = (publicSlug) => `/public/takeaway/${encodeURIComponent(publicSlug)}`;
+
+export function getTakeaway(publicSlug, { token, signal } = {}) {
+  return call(takeawayPath(publicSlug), { token, signal });
+}
+
+export function sendTakeawayOrder(publicSlug, { token, dinerName, phone, idempotencyKey, items }) {
+  return call(`${takeawayPath(publicSlug)}/orders`, {
+    method: "POST",
+    token,
+    body: { diner_name: dinerName, phone, idempotency_key: idempotencyKey, items },
+  });
+}
+
+export function getMyTakeawayOrders(publicSlug, { token, signal } = {}) {
+  return call(`${takeawayPath(publicSlug)}/orders`, { token, signal });
+}

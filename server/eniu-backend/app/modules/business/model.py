@@ -21,6 +21,9 @@ class Business(BaseModel):
     # su menú no ve nada nuevo hasta que lo enciende. También es el botón de
     # "pausar pedidos" cuando la cocina se satura.
     ordering_enabled = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # Pedidos para llevar desde el enlace del menú, sin QR de mesa. Se suman a
+    # `ordering_enabled`: pausar pedidos pausa también los para llevar.
+    takeaway_enabled = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     # Sube con cada cambio en las cuentas o pedidos del negocio. El panel lo
     # manda al consultar los pedidos en vivo y, si no cambió, la respuesta no
     # carga nada más: es lo que hace barata la consulta cada pocos segundos.
@@ -50,6 +53,7 @@ class Business(BaseModel):
             "is_active": self.is_active,
             "currency": self.currency,
             "ordering_enabled": self.ordering_enabled,
+            "takeaway_enabled": self.takeaway_enabled,
             "created_at": (
                 self.created_at.isoformat()
                 if self.created_at

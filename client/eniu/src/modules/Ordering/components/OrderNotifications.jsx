@@ -13,7 +13,7 @@ import {
 } from "../notifications/browserNotifications";
 import { itemsSummary } from "../notifications/orderEvents";
 import { orderingErrorMessage, useOrderingService } from "../services/orderingService";
-import { orderLabel } from "../utils/labels";
+import { orderLabel, placeLabel } from "../utils/labels";
 import ConfirmDialog from "./ConfirmDialog";
 import MesaBadge from "./MesaBadge";
 
@@ -39,7 +39,7 @@ function PendingCard({ order, table, onAccept, onReject }) {
   return (
     <article aria-label={t("Nuevo pedido de {{label}}", { label: orderLabel(order, table) })} className={`${CARD} border-2 border-eniu-yellow`}>
       <div className="flex items-start gap-3">
-        <MesaBadge number={table.number} size={44} />
+        <MesaBadge number={table.number} takeaway={table.takeaway} size={44} />
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-extrabold uppercase tracking-[1.2px] text-eniu-gold">{t("Nuevo pedido")}</p>
           <p className="truncate font-extrabold">{order.diner_name} · {timeOf(order.created_at)}</p>
@@ -67,7 +67,7 @@ function AcceptedAlert({ alert, onDismiss }) {
     <article role="status" className={`${CARD} flex items-start gap-3 border border-eniu-warm`}>
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-eniu-success/15 text-eniu-success"><Check size={18} aria-hidden="true" /></span>
       <div className="min-w-0 flex-1">
-        <p className="font-extrabold">{t("Pedido aceptado · {{table}}", { table: t("Mesa {{number}}", { number: alert.table.number }) })}</p>
+        <p className="font-extrabold">{t("Pedido aceptado · {{table}}", { table: placeLabel(alert.table) })}</p>
         <p className="mt-0.5 truncate text-sm text-eniu-muted">{alert.order.diner_name} · {itemsSummary(alert.order)}</p>
       </div>
       <button type="button" onClick={() => onDismiss(alert.id)} aria-label={t("Cerrar aviso")} className="-m-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-eniu-muted hover:bg-eniu-surface-alt">
@@ -85,7 +85,7 @@ function ReadyAlert({ alert, onDismiss }) {
       <div className="flex items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-eniu-success text-white"><CheckCheck size={18} aria-hidden="true" /></span>
         <div className="min-w-0 flex-1">
-          <p className="font-extrabold">{t("Listo para llevar · {{table}}", { table: t("Mesa {{number}}", { number: alert.table.number }) })}</p>
+          <p className="font-extrabold">{alert.table.takeaway ? t("Listo para entregar · {{name}}", { name: alert.table.name || alert.order.diner_name }) : t("Listo para llevar · {{table}}", { table: placeLabel(alert.table) })}</p>
           <p className="mt-0.5 text-sm text-eniu-muted">{alert.order.diner_name} · {itemsSummary(alert.order)}</p>
         </div>
       </div>

@@ -4,21 +4,22 @@ import { useTranslation } from "react-i18next";
 
 import { formatDate } from "../../../i18n/formats";
 import { useMenuCurrency } from "../../Templates/templates/menuData";
-import { MAX_NAME, MAX_NOTES, MAX_QUANTITY } from "./useTableOrdering";
+import { MAX_NAME, MAX_NOTES, MAX_PHONE, MAX_QUANTITY, isValidPhone } from "./useTableOrdering";
 
 const STEPS = ["pending", "received", "preparing", "ready"];
 const STEP_LABELS = { pending: "Enviado", received: "Recibido", preparing: "Preparando", ready: "Listo" };
-const WELCOME_KEY = (qrToken) => `eniu.diner.welcomed.${qrToken}`;
+const WELCOME_KEY = (placeKey) => `eniu.diner.welcomed.${placeKey}`;
 
-function wasWelcomed(qrToken) {
-  try { return sessionStorage.getItem(WELCOME_KEY(qrToken)) === "1"; } catch { return false; }
+function wasWelcomed(placeKey) {
+  try { return sessionStorage.getItem(WELCOME_KEY(placeKey)) === "1"; } catch { return false; }
 }
 
-function markWelcomed(qrToken) {
-  try { sessionStorage.setItem(WELCOME_KEY(qrToken), "1"); } catch { /* sólo no se recuerda */ }
+function markWelcomed(placeKey) {
+  try { sessionStorage.setItem(WELCOME_KEY(placeKey), "1"); } catch { /* sólo no se recuerda */ }
 }
 
 function tableTitle(t, table) {
+  if (table.takeaway) return t("Para llevar");
   return table.name
     ? t("Mesa {{number}} · {{name}}", { number: table.number, name: table.name })
     : t("Mesa {{number}}", { number: table.number });
@@ -99,7 +100,7 @@ function NameField({ value, onChange, table, autoFocus = false }) {
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="text-sm font-bold">{t("Tu nombre o el de tu mesa")}</label>
+      <label htmlFor={id} className="text-sm font-bold">{table.takeaway ? t("Tu nombre") : t("Tu nombre o el de tu mesa")}</label>
       <input
         id={id}
         value={value}
@@ -110,44 +111,84 @@ function NameField({ value, onChange, table, autoFocus = false }) {
         className="mt-1.5 min-h-12 w-full rounded-xl border border-current/25 bg-transparent px-4 text-base outline-none focus:border-current"
       />
       <p className="mt-1.5 text-xs opacity-70">
-        {t("El mesero verá tu pedido como «{{label}}».", { label: `${value.trim() || t("Ana")} | ${t("Mesa {{number}}", { number: table.number })}` })}
+        {table.takeaway
+          ? t("Con este nombre te entregamos tu pedido.")
+          : t("El mesero verá tu pedido como «{{label}}».", { label: `${value.trim() || t("Ana")} | ${t("Mesa {{number}}", { number: table.number })}` })}
+      </p>
+    </div>
+  );
+}
+
+/** Sólo para llevar: a dónde avisar si hay algún cambio con el pedido. */
+function PhoneField({ value, onChange }) {
+  const { t } = useTranslation();
+  const id = useId();
+  const invalid = value.trim() !== "" && !isValidPhone(value);
+  return (
+    <div>
+      <label htmlFor={id} className="text-sm font-bold">{t("Tu teléfono")}</label>
+      <input
+        id={id}
+        type="tel"
+        inputMode="tel"
+        value={value}
+        onChange={(event) => onChange(event.target.value.slice(0, MAX_PHONE))}
+        maxLength={MAX_PHONE}
+        autoComplete="tel"
+        aria-invalid={invalid}
+        aria-describedby={`${id}-hint`}
+        className="mt-1.5 min-h-12 w-full rounded-xl border border-current/25 bg-transparent px-4 text-base outline-none focus:border-current aria-[invalid=true]:border-red-500"
+      />
+      <p id={`${id}-hint`} className={`mt-1.5 text-xs ${invalid ? "font-bold" : "opacity-70"}`}>
+        {invalid ? t("Escribe un teléfono de 8 a 15 dígitos.") : t("Solo para avisarte si hay algún cambio con tu pedido.")}
       </p>
     </div>
   );
 }
 
 /** Al abrir el QR: en qué mesa está y a nombre de quién pide. */
-function WelcomeSheet({ ordering, palette, qrToken, onDone }) {
+function WelcomeSheet({ ordering, palette, onDone }) {
   const { t } = useTranslation();
   const [name, setName] = useState(ordering.dinerName);
+  const [phone, setPhone] = useState(ordering.dinerPhone);
+  const takeaway = ordering.table.takeaway;
+  const ready = Boolean(name.trim()) && (!takeaway || isValidPhone(phone));
   function start() {
     ordering.saveName(name);
-    markWelcomed(qrToken);
+    if (takeaway) ordering.savePhone(phone);
+    markWelcomed(ordering.placeKey);
     onDone();
   }
   function skip() {
-    markWelcomed(qrToken);
+    markWelcomed(ordering.placeKey);
     onDone();
   }
   return (
     <Sheet
-      title={t("Estás en la {{table}}", { table: tableTitle(t, ordering.table) })}
+      title={takeaway ? t("Pide para llevar") : t("Estás en la {{table}}", { table: tableTitle(t, ordering.table) })}
       onClose={skip}
       palette={palette}
       footer={(
         <div className="space-y-2">
-          <PrimaryButton palette={palette} onClick={start} disabled={!name.trim()}>{t("Empezar a pedir")}</PrimaryButton>
+          <PrimaryButton palette={palette} onClick={start} disabled={!ready}>{t("Empezar a pedir")}</PrimaryButton>
           <button type="button" onClick={skip} className="min-h-11 w-full cursor-pointer rounded-xl text-sm font-bold underline-offset-2 hover:underline">{t("Solo ver el menú")}</button>
         </div>
       )}
     >
-      <p className="mb-4 text-sm opacity-80">{t("Elige lo que quieras, revisa tu pedido y mándalo. Te avisamos aquí cuando el restaurante lo reciba.")}</p>
-      <NameField value={name} onChange={setName} table={ordering.table} autoFocus />
+      <p className="mb-4 text-sm opacity-80">
+        {takeaway
+          ? t("Elige lo que quieras y mándalo. Aquí ves cuándo está listo para recoger; pagas al recogerlo, en efectivo o con tarjeta.")
+          : t("Elige lo que quieras, revisa tu pedido y mándalo. Te avisamos aquí cuando el restaurante lo reciba.")}
+      </p>
+      <div className="space-y-4">
+        <NameField value={name} onChange={setName} table={ordering.table} autoFocus />
+        {takeaway && <PhoneField value={phone} onChange={setPhone} />}
+      </div>
     </Sheet>
   );
 }
 
-function StatusSteps({ status }) {
+function StatusSteps({ status, takeaway = false }) {
   const { t } = useTranslation();
   const current = STEPS.indexOf(status);
   return (
@@ -157,7 +198,7 @@ function StatusSteps({ status }) {
         return (
           <li key={step} aria-current={index === current ? "step" : undefined} className="min-w-0">
             <span aria-hidden="true" className={`block h-1.5 rounded-full ${done ? "bg-current" : "bg-current/20"}`} />
-            <span className={`mt-1 block truncate text-[11px] font-bold ${done ? "" : "opacity-55"}`}>{t(STEP_LABELS[step])}</span>
+            <span className={`mt-1 block truncate text-[11px] font-bold ${done ? "" : "opacity-55"}`}>{takeaway && step === "ready" ? t("Para recoger") : t(STEP_LABELS[step])}</span>
           </li>
         );
       })}
@@ -165,11 +206,13 @@ function StatusSteps({ status }) {
   );
 }
 
-function SentOrder({ order }) {
+function SentOrder({ order, takeaway = false }) {
   const { t } = useTranslation();
   const currency = useMenuCurrency();
   const time = order.created_at ? formatDate(new Date(order.created_at), { hour: "2-digit", minute: "2-digit" }) : "";
   const cancelled = order.status === "cancelled";
+  // Para llevar, la cuenta es del pedido: cerrada quiere decir entregada.
+  const delivered = takeaway && !cancelled && order.account?.status === "closed";
   return (
     <li className="rounded-2xl border border-current/15 p-4">
       <div className="flex items-baseline justify-between gap-3">
@@ -178,8 +221,19 @@ function SentOrder({ order }) {
       </div>
       {cancelled
         ? <p className="mt-2 text-sm font-bold">{t("El restaurante canceló este pedido.")}</p>
-        : <StatusSteps status={order.status} />}
-      {order.status === "pending" && <p className="mt-2 text-xs opacity-75">{t("Esperando a que el restaurante lo reciba. Para cambiar algo, díselo al mesero.")}</p>}
+        : delivered
+          ? <p className="mt-2 flex items-center gap-1.5 text-sm font-bold"><Check size={16} aria-hidden="true" /> {t("Entregado")}</p>
+          : <StatusSteps status={order.status} takeaway={takeaway} />}
+      {order.status === "pending" && (
+        <p className="mt-2 text-xs opacity-75">
+          {takeaway
+            ? t("Esperando a que el restaurante lo reciba. Para cambiar algo, llama al restaurante.")
+            : t("Esperando a que el restaurante lo reciba. Para cambiar algo, díselo al mesero.")}
+        </p>
+      )}
+      {takeaway && order.status === "ready" && !delivered && (
+        <p className="mt-2 text-sm font-bold">{t("¡Listo! Pasa a recogerlo. Pagas {{total}} al recoger, en efectivo o con tarjeta.", { total: currency.format(Number(order.account?.total ?? order.total)) })}</p>
+      )}
       <ul className="mt-3 space-y-1 text-sm">
         {order.items.map((item, index) => (
           <li key={`${item.name}-${index}`} className={item.is_cancelled ? "line-through opacity-55" : ""}>
@@ -247,24 +301,28 @@ function CartLine({ line, ordering }) {
 function CartSheet({ ordering, palette, onClose, onOpenAccount }) {
   const { t } = useTranslation();
   const currency = useMenuCurrency();
-  const [editingName, setEditingName] = useState(!ordering.dinerName);
+  const takeaway = ordering.table.takeaway;
+  const [editingName, setEditingName] = useState(!ordering.dinerName || (takeaway && !isValidPhone(ordering.dinerPhone)));
   const [name, setName] = useState(ordering.dinerName);
+  const [phone, setPhone] = useState(ordering.dinerPhone);
   const hasDraft = ordering.lines.length > 0;
   const hasSent = ordering.orders.length > 0;
-  const nameReady = Boolean((editingName ? name : ordering.dinerName).trim());
+  const nameReady = Boolean((editingName ? name : ordering.dinerName).trim())
+    && (!takeaway || isValidPhone(editingName ? phone : ordering.dinerPhone));
 
   async function send() {
     if (editingName) {
-      if (!name.trim()) return;
+      if (!nameReady) return;
       ordering.saveName(name);
+      if (takeaway) ordering.savePhone(phone);
     }
-    const result = await ordering.send(editingName ? name.trim() : undefined);
+    const result = await ordering.send(editingName ? name.trim() : undefined, editingName && takeaway ? phone.trim() : undefined);
     if (result.ok) setEditingName(false);
   }
 
   return (
     <Sheet
-      title={t("Tu pedido · {{table}}", { table: t("Mesa {{number}}", { number: ordering.table.number }) })}
+      title={takeaway ? t("Tu pedido para llevar") : t("Tu pedido · {{table}}", { table: t("Mesa {{number}}", { number: ordering.table.number }) })}
       onClose={onClose}
       palette={palette}
       footer={(
@@ -274,7 +332,7 @@ function CartSheet({ ordering, palette, onClose, onOpenAccount }) {
               {ordering.sending ? t("Mandando…") : t("Mandar pedido · {{total}}", { total: currency.format(ordering.total) })}
             </PrimaryButton>
           )}
-          {hasSent && (
+          {hasSent && !takeaway && (
             <button type="button" onClick={onOpenAccount} className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-current/25 px-4 font-bold">
               <ReceiptText size={18} aria-hidden="true" /> {t("Ver cuenta de la mesa")}
             </button>
@@ -298,15 +356,23 @@ function CartSheet({ ordering, palette, onClose, onOpenAccount }) {
           </div>
           <div className="mt-4">
             {editingName ? (
-              <NameField value={name} onChange={setName} table={ordering.table} />
+              <div className="space-y-4">
+                <NameField value={name} onChange={setName} table={ordering.table} />
+                {takeaway && <PhoneField value={phone} onChange={setPhone} />}
+              </div>
             ) : (
               <p className="flex flex-wrap items-center gap-x-2 text-sm">
-                <span>{t("Pides como")} <strong>{ordering.dinerName}</strong></span>
-                <button type="button" onClick={() => { setName(ordering.dinerName); setEditingName(true); }} className="min-h-11 cursor-pointer font-bold underline underline-offset-2">{t("Cambiar")}</button>
+                <span>{t("Pides como")} <strong>{ordering.dinerName}</strong>{takeaway && ordering.dinerPhone ? ` · ${ordering.dinerPhone}` : ""}</span>
+                <button type="button" onClick={() => { setName(ordering.dinerName); setPhone(ordering.dinerPhone); setEditingName(true); }} className="min-h-11 cursor-pointer font-bold underline underline-offset-2">{t("Cambiar")}</button>
               </p>
             )}
           </div>
-          {!ordering.canOrder && <p className="mt-3 text-sm font-semibold">{t("El restaurante pausó los pedidos. Puedes pedirle al mesero.")}</p>}
+          {takeaway && ordering.canOrder && <p className="mt-3 text-sm opacity-80">{t("Pagas al recoger, en efectivo o con tarjeta.")}</p>}
+          {!ordering.canOrder && (
+            <p className="mt-3 text-sm font-semibold">
+              {takeaway ? t("El restaurante no está recibiendo pedidos para llevar en este momento.") : t("El restaurante pausó los pedidos. Puedes pedirle al mesero.")}
+            </p>
+          )}
         </>
       ) : !hasSent ? (
         <div className="py-8 text-center">
@@ -319,7 +385,7 @@ function CartSheet({ ordering, palette, onClose, onOpenAccount }) {
       {hasSent && (
         <section aria-labelledby="sent-orders-title" className={hasDraft ? "mt-6" : ""}>
           <h3 id="sent-orders-title" className="mb-3 text-xs font-extrabold uppercase tracking-[1.2px] opacity-75">{t("Lo que ya pediste")}</h3>
-          <ul className="space-y-3">{[...ordering.orders].reverse().map((order) => <SentOrder key={order.idempotency_key || order.created_at} order={order} />)}</ul>
+          <ul className="space-y-3">{[...ordering.orders].reverse().map((order) => <SentOrder key={order.idempotency_key || order.created_at} order={order} takeaway={takeaway} />)}</ul>
         </section>
       )}
     </Sheet>
@@ -388,35 +454,45 @@ function AccountSheet({ ordering, palette, onClose }) {
  * Todo lo que se agrega al menú cuando se abre con el QR de una mesa. La
  * plantilla queda como está; esto va encima, con sus mismos colores.
  */
-export default function TableOrderingLayer({ ordering, palette, qrToken }) {
+export default function TableOrderingLayer({ ordering, palette }) {
   const { t } = useTranslation();
   const currency = useMenuCurrency();
   const [sheet, setSheet] = useState(null);
-  const [welcomed, setWelcomed] = useState(() => wasWelcomed(qrToken));
+  const [welcomed, setWelcomed] = useState(() => wasWelcomed(ordering.placeKey));
   const { table } = ordering;
 
   if (table.status === "missing" || table.status === "error") {
     return (
       <p role="status" className="fixed inset-x-3 bottom-3 z-30 mx-auto max-w-lg rounded-2xl px-4 py-3 text-center text-sm font-semibold shadow-lg" style={{ backgroundColor: palette.background, color: palette.text, fontFamily: palette.font }}>
-        {table.status === "missing"
-          ? t("Este QR de mesa ya no está activo. Puedes ver el menú y pedirle al mesero.")
-          : t("No pudimos conectar con tu mesa. Puedes ver el menú y pedirle al mesero.")}
+        {table.takeaway
+          ? t("No pudimos conectar con el restaurante para pedir para llevar. Puedes ver el menú.")
+          : table.status === "missing"
+            ? t("Este QR de mesa ya no está activo. Puedes ver el menú y pedirle al mesero.")
+            : t("No pudimos conectar con tu mesa. Puedes ver el menú y pedirle al mesero.")}
       </p>
     );
   }
   if (table.status !== "ready") return null;
 
-  const showWelcome = ordering.canOrder && !ordering.dinerName && !welcomed;
+  const showWelcome = ordering.canOrder && !welcomed
+    && (!ordering.dinerName || (table.takeaway && !isValidPhone(ordering.dinerPhone)));
   const pendingCount = ordering.orders.filter((order) => ["pending", "received", "preparing"].includes(order.status)).length;
 
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-lg items-center gap-2 rounded-3xl p-2 shadow-[0_8px_30px_rgba(0,0,0,0.25)]" style={{ backgroundColor: palette.background, color: palette.text, fontFamily: palette.font }}>
-          <span className="shrink-0 rounded-2xl border border-current/20 px-3 py-2 text-center leading-tight">
-            <span className="block text-[10px] font-extrabold uppercase tracking-[1px] opacity-70">{t("Mesa")}</span>
-            <span className="block text-lg font-black tabular-nums">{table.number}</span>
-          </span>
+          {table.takeaway ? (
+            <span className="flex shrink-0 flex-col items-center rounded-2xl border border-current/20 px-3 py-2 text-center leading-tight">
+              <ShoppingBag size={18} aria-hidden="true" />
+              <span className="mt-0.5 block text-[10px] font-extrabold uppercase tracking-[0.5px]">{t("Para llevar")}</span>
+            </span>
+          ) : (
+            <span className="shrink-0 rounded-2xl border border-current/20 px-3 py-2 text-center leading-tight">
+              <span className="block text-[10px] font-extrabold uppercase tracking-[1px] opacity-70">{t("Mesa")}</span>
+              <span className="block text-lg font-black tabular-nums">{table.number}</span>
+            </span>
+          )}
           {ordering.count > 0 ? (
             <button type="button" onClick={() => setSheet("cart")} className="flex min-h-[54px] flex-1 cursor-pointer items-center justify-between gap-2 rounded-2xl px-4 font-extrabold" style={{ backgroundColor: palette.button, color: palette.buttonText }}>
               <span className="flex items-center gap-2"><ShoppingBag size={18} aria-hidden="true" />{t("Ver pedido ({{count}})", { count: ordering.count })}</span>
@@ -429,13 +505,15 @@ export default function TableOrderingLayer({ ordering, palette, qrToken }) {
             </button>
           ) : (
             <p className="min-w-0 flex-1 px-2 text-sm font-semibold opacity-85">
-              {ordering.canOrder ? t("Toca «Agregar» en lo que quieras pedir.") : t("Los pedidos están en pausa. Pídele al mesero.")}
+              {ordering.canOrder
+                ? t("Toca «Agregar» en lo que quieras pedir.")
+                : table.takeaway ? t("Por ahora no hay pedidos para llevar.") : t("Los pedidos están en pausa. Pídele al mesero.")}
             </p>
           )}
         </div>
       </div>
 
-      {showWelcome && <WelcomeSheet ordering={ordering} palette={palette} qrToken={qrToken} onDone={() => setWelcomed(true)} />}
+      {showWelcome && <WelcomeSheet ordering={ordering} palette={palette} onDone={() => setWelcomed(true)} />}
       {sheet === "cart" && <CartSheet ordering={ordering} palette={palette} onClose={() => setSheet(null)} onOpenAccount={() => setSheet("account")} />}
       {sheet === "account" && <AccountSheet ordering={ordering} palette={palette} onClose={() => setSheet("cart")} />}
     </>

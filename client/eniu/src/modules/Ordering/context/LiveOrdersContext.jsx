@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useLiveOrders } from "../hooks/useLiveOrders";
 import { closeAllNotifications, closeNotification, showNotification } from "../notifications/browserNotifications";
 import { itemsSummary } from "../notifications/orderEvents";
+import { placeLabel } from "../utils/labels";
 import { claimAutoPrint, loadPrintSettings } from "../printing/printSettings";
 import { printOrderTicket } from "../printing/printTicket";
 import { playNewOrderSound, soundPreference } from "../utils/orderSound";
@@ -57,7 +58,7 @@ export function LiveOrdersProvider({ businessId, businessName = "", children }) 
     const additions = [];
     const gone = new Set();
     for (const event of events) {
-      const table = tr("Mesa {{number}}", { number: event.table.number });
+      const table = placeLabel(event.table);
       const body = `${event.order.diner_name} · ${itemsSummary(event.order)}`;
       if (event.type === "new" && pageHidden()) {
         showNotification({ tag: pendingTag(event.orderId), title: tr("Nuevo pedido · {{table}}", { table }), body, persistent: true, onClick: goToOrders });
@@ -80,7 +81,10 @@ export function LiveOrdersProvider({ businessId, businessName = "", children }) 
       if (event.type === "ready") {
         additions.push({ id: `ready-${event.orderId}`, kind: "ready", ...event });
         if (pageHidden()) {
-          showNotification({ tag: readyTag(event.orderId), title: tr("Listo para llevar · {{table}}", { table }), body, persistent: true, onClick: goToOrders });
+          const title = event.table.takeaway
+            ? tr("Listo para entregar · {{name}}", { name: event.table.name || event.order.diner_name })
+            : tr("Listo para llevar · {{table}}", { table });
+          showNotification({ tag: readyTag(event.orderId), title, body, persistent: true, onClick: goToOrders });
         }
       }
       if (event.type === "gone") {

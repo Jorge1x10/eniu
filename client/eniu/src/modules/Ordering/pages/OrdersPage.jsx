@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, Bell, BellOff, ClipboardList, Printer, WifiOff } from "lucide-react";
+import { Banknote, Bell, BellOff, ClipboardList, Phone, Printer, ShoppingBag, WifiOff } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
@@ -13,6 +13,7 @@ import MesaBadge from "../components/MesaBadge";
 import OrderTicket from "../components/OrderTicket";
 import OrderingSwitch from "../components/OrderingSwitch";
 import PrintSettingsDialog from "../components/PrintSettingsDialog";
+import TakeawayDialog from "../components/TakeawayDialog";
 import { loadPrintSettings, wasAutoPrinted } from "../printing/printSettings";
 import { printOrderTicket } from "../printing/printTicket";
 import { useLiveOrdersContext } from "../context/LiveOrdersContext";
@@ -76,6 +77,7 @@ function OrdersBoard({ business }) {
   // abierta cuando, ya cobrada, la cuenta sale de la lista (pantalla del cambio).
   const [checkout, setCheckout] = useState(null);
   const [printSettingsOpen, setPrintSettingsOpen] = useState(false);
+  const [takeawayOpen, setTakeawayOpen] = useState(false);
   const [autoPrint, setAutoPrint] = useState(() => loadPrintSettings().autoPrint);
 
   // El navegador no deja sonar nada hasta que la persona toca la página. Si
@@ -194,6 +196,16 @@ function OrdersBoard({ business }) {
           </button>
           <button
             type="button"
+            onClick={() => setTakeawayOpen(true)}
+            aria-label={ordering?.takeaway ? t("Pedidos para llevar: activados") : t("Pedidos para llevar")}
+            title={t("Pedidos para llevar")}
+            className="relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-eniu-warm bg-eniu-surface hover:bg-eniu-surface-alt"
+          >
+            <ShoppingBag size={18} aria-hidden="true" />
+            {ordering?.takeaway && <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-eniu-success ring-2 ring-eniu-surface" />}
+          </button>
+          <button
+            type="button"
             onClick={() => setPrintSettingsOpen(true)}
             aria-label={autoPrint ? t("Impresión de comandas: activada en este equipo") : t("Impresión de comandas")}
             title={t("Impresión de comandas")}
@@ -271,7 +283,7 @@ function OrdersBoard({ business }) {
         <>
           <div className="flex items-center gap-3">
             <p className="shrink-0 text-xs font-extrabold uppercase tracking-[1.2px] text-eniu-gold">
-              {t("Mesas con cuenta abierta")} · {sortedAccounts.length}
+              {t("Cuentas abiertas")} · {sortedAccounts.length}
             </p>
             <span aria-hidden="true" className="h-px flex-1 bg-eniu-warm" />
           </div>
@@ -289,6 +301,14 @@ function OrdersBoard({ business }) {
         </>
       )}
 
+      {takeawayOpen && (
+        <TakeawayDialog
+          businessId={business.id}
+          ordering={ordering}
+          onChange={() => refresh({ force: true })}
+          onClose={() => setTakeawayOpen(false)}
+        />
+      )}
       {printSettingsOpen && (
         <PrintSettingsDialog
           businessName={business.name}
@@ -370,8 +390,19 @@ function TableCard({ account, currency, ticketHandlers, onCharge }) {
       }`}
     >
       <header className="mb-4 flex items-center gap-3">
-        <MesaBadge number={account.table.number} size={50} as="h2" />
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-eniu-muted">{account.table.name || ""}</p>
+        <MesaBadge number={account.table.number} takeaway={account.table.takeaway} size={50} as="h2" />
+        {account.table.takeaway ? (
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-extrabold">{account.table.name}</p>
+            {account.table.phone && (
+              <a href={`tel:${account.table.phone}`} className="inline-flex min-h-6 items-center gap-1 text-sm font-semibold text-eniu-muted underline-offset-2 hover:underline">
+                <Phone size={13} aria-hidden="true" /> {account.table.phone}
+              </a>
+            )}
+          </div>
+        ) : (
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-eniu-muted">{account.table.name || ""}</p>
+        )}
         {hasPending && (
           <span className="shrink-0 rounded-full bg-eniu-yellow px-2.5 py-1 text-xs font-extrabold text-eniu-ink">
             {t("{{count}} por aceptar", { count: account.pending_orders })}
@@ -394,7 +425,7 @@ function TableCard({ account, currency, ticketHandlers, onCharge }) {
 
       <footer className="mt-4 border-t border-eniu-warm pt-4">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-sm font-bold text-eniu-muted">{t("Cuenta de la mesa")}</p>
+          <p className="text-sm font-bold text-eniu-muted">{account.table.takeaway ? t("Total · paga al recoger") : t("Cuenta de la mesa")}</p>
           <p className="text-xl font-black tabular-nums">{formatCurrency(Number(account.total), currency)}</p>
         </div>
         <button

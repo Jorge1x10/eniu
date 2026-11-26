@@ -6,13 +6,17 @@
  *   mesa sólo a quien pidió en ella.
  * - El **nombre** ("David", "Familia López") se recuerda para no preguntarlo
  *   en cada visita.
- * - El **carrito** se guarda por mesa: recargar la página no lo vacía.
+ * - El **teléfono** sólo se pide para llevar, para avisar cuando esté listo;
+ *   también se recuerda.
+ * - El **carrito** se guarda por mesa (o por menú, para llevar): recargar la
+ *   página no lo vacía.
  *
  * Todo pasa por `try/catch`: en una ventana privada o con el almacenamiento
  * bloqueado, el token vive en memoria y la página sigue funcionando.
  */
 const TOKEN_KEY = "eniu.diner.token";
 const NAME_KEY = "eniu.diner.name";
+const PHONE_KEY = "eniu.diner.phone";
 const cartKey = (qrToken) => `eniu.diner.cart.${qrToken}`;
 
 let memoryToken = null;
@@ -53,6 +57,14 @@ export function savedDinerName() {
 
 export function rememberDinerName(name) {
   write(NAME_KEY, name ? name.trim().slice(0, 40) : null);
+}
+
+export function savedDinerPhone() {
+  return (read(PHONE_KEY) || "").slice(0, 20);
+}
+
+export function rememberDinerPhone(phone) {
+  write(PHONE_KEY, phone ? phone.trim().slice(0, 20) : null);
 }
 
 export function savedCart(qrToken) {
