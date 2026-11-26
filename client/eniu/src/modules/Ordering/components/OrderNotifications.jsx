@@ -39,7 +39,7 @@ function PendingCard({ order, table, onAccept, onReject }) {
   return (
     <article aria-label={t("Nuevo pedido de {{label}}", { label: orderLabel(order, table) })} className={`${CARD} border-2 border-eniu-yellow`}>
       <div className="flex items-start gap-3">
-        <MesaBadge number={table.number} takeaway={table.takeaway} size={44} />
+        <MesaBadge number={table.number} takeaway={table.takeaway} delivery={Boolean(table.delivery)} size={44} />
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-extrabold uppercase tracking-[1.2px] text-eniu-gold">{t("Nuevo pedido")}</p>
           <p className="truncate font-extrabold">{order.diner_name} · {timeOf(order.created_at)}</p>
@@ -85,7 +85,7 @@ function ReadyAlert({ alert, onDismiss }) {
       <div className="flex items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-eniu-success text-white"><CheckCheck size={18} aria-hidden="true" /></span>
         <div className="min-w-0 flex-1">
-          <p className="font-extrabold">{alert.table.takeaway ? t("Listo para entregar · {{name}}", { name: alert.table.name || alert.order.diner_name }) : t("Listo para llevar · {{table}}", { table: placeLabel(alert.table) })}</p>
+          <p className="font-extrabold">{alert.table.delivery ? t("Listo para enviar · {{name}}", { name: alert.table.name || alert.order.diner_name }) : alert.table.takeaway ? t("Listo para entregar · {{name}}", { name: alert.table.name || alert.order.diner_name }) : t("Listo para llevar · {{table}}", { table: placeLabel(alert.table) })}</p>
           <p className="mt-0.5 text-sm text-eniu-muted">{alert.order.diner_name} · {itemsSummary(alert.order)}</p>
         </div>
       </div>

@@ -51,6 +51,14 @@ export function useOrderingService(businessId) {
     (takeaway) => request({ method: "PATCH", path: `${base}/ordering`, data: { takeaway } }),
     [base, request]
   );
+  const getDelivery = useCallback(
+    (options = {}) => request({ method: "GET", path: `${base}/delivery`, ...options }),
+    [base, request]
+  );
+  const setDelivery = useCallback(
+    (data) => request({ method: "PATCH", path: `${base}/delivery`, data }),
+    [base, request]
+  );
   const live = useCallback(
     (version, options = {}) => request({
       method: "GET",
@@ -79,6 +87,6 @@ export function useOrderingService(businessId) {
 
   return {
     listTables, createTable, updateTable, deleteTable, regenerateQr,
-    setOrdering, setTakeaway, live, setOrderStatus, cancelItem, closeAccount, stats,
+    setOrdering, setTakeaway, getDelivery, setDelivery, live, setOrderStatus, cancelItem, closeAccount, stats,
   };
 }

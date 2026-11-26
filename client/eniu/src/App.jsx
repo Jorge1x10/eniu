@@ -5,7 +5,8 @@ import { Route, Routes } from "react-router";
  * Dos aplicaciones en un mismo despliegue, cargadas por separado.
  *
  * - `/m/:publicSlug` es el menú que abre el comensal al escanear un QR, y
- *   `/m/:publicSlug/para-llevar` el mismo menú para pedir para llevar.
+ *   `/m/:publicSlug/para-llevar` y `/a-domicilio`: el mismo menú para pedir
+ *   sin mesa (las dos opciones se pueden cambiar adentro).
  *   `/m/:publicSlug/mesa/:qrToken` el mismo menú abierto desde el QR de una
  *   mesa, desde donde se puede pedir. Sólo
  *   descarga el menú y sus plantillas: ni sesión, ni el SDK de Google, ni el
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/m/:publicSlug/mesa/:qrToken" element={<PublicMenuPage />} />
         {/* Pedir para llevar desde el enlace del menú, sin mesa. */}
         <Route path="/m/:publicSlug/para-llevar" element={<PublicMenuPage takeaway />} />
+        <Route path="/m/:publicSlug/a-domicilio" element={<PublicMenuPage delivery />} />
         <Route path="*" element={<PanelApp />} />
       </Routes>
     </Suspense>

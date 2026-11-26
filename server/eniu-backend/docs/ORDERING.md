@@ -148,11 +148,56 @@ llevar" (`menu.ordering.takeaway` en `/api/public/menus/<slug>`).
 
 | Método y ruta | Qué hace |
 |---|---|
-| `GET /api/public/takeaway/<slug>` | Nombre del negocio y si acepta pedidos para llevar ahora |
+| `GET /api/public/takeaway/<slug>` | Nombre del negocio, si acepta pedidos para llevar ahora y `delivery` (`enabled`, `fee`, `min_order`, `zones`) |
 | `POST /api/public/takeaway/<slug>/orders` | Manda el pedido. Mismo cuerpo que en la mesa, más `"phone"` |
 | `GET /api/public/takeaway/<slug>/orders` | Los pedidos para llevar de este teléfono en las últimas 12 horas, con `account.status` (`closed` = entregado) y `account.total` |
 
 Los códigos de error son los mismos que en la mesa.
+
+## A domicilio
+
+Con los repartidores del restaurante. El cliente entra por
+`/m/<slug>/a-domicilio` (o elige "A domicilio" dentro de `/para-llevar`). El
+botón del menú público dice "Pedir a domicilio" o "Pedir para llevar o a
+domicilio" según lo activo (`menu.ordering.delivery`).
+
+- **Ajustes del negocio:** `GET`/`PATCH /api/businesses/<id>/delivery` con
+  `enabled`, `fee` (el **mismo costo para todas las colonias**), `min_order`
+  (sin el envío; `null` es sin mínimo) y `zones` (las colonias que atiende;
+  sin vacías ni repetidas). No se puede activar sin colonias
+  (`code: "zones_required"`). Como para llevar, depende de `ordering_enabled`
+  y del plan; `ordering.delivery` llega en `orders/live`.
+- **Pedido:** `POST /api/public/delivery/<slug>/orders`, el cuerpo de para
+  llevar más:
+
+  ```json
+  "delivery": {
+    "zone": "Roma Norte", "address": "Colima 120, depto 3", "references": "Portón negro",
+    "pay_with": "cash", "cash_tendered": "500"
+  }
+  ```
+
+  - `zone` debe ser una de las colonias del negocio (sin importar mayúsculas):
+    si no, `code: "zone_not_served"`.
+  - `pay_with`: `cash` o `card` (el repartidor lleva terminal). Con efectivo,
+    `cash_tendered` es opcional; si no alcanza para productos + envío,
+    `code: "tendered_short"`.
+  - Si los productos no llegan al mínimo: `409`, `code: "below_minimum"` con
+    `min_order`.
+- **La cuenta** (`channel: "delivery"`) copia el costo de envío al pedir: si el
+  negocio lo cambia después, el pedido no cambia. En `orders/live` trae
+  `delivery: {address, zone, references, fee, pay_with, cash_tendered}`.
+- **Total:** productos aceptados + envío. Si el negocio cancela todo, el envío
+  tampoco se cobra (total en cero).
+- **Estados:** los de siempre y uno más, `on_the_way` (En camino), sólo para
+  domicilio (`on_the_way_at`). Entregado es cobrar con la caja al volver el
+  repartidor. En una mesa o para llevar, `on_the_way` responde `409`
+  (`invalid_transition`).
+- **Estadísticas:** cuentan "En camino" como venta; los ingresos son de
+  productos, sin el envío.
+- **Seguimiento del cliente:** `GET /api/public/takeaway/<slug>/orders`
+  devuelve los dos canales, con `channel` y `account.delivery`. El límite de
+  3 pedidos sin aceptar por teléfono es para los dos juntos.
 
 ## API del negocio (con sesión)
 

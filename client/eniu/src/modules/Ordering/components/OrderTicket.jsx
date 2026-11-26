@@ -11,8 +11,11 @@ const NEXT = {
   preparing: { status: "ready", label: "Marcar listo" },
 };
 
+// A domicilio, lo listo sale con el repartidor. Entregado es cobrar.
+const DELIVERY_NEXT = { status: "on_the_way", label: "Salió a entregar" };
+
 // Lo aceptado ya está en cocina: es lo que tiene comanda impresa.
-const PRINTABLE = new Set(["received", "preparing", "ready"]);
+const PRINTABLE = new Set(["received", "preparing", "ready", "on_the_way"]);
 
 const MONO = "font-['ui-monospace','SFMono-Regular','Menlo','Consolas',monospace]";
 
@@ -33,9 +36,9 @@ export default function OrderTicket({ order, table, currency, variant = "status"
   const { t } = useTranslation();
   const [confirming, setConfirming] = useState(null);
   const [busy, setBusy] = useState(null);
-  const canRemove = order.status !== "ready" && order.status !== "cancelled";
+  const canRemove = !["ready", "on_the_way", "cancelled"].includes(order.status);
   const count = order.items.filter((item) => !item.is_cancelled).reduce((sum, item) => sum + item.quantity, 0);
-  const next = NEXT[order.status];
+  const next = NEXT[order.status] || (order.status === "ready" && table?.delivery ? DELIVERY_NEXT : null);
   const printButton = onPrint && PRINTABLE.has(order.status) ? (
     <button
       type="button"
@@ -65,10 +68,10 @@ export default function OrderTicket({ order, table, currency, variant = "status"
         </header>
       ) : (
         <header className="flex items-center gap-3">
-          <MesaBadge number={table.number} takeaway={table.takeaway} tone="paper" />
+          <MesaBadge number={table.number} takeaway={table.takeaway} delivery={Boolean(table.delivery)} tone="paper" />
           <div className="min-w-0 flex-1">
             <p className={`${MONO} truncate text-[15px] font-extrabold`}>{order.diner_name.toUpperCase()}</p>
-            <p className={`${MONO} text-[13px] text-eniu-ticket-muted`}>{time(order.created_at)}{table.takeaway ? (table.phone ? ` · ${table.phone}` : "") : table.name ? ` · ${table.name}` : ""}</p>
+            <p className={`${MONO} text-[13px] text-eniu-ticket-muted`}>{time(order.created_at)}{table.delivery ? ` · ${table.delivery.zone}` : table.takeaway ? (table.phone ? ` · ${table.phone}` : "") : table.name ? ` · ${table.name}` : ""}</p>
           </div>
           {printButton}
           <StatusChip status={order.status} />

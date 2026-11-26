@@ -69,3 +69,11 @@ export function sendTakeawayOrder(publicSlug, { token, dinerName, phone, idempot
 export function getMyTakeawayOrders(publicSlug, { token, signal } = {}) {
   return call(`${takeawayPath(publicSlug)}/orders`, { token, signal });
 }
+
+export function sendDeliveryOrder(publicSlug, { token, dinerName, phone, idempotencyKey, items, delivery }) {
+  return call(`/public/delivery/${encodeURIComponent(publicSlug)}/orders`, {
+    method: "POST",
+    token,
+    body: { diner_name: dinerName, phone, idempotency_key: idempotencyKey, items, delivery },
+  });
+}

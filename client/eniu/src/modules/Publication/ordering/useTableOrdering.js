@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  getMyOrders, getMyTakeawayOrders, getTable, getTableAccount, getTakeaway, sendOrder, sendTakeawayOrder,
+  getMyOrders, getMyTakeawayOrders, getTable, getTableAccount, getTakeaway, sendDeliveryOrder, sendOrder, sendTakeawayOrder,
 } from "./dinerService";
 import {
-  dinerToken, randomToken, rememberCart, rememberDinerName, rememberDinerPhone, savedCart, savedDinerName, savedDinerPhone,
+  dinerToken, randomToken, rememberCart, rememberChannel, rememberDelivery, rememberDinerName, rememberDinerPhone,
+  savedCart, savedChannel, savedDelivery, savedDinerName, savedDinerPhone,
 } from "./dinerIdentity";
 
 /** El comensal pregunta cada 10 s, sólo con pedidos sin terminar (ORDERING.md). */
@@ -23,6 +24,8 @@ export function isValidPhone(value) {
 }
 
 const UNFINISHED = new Set(["pending", "received", "preparing"]);
+// A domicilio, "listo" todavía no llega: se sigue preguntando hasta que sale.
+const UNFINISHED_DELIVERY = new Set(["pending", "received", "preparing", "ready"]);
 
 /** Se puede pedir lo que está disponible, tiene precio y clave pública. */
 export function isOrderable(product) {
@@ -33,14 +36,16 @@ export function isOrderable(product) {
  * Todo lo que el comensal hace en su mesa: el carrito (guardado por mesa), el
  * envío y el seguimiento de sus pedidos, y la cuenta de la mesa.
  *
- * Con `takeawaySlug` (el menú abierto en `/m/<slug>/para-llevar`) es lo mismo
- * para llevar: pide también el teléfono, cada pedido es independiente y no
- * hay cuenta de mesa. En ese caso `table` es `{ takeaway: true, ... }`.
+ * Con `takeawaySlug` (el menú abierto en `/m/<slug>/para-llevar` o
+ * `/a-domicilio`) es lo mismo sin mesa: pide también el teléfono, cada pedido
+ * es independiente y no hay cuenta de mesa. En ese caso `table` es
+ * `{ takeaway: true, ... }` y `channel` dice si es para recoger o a domicilio
+ * (`preferDelivery` lo elige al entrar por `/a-domicilio`).
  *
  * Sin ninguno de los dos (el menú abierto sin QR de mesa) el hook queda
  * inactivo: no pide nada al servidor y las plantillas se ven como siempre.
  */
-export function useTableOrdering(qrToken, products, takeawaySlug = null) {
+export function useTableOrdering(qrToken, products, takeawaySlug = null, preferDelivery = false) {
   const { t } = useTranslation();
   const mode = qrToken ? "table" : takeawaySlug ? "takeaway" : null;
   const active = Boolean(mode);
@@ -52,6 +57,8 @@ export function useTableOrdering(qrToken, products, takeawaySlug = null) {
   const [dinerName, setDinerName] = useState(savedDinerName);
   const [dinerPhone, setDinerPhone] = useState(savedDinerPhone);
   const [cart, setCart] = useState(() => (active ? savedCart(placeKey) : []));
+  const [channel, setChannelState] = useState(() => (preferDelivery ? "delivery" : savedChannel() || "takeaway"));
+  const [delivery, setDeliveryState] = useState(savedDelivery);
   const [orders, setOrders] = useState([]);
   // "closed": el restaurante ya cerró la cuenta en la que pidió este teléfono.
   const [accountStatus, setAccountStatus] = useState(null);
@@ -116,7 +123,25 @@ export function useTableOrdering(qrToken, products, takeawaySlug = null) {
           setTable({ status: response.status === 404 ? "missing" : "error", takeaway: true });
           return;
         }
-        setTable({ status: "ready", takeaway: true, number: null, name: null, orderingEnabled: Boolean(response.data?.ordering?.enabled) });
+        const takeawayEnabled = Boolean(response.data?.ordering?.enabled);
+        const deliveryInfo = response.data?.delivery || {};
+        const deliveryEnabled = Boolean(deliveryInfo.enabled);
+        setTable({
+          status: "ready", takeaway: true, number: null, name: null,
+          orderingEnabled: takeawayEnabled,
+          delivery: {
+            enabled: deliveryEnabled,
+            fee: Number(deliveryInfo.fee || 0),
+            minOrder: deliveryInfo.min_order ? Number(deliveryInfo.min_order) : null,
+            zones: Array.isArray(deliveryInfo.zones) ? deliveryInfo.zones : [],
+          },
+        });
+        // Si sólo hay una opción, se usa esa.
+        setChannelState((current) => {
+          if (current === "delivery" && !deliveryEnabled && takeawayEnabled) return "takeaway";
+          if (current === "takeaway" && !takeawayEnabled && deliveryEnabled) return "delivery";
+          return current;
+        });
         loadOrders({ force: true, signal: controller.signal });
         return;
       }
@@ -138,7 +163,7 @@ export function useTableOrdering(qrToken, products, takeawaySlug = null) {
     return () => controller.abort();
   }, [active, takeaway, takeawaySlug, qrToken, token, loadOrders]);
 
-  const hasUnfinished = orders.some((order) => UNFINISHED.has(order.status));
+  const hasUnfinished = orders.some((order) => (order.channel === "delivery" ? UNFINISHED_DELIVERY : UNFINISHED).has(order.status));
 
   // Sondeo sólo mientras algo está en camino y la pestaña se ve. Cuando todo
   // está "Listo", deja de preguntar.
@@ -214,14 +239,32 @@ export function useTableOrdering(qrToken, products, takeawaySlug = null) {
     rememberDinerPhone(clean);
   }, []);
 
+  const setChannel = useCallback((next) => {
+    sendKeyRef.current = null;
+    setNotice(null);
+    setChannelState(next);
+    rememberChannel(next);
+  }, []);
+
+  const saveDelivery = useCallback((change) => {
+    sendKeyRef.current = null;
+    setDeliveryState((current) => {
+      const next = { ...current, ...change };
+      rememberDelivery(next);
+      return next;
+    });
+  }, []);
+
   // `nameOverride` y `phoneOverride`: lo que se acaba de escribir en el
   // carrito, que aún no llegó al estado cuando se toca "Mandar pedido".
+  const isDelivery = takeaway && channel === "delivery";
   const send = useCallback(async (nameOverride, phoneOverride) => {
     const name = (nameOverride ?? dinerName).trim();
     const phone = (phoneOverride ?? dinerPhone).trim();
     if (!lines.length || sending) return { ok: false };
     if (!name) return { ok: false, needsName: true };
     if (takeaway && !isValidPhone(phone)) return { ok: false, needsPhone: true };
+    if (isDelivery && (!delivery.zone || !delivery.address.trim())) return { ok: false, needsAddress: true };
     // La misma clave en los reintentos: un doble toque o una red lenta
     // devuelven el mismo pedido en vez de duplicarlo.
     if (!sendKeyRef.current) sendKeyRef.current = randomToken(24);
@@ -233,9 +276,22 @@ export function useTableOrdering(qrToken, products, takeawaySlug = null) {
       idempotencyKey: sendKeyRef.current,
       items: lines.map((line) => ({ product_key: line.key, quantity: line.quantity, ...(line.notes?.trim() ? { notes: line.notes.trim() } : {}) })),
     };
-    const response = takeaway
-      ? await sendTakeawayOrder(takeawaySlug, { ...payload, phone })
-      : await sendOrder(qrToken, payload);
+    const tendered = delivery.cashTendered.trim().replace(",", ".");
+    const response = isDelivery
+      ? await sendDeliveryOrder(takeawaySlug, {
+        ...payload,
+        phone,
+        delivery: {
+          zone: delivery.zone,
+          address: delivery.address.trim(),
+          references: delivery.references.trim() || null,
+          pay_with: delivery.payWith,
+          ...(delivery.payWith === "cash" && tendered ? { cash_tendered: tendered } : {}),
+        },
+      })
+      : takeaway
+        ? await sendTakeawayOrder(takeawaySlug, { ...payload, phone })
+        : await sendOrder(qrToken, payload);
     if (!mountedRef.current) return { ok: false };
     setSending(false);
     if (response.ok) {
@@ -257,6 +313,12 @@ export function useTableOrdering(qrToken, products, takeawaySlug = null) {
       setNotice({ tone: "error", text: takeaway
         ? t("El restaurante no está recibiendo pedidos para llevar en este momento.")
         : t("El restaurante pausó los pedidos. Puedes seguir viendo el menú o pedirle al mesero.") });
+    } else if (code === "below_minimum") {
+      setNotice({ tone: "error", text: t("El pedido mínimo a domicilio es de {{amount}}, sin contar el envío.", { amount: response.data.min_order }) });
+    } else if (code === "tendered_short") {
+      setNotice({ tone: "error", text: t("El efectivo con el que pagas no alcanza para el total con envío.") });
+    } else if (code === "zone_not_served") {
+      setNotice({ tone: "error", text: t("El restaurante no entrega en esa colonia. Elige otra de la lista.") });
     } else if (code === "too_many_pending") {
       setNotice({ tone: "error", text: t("Espera a que el restaurante confirme tus pedidos antes de mandar otro.") });
     } else if (response.status === 0) {
@@ -265,7 +327,7 @@ export function useTableOrdering(qrToken, products, takeawaySlug = null) {
       setNotice({ tone: "error", text: response.data?.message || t("No pudimos mandar tu pedido. Intenta de nuevo.") });
     }
     return { ok: false };
-  }, [dinerName, dinerPhone, lines, loadOrders, qrToken, sending, t, takeaway, takeawaySlug, token]);
+  }, [delivery, dinerName, dinerPhone, isDelivery, lines, loadOrders, qrToken, sending, t, takeaway, takeawaySlug, token]);
 
   const loadAccount = useCallback(async () => {
     const response = await getTableAccount(qrToken, { token });
@@ -276,12 +338,16 @@ export function useTableOrdering(qrToken, products, takeawaySlug = null) {
 
   // "Te avisamos cuando lo reciba" deja de tener sentido en cuanto lo recibe.
   const visibleNotice = notice?.tone === "success" && !orders.some((order) => order.status === "pending") ? null : notice;
-  const canOrder = active && table.status === "ready" && table.orderingEnabled;
+  const canOrder = active && table.status === "ready" && (isDelivery ? Boolean(table.delivery?.enabled) : table.orderingEnabled);
+  // Sin mesa, se puede armar el carrito si hay alguna de las dos opciones.
+  const canBrowseOrder = canOrder || (takeaway && table.status === "ready" && (table.orderingEnabled || Boolean(table.delivery?.enabled)));
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
   const total = lines.reduce((sum, line) => sum + Number(line.price) * line.quantity, 0);
 
   return {
-    active, takeaway, placeKey, table, canOrder, dinerName, saveName, dinerPhone, savePhone,
+    active, takeaway, placeKey, table, canOrder, canBrowseOrder, dinerName, saveName, dinerPhone, savePhone,
+    channel: takeaway ? channel : "table", setChannel, isDelivery, delivery, saveDelivery,
+    deliveryFee: isDelivery ? table.delivery?.fee || 0 : 0,
     lines, count, total, quantityOf, add, addByKey, decrement, remove, setNotes,
     orders, send, sending, notice: visibleNotice, dismissNotice: () => setNotice(null),
     loadAccount, refreshOrders: () => loadOrders({ force: true }),

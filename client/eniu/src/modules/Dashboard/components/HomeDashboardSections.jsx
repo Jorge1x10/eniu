@@ -68,7 +68,7 @@ export function PendingOrdersCard({ accounts, ordering, onAccept }) {
             const notes = items.filter((item) => item.notes);
             return (
               <li key={order.id} className="flex flex-wrap items-center gap-3 py-3 sm:flex-nowrap">
-                <MesaBadge number={table.number} takeaway={table.takeaway} tone="dark" />
+                <MesaBadge number={table.number} takeaway={table.takeaway} delivery={Boolean(table.delivery)} tone="dark" />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold uppercase tracking-[0.8px] text-eniu-hero-muted">{order.diner_name} · {timeOf(order.created_at)}</p>
                   <p className="truncate text-[15px] font-bold">{items.map((item) => `${item.quantity}× ${item.name}`).join(", ")}</p>
@@ -80,7 +80,7 @@ export function PendingOrdersCard({ accounts, ordering, onAccept }) {
                   type="button"
                   disabled={busyId === order.id}
                   onClick={() => accept(order)}
-                  aria-label={table.takeaway ? t("Aceptar el pedido para llevar de {{name}}", { name: order.diner_name }) : t("Aceptar el pedido de {{name}}, mesa {{number}}", { name: order.diner_name, number: table.number })}
+                  aria-label={table.delivery ? t("Aceptar el pedido a domicilio de {{name}}", { name: order.diner_name }) : table.takeaway ? t("Aceptar el pedido para llevar de {{name}}", { name: order.diner_name }) : t("Aceptar el pedido de {{name}}, mesa {{number}}", { name: order.diner_name, number: table.number })}
                   className="min-h-11 shrink-0 cursor-pointer rounded-xl bg-eniu-yellow px-5 font-extrabold text-eniu-ink hover:bg-eniu-yellow-pressed disabled:opacity-60"
                 >
                   {t("Aceptar")}

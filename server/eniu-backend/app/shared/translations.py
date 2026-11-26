@@ -38,6 +38,18 @@ _EN = {
     "{field} es obligatorio": "{field} is required",
     "{field} no puede tener más de {limit} caracteres": "{field} can't be longer than {limit} characters",
     # --- Pedidos desde la mesa -----------------------------------------------
+    "Agrega al menos una colonia para entregar a domicilio": "Add at least one neighborhood to deliver to",
+    "El efectivo con el que pagas no alcanza para el total": "The cash you'll pay with doesn't cover the total",
+    "El pedido mínimo a domicilio es de {amount}": "The minimum delivery order is {amount}",
+    "Elige cómo vas a pagar": "Choose how you'll pay",
+    "Elige una de las colonias a las que entrega el restaurante": "Choose one of the neighborhoods the restaurant delivers to",
+    "Escribe la dirección de entrega": "Enter the delivery address",
+    "Este negocio no está entregando a domicilio en este momento": "This business isn't delivering right now",
+    "Las colonias no son válidas": "The neighborhoods are not valid",
+    "Los datos de la entrega no son válidos": "The delivery details are not valid",
+    "No fue posible cargar la entrega a domicilio": "We couldn't load the delivery settings",
+    "No fue posible guardar la entrega a domicilio": "We couldn't save the delivery settings",
+    "Sólo un pedido a domicilio puede salir a entregarse": "Only a delivery order can go out for delivery",
     "Escribe un teléfono para avisarte cuando tu pedido esté listo": (
         "Enter a phone number so we can let you know when your order is ready"
     ),

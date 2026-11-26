@@ -5,6 +5,7 @@ const STYLES = {
   received: { label: "Recibido", className: "bg-eniu-ticket-alt text-eniu-ink" },
   preparing: { label: "Preparando", className: "bg-eniu-ticket-alt text-eniu-ink" },
   ready: { label: "Listo", className: "bg-eniu-ticket-success/12 text-eniu-ticket-success" },
+  on_the_way: { label: "En camino", className: "bg-eniu-ticket-success/12 text-eniu-ticket-success" },
   cancelled: { label: "Rechazado", className: "bg-eniu-ticket-danger/10 text-eniu-ticket-danger" },
 };
 

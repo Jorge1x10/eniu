@@ -37,6 +37,16 @@ describe("la comanda", () => {
     expect(html).not.toContain("MESA");
   });
 
+  it("a domicilio lleva la dirección, la colonia y cómo paga", () => {
+    const delivery = { address: "Amsterdam 10", zone: "Condesa", references: "Portón <negro>", fee: "35.00", pay_with: "cash", cash_tendered: "200.00" };
+    const html = buildTicketHtml({ order, table: { takeaway: true, number: null, name: "Ana", phone: "5512345678", delivery }, businessName: "Café Luna" });
+    expect(html).toContain("A DOMICILIO");
+    expect(html).toContain("Amsterdam 10");
+    expect(html).toContain("Col. Condesa");
+    expect(html).toContain("Portón &lt;negro&gt;");
+    expect(html).toMatch(/Paga en efectivo con .*200\.00/);
+  });
+
   it("no deja pasar HTML del comensal", () => {
     const doc = parse(buildTicketHtml({ order, table: { number: 4 }, businessName: "Café" }));
     expect(doc.querySelector("img")).toBeNull();

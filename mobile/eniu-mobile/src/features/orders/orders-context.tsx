@@ -45,7 +45,11 @@ function withPlace(account: TableAccount): TableAccount {
   if (account.table) return account;
   return {
     ...account,
-    table: { id: null, number: null, takeaway: true, name: account.customer?.name ?? null, phone: account.customer?.phone ?? null },
+    table: {
+      id: null, number: null, takeaway: true,
+      name: account.customer?.name ?? null, phone: account.customer?.phone ?? null,
+      delivery: account.delivery ?? null,
+    },
   };
 }
 

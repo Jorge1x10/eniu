@@ -68,7 +68,7 @@ export function printHtml(html) {
 }
 
 /** Imprime la comanda de un pedido con el papel elegido en este dispositivo. */
-export async function printOrderTicket({ order, table, businessName, reprint = false }) {
+export async function printOrderTicket({ order, table, businessName, reprint = false, currency = "MXN" }) {
   const [{ buildTicketHtml }, { loadPrintSettings }] = await Promise.all([import("./ticket"), import("./printSettings")]);
-  return printHtml(buildTicketHtml({ order, table, businessName, paper: loadPrintSettings().paper, reprint }));
+  return printHtml(buildTicketHtml({ order, table, businessName, paper: loadPrintSettings().paper, reprint, currency }));
 }

@@ -17,6 +17,8 @@
 const TOKEN_KEY = "eniu.diner.token";
 const NAME_KEY = "eniu.diner.name";
 const PHONE_KEY = "eniu.diner.phone";
+const DELIVERY_KEY = "eniu.diner.delivery";
+const CHANNEL_KEY = "eniu.diner.channel";
 const cartKey = (qrToken) => `eniu.diner.cart.${qrToken}`;
 
 let memoryToken = null;
@@ -65,6 +67,37 @@ export function savedDinerPhone() {
 
 export function rememberDinerPhone(phone) {
   write(PHONE_KEY, phone ? phone.trim().slice(0, 20) : null);
+}
+
+/** Colonia, dirección, referencias y pago de la última entrega a domicilio. */
+export function savedDelivery() {
+  try {
+    const data = JSON.parse(read(DELIVERY_KEY) || "{}");
+    const text = (value, limit) => (typeof value === "string" ? value.slice(0, limit) : "");
+    return {
+      zone: text(data.zone, 60),
+      address: text(data.address, 200),
+      references: text(data.references, 200),
+      payWith: data.payWith === "card" ? "card" : "cash",
+      cashTendered: text(data.cashTendered, 12),
+    };
+  } catch {
+    return { zone: "", address: "", references: "", payWith: "cash", cashTendered: "" };
+  }
+}
+
+export function rememberDelivery(delivery) {
+  write(DELIVERY_KEY, JSON.stringify(delivery));
+}
+
+/** "takeaway" o "delivery": lo que eligió la última vez. */
+export function savedChannel() {
+  const value = read(CHANNEL_KEY);
+  return value === "delivery" || value === "takeaway" ? value : null;
+}
+
+export function rememberChannel(channel) {
+  write(CHANNEL_KEY, channel);
 }
 
 export function savedCart(qrToken) {

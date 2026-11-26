@@ -45,7 +45,7 @@ class TakeawayTestCase(OrderingTestCase):
         self.assertEqual(self.client.get("/api/public/takeaway/no-existe").status_code, 404)
 
     def test_el_menu_publico_ofrece_pedir_para_llevar(self):
-        self.assertEqual(self.client.get(f"/api/public/menus/{SLUG}").json["menu"]["ordering"], {"takeaway": True})
+        self.assertEqual(self.client.get(f"/api/public/menus/{SLUG}").json["menu"]["ordering"], {"takeaway": True, "delivery": False})
 
     def test_apagado_no_recibe_pedidos(self):
         self.set_takeaway(False)

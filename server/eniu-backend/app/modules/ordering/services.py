@@ -39,7 +39,10 @@ from .model import (
     ACCEPTED_STATUSES,
     ACCOUNT_CLOSED,
     ACCOUNT_OPEN,
+    CHANNEL_DELIVERY,
     CHANNEL_TAKEAWAY,
+    DELIVERY_FLOW,
+    REMOTE_CHANNELS,
     ORDER_CANCELLED,
     ORDER_FLOW,
     ORDER_PENDING,
@@ -70,6 +73,7 @@ TIMESTAMP_FOR_STATUS = {
     "received": "received_at",
     "preparing": "preparing_at",
     "ready": "ready_at",
+    "on_the_way": "on_the_way_at",
 }
 
 
@@ -187,6 +191,7 @@ def order_payload(order, for_business=False):
         "received_at": _iso(order.received_at),
         "preparing_at": _iso(order.preparing_at),
         "ready_at": _iso(order.ready_at),
+        "on_the_way_at": _iso(order.on_the_way_at),
         "cancelled_at": _iso(order.cancelled_at),
         "items": [_item_payload(item, with_id=for_business) for item in order.items],
         "total": _money(_order_total(order)),
@@ -200,12 +205,38 @@ def order_payload(order, for_business=False):
     return payload
 
 
-def account_total(account):
-    """Lo que se debe: sólo pedidos aceptados y productos sin cancelar."""
+def account_subtotal(account):
+    """Lo consumido: sólo pedidos aceptados y productos sin cancelar."""
     return sum(
         (_order_total(order) for order in account.orders if order.status in ACCEPTED_STATUSES),
         Decimal("0"),
     )
+
+
+def account_total(account):
+    """Lo que se debe: lo consumido y, a domicilio, el envío.
+
+    El envío sólo se cobra si hay algo que entregar: si el negocio canceló
+    todo, la cuenta queda en cero.
+    """
+    subtotal = account_subtotal(account)
+    if account.channel == CHANNEL_DELIVERY and subtotal > 0:
+        return subtotal + (account.delivery_fee or Decimal("0"))
+    return subtotal
+
+
+def delivery_payload(account):
+    """A dónde y cómo se entrega un pedido a domicilio; None en los demás."""
+    if account.channel != CHANNEL_DELIVERY:
+        return None
+    return {
+        "address": account.delivery_address,
+        "zone": account.delivery_zone,
+        "references": account.delivery_references,
+        "fee": _money(account.delivery_fee),
+        "pay_with": account.pay_with,
+        "cash_tendered": _money(account.cash_tendered) if account.cash_tendered is not None else None,
+    }
 
 
 def _account_payload_for_business(account):
@@ -217,8 +248,9 @@ def _account_payload_for_business(account):
         "table": {"id": str(account.table_id), **_table_label(account.table)} if account.table else None,
         "customer": (
             {"name": account.customer_name, "phone": account.customer_phone}
-            if account.channel == CHANNEL_TAKEAWAY else None
+            if account.channel in REMOTE_CHANNELS else None
         ),
+        "delivery": delivery_payload(account),
         "opened_at": _iso(account.created_at),
         "closed_at": _iso(account.closed_at),
         "total": _money(account_total(account)),
@@ -250,12 +282,12 @@ def _ordering_state(business):
     `paused`: el negocio los apagó. `plan`: su plan no los incluye (por
     ejemplo, terminó la prueba gratuita). El panel muestra uno u otro aviso.
     """
-    takeaway = bool(business.takeaway_enabled)
+    extra = {"takeaway": bool(business.takeaway_enabled), "delivery": bool(business.delivery_enabled)}
     if not _plan_allows_orders(business):
-        return {"enabled": False, "reason": "plan", "takeaway": takeaway}
+        return {"enabled": False, "reason": "plan", **extra}
     if not business.ordering_enabled:
-        return {"enabled": False, "reason": "paused", "takeaway": takeaway}
-    return {"enabled": True, "reason": None, "takeaway": takeaway}
+        return {"enabled": False, "reason": "paused", **extra}
+    return {"enabled": True, "reason": None, **extra}
 
 
 def _ordering_enabled(business):
@@ -749,7 +781,7 @@ def _cancel_order(order, now):
 
 
 def update_order_status(owner_id, business_id, order_id, status):
-    if status not in ORDER_FLOW[1:] and status != ORDER_CANCELLED:
+    if status not in DELIVERY_FLOW[1:] and status != ORDER_CANCELLED:
         return {"message": _("El estado del pedido no es válido")}, 400
     try:
         business, error = _business_access(owner_id, business_id)
@@ -764,16 +796,19 @@ def update_order_status(owner_id, business_id, order_id, status):
             return {"message": _("Este pedido está cancelado"), "code": "order_cancelled"}, 409
 
         now = utc_now()
+        flow = DELIVERY_FLOW if order.account.channel == CHANNEL_DELIVERY else ORDER_FLOW
         if status == ORDER_CANCELLED:
             _cancel_order(order, now)
+        elif status not in flow:
+            return {"message": _("Sólo un pedido a domicilio puede salir a entregarse"), "code": "invalid_transition"}, 409
         else:
-            current = ORDER_FLOW.index(order.status)
-            target = ORDER_FLOW.index(status)
+            current = flow.index(order.status)
+            target = flow.index(status)
             if target <= current:
                 return {"message": _("Un pedido sólo puede avanzar de estado"), "code": "invalid_transition"}, 409
             # Saltar pasos (de enviado a preparando) también cuenta como
             # recibido: lo que se prepara, se aceptó.
-            for step in ORDER_FLOW[current + 1:target + 1]:
+            for step in flow[current + 1:target + 1]:
                 setattr(order, TIMESTAMP_FOR_STATUS[step], now)
             order.status = status
         db.session.flush()

@@ -117,7 +117,7 @@ function PendingCard({ accounts, onAccept }: { accounts: TableAccount[]; onAccep
         </Pressable>
       </View>
       <View style={{ borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.55)', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <MesaBadge number={account.table.number} takeaway={account.table.takeaway} />
+        <MesaBadge number={account.table.number} takeaway={account.table.takeaway} delivery={Boolean(account.table.delivery)} />
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <Text numberOfLines={1} style={{ color: theme.onYellow, fontSize: 16, fontWeight: '800' }}>{order.diner_name}</Text>
           <Text numberOfLines={2} style={{ color: 'rgba(17,17,17,0.7)', fontSize: 13 }}>{summary}</Text>

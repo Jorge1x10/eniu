@@ -63,13 +63,16 @@ igual que los pedidos.
       botón "Pedir para llevar" del menú) con nombre y teléfono; cada pedido
       es su propia cuenta sin mesa, con los mismos estados, comanda
       "PARA LLEVAR" y cobro al recoger (efectivo o terminal) en la caja.
-- [x] Ajuste "Pedidos para llevar" en Pedidos, con el enlace y el QR para
-      compartir; la app móvil los muestra.
-- [ ] **A domicilio** con repartidores propios: dirección y referencias,
-      pago contra entrega (efectivo, con cuánto paga, o terminal).
-- [ ] Zonas por colonia o código postal, cada una con su costo de envío;
-      pedido mínimo y horario.
-- [ ] Estados En camino y Entregado; filtro por canal en Pedidos.
+- [x] Ajuste "Para llevar y a domicilio" en Pedidos, con el enlace y el QR
+      para compartir; la app móvil los muestra.
+- [x] **A domicilio** con repartidores propios: colonia (de la lista del
+      negocio), dirección y referencias; pago contra entrega (efectivo, con
+      cuánto paga, o terminal).
+- [x] Mismo costo de envío para todas las colonias y pedido mínimo opcional,
+      en el mismo ajuste de Pedidos.
+- [x] Estado "En camino" (sólo domicilio); entregado es cobrar. Comanda con
+      dirección y forma de pago; el cobro arranca con lo que dijo el cliente.
+- [ ] Horario de entrega; filtro por canal en Pedidos.
 - [ ] Rappi, Uber Eats y DiDi Food: integración como proveedor de POS
       (DiDi y Rappi primero) o por un agregador. Requiere que Eniu pida
       acceso a cada plataforma.
@@ -94,6 +97,6 @@ igual que los pedidos.
   ESC/POS también sirven). Bluetooth de 58 mm, con la app.
 - ~~**Cobro**~~: decidido. Con propina, y la cuenta se cobra completa con uno
   o varios métodos (no se divide por comensal).
-- ~~**Domicilio**~~: decidido. Repartidores propios, pago al entregar
-  (efectivo o terminal) y zonas por colonia. Más adelante, Rappi, Uber Eats y
-  DiDi Food.
+- ~~**Domicilio**~~: decidido. Repartidores propios sin registrarlos (sólo
+  estados), pago al entregar (efectivo o terminal), colonias con el mismo
+  costo de envío. Más adelante, Rappi, Uber Eats y DiDi Food.

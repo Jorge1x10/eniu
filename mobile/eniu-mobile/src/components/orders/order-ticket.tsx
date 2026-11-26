@@ -67,11 +67,12 @@ export function OrderTicket({ order, table, currency, variant = 'status', backdr
   const ink = theme.ticketInk;
   const inkMuted = theme.ticketInkMuted;
   const behind = backdrop ?? theme.background;
-  const canRemove = order.status !== 'ready' && order.status !== 'cancelled';
+  const canRemove = order.status !== 'ready' && order.status !== 'on_the_way' && order.status !== 'cancelled';
   const liveItems = order.items.filter((item) => !item.is_cancelled);
   const count = liveItems.reduce((sum, item) => sum + item.quantity, 0);
   const time = orderTime(order.created_at, currentLocale());
-  const next = NEXT[order.status];
+  // A domicilio, lo listo sale con el repartidor. Entregado es cobrar.
+  const next = NEXT[order.status] ?? (order.status === 'ready' && table.delivery ? { status: 'on_the_way' as const, label: 'Salió a entregar' } : undefined);
 
   async function run(key: string, action: () => Promise<void>) {
     setBusy(key);
@@ -89,10 +90,10 @@ export function OrderTicket({ order, table, currency, variant = 'status', backdr
           </View>
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <MesaBadge number={table.number} takeaway={table.takeaway} />
+            <MesaBadge number={table.number} takeaway={table.takeaway} delivery={Boolean(table.delivery)} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text numberOfLines={1} style={{ fontFamily: MONO, color: ink, fontSize: 15, fontWeight: '800' }}>{order.diner_name.toUpperCase()}</Text>
-              <Text style={{ fontFamily: MONO, color: inkMuted, fontSize: 13 }}>{time}{table.takeaway ? (table.phone ? ` · ${table.phone}` : '') : table.name ? ` · ${table.name}` : ''}</Text>
+              <Text style={{ fontFamily: MONO, color: inkMuted, fontSize: 13 }}>{time}{table.delivery ? ` · ${table.delivery.zone}` : table.takeaway ? (table.phone ? ` · ${table.phone}` : '') : table.name ? ` · ${table.name}` : ''}</Text>
             </View>
             <StatusChip status={order.status} />
           </View>

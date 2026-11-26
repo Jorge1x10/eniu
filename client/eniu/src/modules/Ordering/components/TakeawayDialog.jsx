@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import AccessibleModal from "../../Catalogue/components/AccessibleModal";
 import { useCatalogueService } from "../../Catalogue/services/catalogueService";
 import { orderingErrorMessage, useOrderingService } from "../services/orderingService";
+import DeliverySettings from "./DeliverySettings";
 import TableQr from "./TableQr";
 
 /** El enlace que el negocio comparte para pedir para llevar desde un menú. */
@@ -65,9 +66,9 @@ export default function TakeawayDialog({ businessId, ordering, onChange, onClose
       <div className="text-eniu-text">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 id={`${id}-title`} className="text-xl font-black">{t("Pedidos para llevar")}</h2>
+            <h2 id={`${id}-title`} className="text-xl font-black">{t("Para llevar y a domicilio")}</h2>
             <p id={`${id}-description`} className="mt-1 text-sm text-eniu-muted">
-              {t("Tus clientes piden desde el enlace del menú, sin QR de mesa, y pagan al recoger en efectivo o con terminal.")}
+              {t("Tus clientes piden desde el enlace del menú, sin QR de mesa, y pagan al recoger o al recibir, en efectivo o con terminal.")}
             </p>
           </div>
           <button type="button" onClick={onClose} disabled={busy} aria-label={t("Cerrar")} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl hover:bg-eniu-surface-alt">
@@ -94,6 +95,9 @@ export default function TakeawayDialog({ businessId, ordering, onChange, onClose
           </span>
         </button>
         {error && <p role="alert" className="mt-3 rounded-xl bg-eniu-danger-soft px-4 py-3 text-sm font-semibold text-eniu-danger">{error}</p>}
+
+        <h3 className="mt-6 text-xs font-extrabold uppercase tracking-[1.2px] text-eniu-gold">{t("A domicilio")}</h3>
+        <DeliverySettings businessId={businessId} onChange={onChange} />
 
         <h3 className="mt-6 text-xs font-extrabold uppercase tracking-[1.2px] text-eniu-gold">{t("Enlace para compartir")}</h3>
         {menus === null ? (
@@ -123,7 +127,7 @@ export default function TakeawayDialog({ businessId, ordering, onChange, onClose
             })}
           </ul>
         )}
-        <p className="mt-4 text-xs text-eniu-muted">{t("También aparece un botón “Pedir para llevar” en tu menú público mientras esto esté activo.")}</p>
+        <p className="mt-4 text-xs text-eniu-muted">{t("Tu menú público también muestra un botón para pedir mientras alguno de los dos esté activo.")}</p>
       </div>
     </AccessibleModal>
   );

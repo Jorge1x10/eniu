@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, Bell, BellOff, ClipboardList, Phone, Printer, ShoppingBag, WifiOff } from "lucide-react";
+import { Banknote, Bell, BellOff, ClipboardList, MapPin, Phone, Printer, ShoppingBag, WifiOff } from "lucide-react";
+import { formatPayWith } from "../utils/delivery";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
@@ -32,7 +33,7 @@ const VIEW_KEY = "eniu.orders.view";
 const STATUS_COLUMNS = [
   { key: "pending", title: "Por aceptar", statuses: ["pending"] },
   { key: "kitchen", title: "En cocina", statuses: ["received", "preparing"] },
-  { key: "ready", title: "Listos", statuses: ["ready"] },
+  { key: "ready", title: "Listos", statuses: ["ready", "on_the_way"] },
 ];
 
 function storedView() {
@@ -96,7 +97,7 @@ function OrdersBoard({ business }) {
     return {
       pending: orders.filter((order) => order.status === "pending").length,
       kitchen: orders.filter((order) => order.status === "received" || order.status === "preparing").length,
-      ready: orders.filter((order) => order.status === "ready").length,
+      ready: orders.filter((order) => order.status === "ready" || order.status === "on_the_way").length,
     };
   }, [accounts]);
 
@@ -161,7 +162,7 @@ function OrdersBoard({ business }) {
     onAdvance: (status) => advance(order, status),
     onReject: () => setConfirming({ kind: "reject", account, order }),
     onRemoveItem: (item) => removeItem(order, item),
-    onPrint: () => printOrderTicket({ order, table: account.table, businessName: business.name, reprint: wasAutoPrinted(order.id) }),
+    onPrint: () => printOrderTicket({ order, table: account.table, businessName: business.name, reprint: wasAutoPrinted(order.id), currency }),
   });
 
   return (
@@ -197,12 +198,12 @@ function OrdersBoard({ business }) {
           <button
             type="button"
             onClick={() => setTakeawayOpen(true)}
-            aria-label={ordering?.takeaway ? t("Pedidos para llevar: activados") : t("Pedidos para llevar")}
-            title={t("Pedidos para llevar")}
+            aria-label={ordering?.takeaway || ordering?.delivery ? t("Para llevar y a domicilio: activados") : t("Para llevar y a domicilio")}
+            title={t("Para llevar y a domicilio")}
             className="relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-eniu-warm bg-eniu-surface hover:bg-eniu-surface-alt"
           >
             <ShoppingBag size={18} aria-hidden="true" />
-            {ordering?.takeaway && <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-eniu-success ring-2 ring-eniu-surface" />}
+            {(ordering?.takeaway || ordering?.delivery) && <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-eniu-success ring-2 ring-eniu-surface" />}
           </button>
           <button
             type="button"
@@ -390,7 +391,7 @@ function TableCard({ account, currency, ticketHandlers, onCharge }) {
       }`}
     >
       <header className="mb-4 flex items-center gap-3">
-        <MesaBadge number={account.table.number} takeaway={account.table.takeaway} size={50} as="h2" />
+        <MesaBadge number={account.table.number} takeaway={account.table.takeaway} delivery={Boolean(account.table.delivery)} size={50} as="h2" />
         {account.table.takeaway ? (
           <div className="min-w-0 flex-1">
             <p className="truncate font-extrabold">{account.table.name}</p>
@@ -409,6 +410,13 @@ function TableCard({ account, currency, ticketHandlers, onCharge }) {
           </span>
         )}
       </header>
+      {account.table.delivery && (
+        <div className="-mt-1 mb-4 rounded-2xl bg-eniu-surface-alt p-3 text-sm">
+          <p className="flex items-start gap-1.5 font-bold"><MapPin size={15} aria-hidden="true" className="mt-0.5 shrink-0" /> <span>{account.table.delivery.address} · {account.table.delivery.zone}</span></p>
+          {account.table.delivery.references && <p className="ml-5 text-eniu-muted">{account.table.delivery.references}</p>}
+          <p className="ml-5 mt-1 font-semibold">{formatPayWith(account.table.delivery, currency, account.total)}</p>
+        </div>
+      )}
 
       <div className="space-y-3">
         {account.orders.map((order) => (
@@ -425,7 +433,11 @@ function TableCard({ account, currency, ticketHandlers, onCharge }) {
 
       <footer className="mt-4 border-t border-eniu-warm pt-4">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-sm font-bold text-eniu-muted">{account.table.takeaway ? t("Total · paga al recoger") : t("Cuenta de la mesa")}</p>
+          <p className="text-sm font-bold text-eniu-muted">
+            {account.table.delivery
+              ? t("Total con envío de {{fee}}", { fee: formatCurrency(Number(account.table.delivery.fee), currency) })
+              : account.table.takeaway ? t("Total · paga al recoger") : t("Cuenta de la mesa")}
+          </p>
           <p className="text-xl font-black tabular-nums">{formatCurrency(Number(account.total), currency)}</p>
         </div>
         <button

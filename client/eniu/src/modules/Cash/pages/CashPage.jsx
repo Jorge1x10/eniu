@@ -189,7 +189,7 @@ function OpenShift({ report, currency, money, onMovement }) {
       {report.accounts_unpaid.length > 0 && (
         <p className="rounded-2xl bg-eniu-sand px-4 py-3 text-sm font-semibold">
           {t("Se cerraron cuentas sin cobrar en este turno: {{tables}}.", {
-            tables: report.accounts_unpaid.map((entry) => `${entry.table ? t("Mesa {{number}}", { number: entry.table.number }) : t("Para llevar · {{name}}", { name: entry.customer_name || "" })} (${money(entry.total)})`).join(", "),
+            tables: report.accounts_unpaid.map((entry) => `${entry.table ? t("Mesa {{number}}", { number: entry.table.number }) : entry.channel === "delivery" ? t("A domicilio · {{name}}", { name: entry.customer_name || "" }) : t("Para llevar · {{name}}", { name: entry.customer_name || "" })} (${money(entry.total)})`).join(", "),
           })}
         </p>
       )}
@@ -212,7 +212,9 @@ function OpenShift({ report, currency, money, onMovement }) {
             {report.checkouts.map((checkout) => (
               <li key={checkout.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5 text-sm">
                 <span className="min-w-0">
-                  <span className="font-bold">{checkout.channel === "takeaway"
+                  <span className="font-bold">{checkout.channel === "delivery"
+                    ? t("A domicilio · {{name}}", { name: checkout.customer_name || "" })
+                    : checkout.channel === "takeaway"
                     ? t("Para llevar · {{name}}", { name: checkout.customer_name || "" })
                     : checkout.table_number ? t("Mesa {{number}}", { number: checkout.table_number }) : t("Mesa borrada")}</span>
                   <span className="text-eniu-muted"> · {time(checkout.paid_at)} · {checkout.methods.map((method) => t(METHOD_LABELS[method])).join(" + ")}</span>

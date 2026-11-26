@@ -13,7 +13,7 @@ import { FONT_REGISTRY } from "../../Templates/utils/themeDefaults";
 import TableOrderingLayer from "../ordering/TableOrderingLayer";
 import { isOrderable, useTableOrdering } from "../ordering/useTableOrdering";
 
-export default function PublicMenuPage({ takeaway = false }) {
+export default function PublicMenuPage({ takeaway = false, delivery = false }) {
   const { t } = useTranslation();
 
   // `qrToken` llega cuando el menú se abre con el QR de una mesa
@@ -64,16 +64,17 @@ export default function PublicMenuPage({ takeaway = false }) {
     };
   }, [loadMenu]);
 
-  const ordering = useTableOrdering(qrToken, menu?.products, takeaway && !qrToken ? publicSlug : null);
+  const remote = (takeaway || delivery) && !qrToken;
+  const ordering = useTableOrdering(qrToken, menu?.products, remote ? publicSlug : null, delivery);
   const tokens = useMemo(() => (menu ? resolveTokens(menu.theme) : null), [menu]);
   const orderingContext = useMemo(() => (ordering.active && tokens ? {
-    canOrder: ordering.canOrder,
+    canOrder: ordering.canBrowseOrder,
     isOrderable,
     quantityOf: ordering.quantityOf,
     add: ordering.add,
     decrement: ordering.decrement,
     colors: { background: tokens.nav_chip_bg, text: tokens.nav_chip_text },
-  } : null), [ordering.active, ordering.canOrder, ordering.quantityOf, ordering.add, ordering.decrement, tokens]);
+  } : null), [ordering.active, ordering.canBrowseOrder, ordering.quantityOf, ordering.add, ordering.decrement, tokens]);
   const palette = useMemo(() => (menu && tokens ? {
     background: menu.theme.background_color,
     text: menu.theme.text_color,
@@ -97,15 +98,16 @@ export default function PublicMenuPage({ takeaway = false }) {
       </MenuCurrencyContext.Provider>
     </>}
     {/* El menú sin mesa invita a pedir para llevar si el negocio lo ofrece. */}
-    {!ordering.active && menu.takeaway && palette && <div aria-hidden="true" className="h-24" style={{ backgroundColor: menu.theme.background_color }} />}
-    {!ordering.active && menu.takeaway && palette && (
+    {!ordering.active && (menu.takeaway || menu.delivery) && palette && <div aria-hidden="true" className="h-24" style={{ backgroundColor: menu.theme.background_color }} />}
+    {!ordering.active && (menu.takeaway || menu.delivery) && palette && (
       <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <Link
-          to={`/m/${publicSlug}/para-llevar${location.search}`}
+          to={`/m/${publicSlug}/${menu.takeaway ? "para-llevar" : "a-domicilio"}${location.search}`}
           className="flex min-h-[54px] items-center gap-2 rounded-full px-6 font-extrabold shadow-[0_8px_30px_rgba(0,0,0,0.25)]"
           style={{ backgroundColor: palette.button, color: palette.buttonText, fontFamily: palette.font }}
         >
-          <ShoppingBag size={18} aria-hidden="true" /> {t("Pedir para llevar")}
+          <ShoppingBag size={18} aria-hidden="true" />
+          {menu.takeaway && menu.delivery ? t("Pedir para llevar o a domicilio") : menu.delivery ? t("Pedir a domicilio") : t("Pedir para llevar")}
         </Link>
       </div>
     )}

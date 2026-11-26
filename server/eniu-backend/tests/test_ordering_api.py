@@ -496,8 +496,8 @@ class BusinessOrderFlowTestCase(OrderingTestCase):
 
     def test_pausing_says_why_ordering_is_off(self):
         response = self.client.patch(self.business_url("/ordering"), json={"enabled": False}, headers=self.auth())
-        self.assertEqual(response.json["ordering"], {"enabled": False, "reason": "paused", "takeaway": False})
-        self.assertEqual(self.live()["ordering"], {"enabled": False, "reason": "paused", "takeaway": False})
+        self.assertEqual(response.json["ordering"], {"enabled": False, "reason": "paused", "takeaway": False, "delivery": False})
+        self.assertEqual(self.live()["ordering"], {"enabled": False, "reason": "paused", "takeaway": False, "delivery": False})
 
 
 class FreeTrialTestCase(OrderingTestCase):
@@ -523,7 +523,7 @@ class FreeTrialTestCase(OrderingTestCase):
         refused = self.client.patch(self.business_url("/ordering"), json={"enabled": True}, headers=self.auth())
         self.assertEqual(refused.status_code, 403)
         self.assertEqual(refused.json["code"], "plan_limit")
-        self.assertEqual(self.live()["ordering"], {"enabled": False, "reason": "plan", "takeaway": False})
+        self.assertEqual(self.live()["ordering"], {"enabled": False, "reason": "plan", "takeaway": False, "delivery": False})
         self.assertFalse(self.me()["allow_orders"])
         self.assertIsNone(self.me()["orders_free_until"])
 

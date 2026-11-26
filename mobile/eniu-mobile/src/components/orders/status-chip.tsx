@@ -9,6 +9,7 @@ const LABELS: Record<OrderStatus, string> = {
   received: 'Recibido',
   preparing: 'Preparando',
   ready: 'Listo',
+  on_the_way: 'En camino',
   cancelled: 'Rechazado',
 };
 
@@ -21,6 +22,7 @@ export function StatusChip({ status }: { status: OrderStatus }) {
     received: { backgroundColor: theme.surfaceAlt, color: theme.text },
     preparing: { backgroundColor: theme.surfaceAlt, color: theme.text },
     ready: { backgroundColor: 'rgba(22,128,58,0.12)', color: theme.success },
+    on_the_way: { backgroundColor: 'rgba(22,128,58,0.12)', color: theme.success },
     cancelled: { backgroundColor: 'rgba(198,40,40,0.12)', color: theme.danger },
   }[status];
   return (

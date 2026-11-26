@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Check, ChevronRight, Minus, Plus, ReceiptText, ShoppingBag, Trash2, X } from "lucide-react";
+import { Bike, Check, ChevronRight, Minus, Plus, ReceiptText, ShoppingBag, Store, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { formatDate } from "../../../i18n/formats";
@@ -7,7 +7,9 @@ import { useMenuCurrency } from "../../Templates/templates/menuData";
 import { MAX_NAME, MAX_NOTES, MAX_PHONE, MAX_QUANTITY, isValidPhone } from "./useTableOrdering";
 
 const STEPS = ["pending", "received", "preparing", "ready"];
-const STEP_LABELS = { pending: "Enviado", received: "Recibido", preparing: "Preparando", ready: "Listo" };
+const DELIVERY_STEPS = ["pending", "received", "preparing", "ready", "on_the_way"];
+const STEP_LABELS = { pending: "Enviado", received: "Recibido", preparing: "Preparando", ready: "Listo", on_the_way: "En camino" };
+const AMOUNT = /^\d{1,6}([.,]\d{1,2})?$/;
 const WELCOME_KEY = (placeKey) => `eniu.diner.welcomed.${placeKey}`;
 
 function wasWelcomed(placeKey) {
@@ -146,6 +148,104 @@ function PhoneField({ value, onChange }) {
   );
 }
 
+/** Para recoger o a domicilio, cuando el restaurante ofrece las dos. */
+function ChannelPicker({ ordering }) {
+  const { t } = useTranslation();
+  const { table } = ordering;
+  if (!table.orderingEnabled || !table.delivery?.enabled) return null;
+  const options = [
+    { key: "takeaway", label: t("Paso a recoger"), icon: Store },
+    { key: "delivery", label: t("A domicilio"), icon: Bike },
+  ];
+  return (
+    <div role="radiogroup" aria-label={t("Cómo quieres tu pedido")} className="grid grid-cols-2 gap-2">
+      {options.map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          type="button"
+          role="radio"
+          aria-checked={ordering.channel === key}
+          onClick={() => ordering.setChannel(key)}
+          className={`flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 px-3 font-bold ${ordering.channel === key ? "border-current" : "border-current/20 opacity-75"}`}
+        >
+          <Icon size={18} aria-hidden="true" /> {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const inputClass = "mt-1.5 min-h-12 w-full rounded-xl border border-current/25 bg-transparent px-4 text-base outline-none focus:border-current";
+
+/** A domicilio: colonia (de las que atiende el restaurante), dirección y referencias. */
+function DeliveryFields({ ordering }) {
+  const { t } = useTranslation();
+  const id = useId();
+  const { delivery, saveDelivery, table } = ordering;
+  const zones = table.delivery?.zones || [];
+  return (
+    <div className="space-y-4">
+      <div>
+        <label htmlFor={`${id}-zone`} className="text-sm font-bold">{t("Colonia")}</label>
+        <select id={`${id}-zone`} value={zones.includes(delivery.zone) ? delivery.zone : ""} onChange={(event) => saveDelivery({ zone: event.target.value })} className={`${inputClass} cursor-pointer`}>
+          <option value="">{t("Elige tu colonia")}</option>
+          {zones.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
+        </select>
+        <p className="mt-1.5 text-xs opacity-70">{t("Solo entregamos en estas colonias.")}</p>
+      </div>
+      <div>
+        <label htmlFor={`${id}-address`} className="text-sm font-bold">{t("Calle y número")}</label>
+        <input id={`${id}-address`} value={delivery.address} maxLength={200} autoComplete="street-address" onChange={(event) => saveDelivery({ address: event.target.value })} className={inputClass} />
+      </div>
+      <div>
+        <label htmlFor={`${id}-references`} className="text-sm font-bold">{t("Referencias")} <span className="font-normal opacity-70">({t("opcional")})</span></label>
+        <input id={`${id}-references`} value={delivery.references} maxLength={200} placeholder={t("Ej. portón negro, depto 3")} onChange={(event) => saveDelivery({ references: event.target.value })} className={inputClass} />
+      </div>
+    </div>
+  );
+}
+
+/** Cómo va a pagar al recibir: efectivo (con cuánto, para llevar cambio) o tarjeta. */
+function PaymentFields({ ordering, total }) {
+  const { t } = useTranslation();
+  const currency = useMenuCurrency();
+  const id = useId();
+  const { delivery, saveDelivery } = ordering;
+  const tendered = delivery.cashTendered.trim();
+  const tenderedValue = AMOUNT.test(tendered) ? Number(tendered.replace(",", ".")) : null;
+  const short = tenderedValue !== null && tenderedValue < total;
+  return (
+    <fieldset>
+      <legend className="text-sm font-bold">{t("Pagas al recibir")}</legend>
+      <div role="radiogroup" aria-label={t("Cómo vas a pagar")} className="mt-1.5 grid grid-cols-2 gap-2">
+        {[{ key: "cash", label: t("Efectivo") }, { key: "card", label: t("Tarjeta") }].map((option) => (
+          <button
+            key={option.key}
+            type="button"
+            role="radio"
+            aria-checked={delivery.payWith === option.key}
+            onClick={() => saveDelivery({ payWith: option.key })}
+            className={`min-h-12 cursor-pointer rounded-xl border-2 px-3 font-bold ${delivery.payWith === option.key ? "border-current" : "border-current/20 opacity-75"}`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {delivery.payWith === "cash" ? (
+        <div className="mt-3">
+          <label htmlFor={`${id}-tendered`} className="text-sm font-bold">{t("¿Con cuánto pagas?")} <span className="font-normal opacity-70">({t("opcional")})</span></label>
+          <input id={`${id}-tendered`} inputMode="decimal" value={delivery.cashTendered} maxLength={12} placeholder={t("Para llevarte cambio")} aria-invalid={short} aria-describedby={`${id}-change`} onChange={(event) => saveDelivery({ cashTendered: event.target.value })} className={inputClass} />
+          <p id={`${id}-change`} aria-live="polite" className={`mt-1.5 text-xs ${short ? "font-bold" : "opacity-70"}`}>
+            {short ? t("No alcanza para el total.") : tenderedValue !== null ? t("Te llevamos {{change}} de cambio.", { change: currency.format(tenderedValue - total) }) : ""}
+          </p>
+        </div>
+      ) : (
+        <p className="mt-2 text-xs opacity-70">{t("El repartidor lleva terminal.")}</p>
+      )}
+    </fieldset>
+  );
+}
+
 /** Al abrir el QR: en qué mesa está y a nombre de quién pide. */
 function WelcomeSheet({ ordering, palette, onDone }) {
   const { t } = useTranslation();
@@ -165,7 +265,9 @@ function WelcomeSheet({ ordering, palette, onDone }) {
   }
   return (
     <Sheet
-      title={takeaway ? t("Pide para llevar") : t("Estás en la {{table}}", { table: tableTitle(t, ordering.table) })}
+      title={takeaway
+        ? (ordering.table.orderingEnabled && ordering.table.delivery?.enabled ? t("¿Cómo quieres tu pedido?") : ordering.isDelivery ? t("Pide a domicilio") : t("Pide para llevar"))
+        : t("Estás en la {{table}}", { table: tableTitle(t, ordering.table) })}
       onClose={skip}
       palette={palette}
       footer={(
@@ -176,11 +278,14 @@ function WelcomeSheet({ ordering, palette, onDone }) {
       )}
     >
       <p className="mb-4 text-sm opacity-80">
-        {takeaway
+        {ordering.isDelivery
+          ? t("Elige lo que quieras y mándalo. Aquí ves cuándo va en camino; pagas al recibirlo, en efectivo o con tarjeta.")
+          : takeaway
           ? t("Elige lo que quieras y mándalo. Aquí ves cuándo está listo para recoger; pagas al recogerlo, en efectivo o con tarjeta.")
           : t("Elige lo que quieras, revisa tu pedido y mándalo. Te avisamos aquí cuando el restaurante lo reciba.")}
       </p>
       <div className="space-y-4">
+        {takeaway && <ChannelPicker ordering={ordering} />}
         <NameField value={name} onChange={setName} table={ordering.table} autoFocus />
         {takeaway && <PhoneField value={phone} onChange={setPhone} />}
       </div>
@@ -188,17 +293,18 @@ function WelcomeSheet({ ordering, palette, onDone }) {
   );
 }
 
-function StatusSteps({ status, takeaway = false }) {
+function StatusSteps({ status, takeaway = false, delivery = false }) {
   const { t } = useTranslation();
-  const current = STEPS.indexOf(status);
+  const steps = delivery ? DELIVERY_STEPS : STEPS;
+  const current = steps.indexOf(status);
   return (
-    <ol aria-label={t("Estado del pedido")} className="mt-3 grid grid-cols-4 gap-1.5">
-      {STEPS.map((step, index) => {
+    <ol aria-label={t("Estado del pedido")} className={`mt-3 grid gap-1.5 ${delivery ? "grid-cols-5" : "grid-cols-4"}`}>
+      {steps.map((step, index) => {
         const done = index <= current;
         return (
           <li key={step} aria-current={index === current ? "step" : undefined} className="min-w-0">
             <span aria-hidden="true" className={`block h-1.5 rounded-full ${done ? "bg-current" : "bg-current/20"}`} />
-            <span className={`mt-1 block truncate text-[11px] font-bold ${done ? "" : "opacity-55"}`}>{takeaway && step === "ready" ? t("Para recoger") : t(STEP_LABELS[step])}</span>
+            <span className={`mt-1 block truncate text-[11px] font-bold ${done ? "" : "opacity-55"}`}>{takeaway && !delivery && step === "ready" ? t("Para recoger") : t(STEP_LABELS[step])}</span>
           </li>
         );
       })}
@@ -213,6 +319,7 @@ function SentOrder({ order, takeaway = false }) {
   const cancelled = order.status === "cancelled";
   // Para llevar, la cuenta es del pedido: cerrada quiere decir entregada.
   const delivered = takeaway && !cancelled && order.account?.status === "closed";
+  const isDelivery = order.channel === "delivery";
   return (
     <li className="rounded-2xl border border-current/15 p-4">
       <div className="flex items-baseline justify-between gap-3">
@@ -223,7 +330,7 @@ function SentOrder({ order, takeaway = false }) {
         ? <p className="mt-2 text-sm font-bold">{t("El restaurante canceló este pedido.")}</p>
         : delivered
           ? <p className="mt-2 flex items-center gap-1.5 text-sm font-bold"><Check size={16} aria-hidden="true" /> {t("Entregado")}</p>
-          : <StatusSteps status={order.status} takeaway={takeaway} />}
+          : <StatusSteps status={order.status} takeaway={takeaway} delivery={isDelivery} />}
       {order.status === "pending" && (
         <p className="mt-2 text-xs opacity-75">
           {takeaway
@@ -231,7 +338,13 @@ function SentOrder({ order, takeaway = false }) {
             : t("Esperando a que el restaurante lo reciba. Para cambiar algo, díselo al mesero.")}
         </p>
       )}
-      {takeaway && order.status === "ready" && !delivered && (
+      {isDelivery && !delivered && order.status === "on_the_way" && (
+        <p className="mt-2 text-sm font-bold">{t("¡Va en camino! Pagas {{total}} al recibirlo.", { total: currency.format(Number(order.account?.total ?? order.total)) })}</p>
+      )}
+      {isDelivery && !delivered && order.account?.delivery && (
+        <p className="mt-2 text-xs opacity-75">{order.account.delivery.address} · {order.account.delivery.zone}</p>
+      )}
+      {takeaway && !isDelivery && order.status === "ready" && !delivered && (
         <p className="mt-2 text-sm font-bold">{t("¡Listo! Pasa a recogerlo. Pagas {{total}} al recoger, en efectivo o con tarjeta.", { total: currency.format(Number(order.account?.total ?? order.total)) })}</p>
       )}
       <ul className="mt-3 space-y-1 text-sm">
@@ -307,8 +420,17 @@ function CartSheet({ ordering, palette, onClose, onOpenAccount }) {
   const [phone, setPhone] = useState(ordering.dinerPhone);
   const hasDraft = ordering.lines.length > 0;
   const hasSent = ordering.orders.length > 0;
+  const isDelivery = ordering.isDelivery;
+  const fee = ordering.deliveryFee;
+  const minOrder = isDelivery ? ordering.table.delivery?.minOrder : null;
+  const belowMinimum = Boolean(minOrder) && ordering.total < minOrder;
+  const grandTotal = ordering.total + fee;
+  const tendered = ordering.delivery.cashTendered.trim();
+  const tenderedShort = isDelivery && ordering.delivery.payWith === "cash" && AMOUNT.test(tendered) && Number(tendered.replace(",", ".")) < grandTotal;
+  const addressReady = !isDelivery || (ordering.table.delivery?.zones || []).includes(ordering.delivery.zone) && Boolean(ordering.delivery.address.trim());
   const nameReady = Boolean((editingName ? name : ordering.dinerName).trim())
     && (!takeaway || isValidPhone(editingName ? phone : ordering.dinerPhone));
+  const sendReady = nameReady && addressReady && !belowMinimum && !tenderedShort;
 
   async function send() {
     if (editingName) {
@@ -322,14 +444,14 @@ function CartSheet({ ordering, palette, onClose, onOpenAccount }) {
 
   return (
     <Sheet
-      title={takeaway ? t("Tu pedido para llevar") : t("Tu pedido · {{table}}", { table: t("Mesa {{number}}", { number: ordering.table.number }) })}
+      title={isDelivery ? t("Tu pedido a domicilio") : takeaway ? t("Tu pedido para llevar") : t("Tu pedido · {{table}}", { table: t("Mesa {{number}}", { number: ordering.table.number }) })}
       onClose={onClose}
       palette={palette}
       footer={(
         <div className="space-y-2">
           {hasDraft && ordering.canOrder && (
-            <PrimaryButton palette={palette} onClick={send} disabled={ordering.sending || !nameReady}>
-              {ordering.sending ? t("Mandando…") : t("Mandar pedido · {{total}}", { total: currency.format(ordering.total) })}
+            <PrimaryButton palette={palette} onClick={send} disabled={ordering.sending || !sendReady}>
+              {ordering.sending ? t("Mandando…") : t("Mandar pedido · {{total}}", { total: currency.format(grandTotal) })}
             </PrimaryButton>
           )}
           {hasSent && !takeaway && (
@@ -350,10 +472,19 @@ function CartSheet({ ordering, palette, onClose, onOpenAccount }) {
       {hasDraft ? (
         <>
           <ul>{ordering.lines.map((line) => <CartLine key={line.key} line={line} ordering={ordering} />)}</ul>
+          {isDelivery && (
+            <div className="mt-3 space-y-1 text-sm">
+              <div className="flex justify-between"><span>{t("Productos")}</span><span className="tabular-nums">{currency.format(ordering.total)}</span></div>
+              <div className="flex justify-between"><span>{t("Envío")}</span><span className="tabular-nums">{fee ? currency.format(fee) : t("Gratis")}</span></div>
+            </div>
+          )}
           <div className="mt-3 flex items-baseline justify-between">
             <p className="font-bold">{t("Total de este pedido")}</p>
-            <p className="text-lg font-black tabular-nums">{currency.format(ordering.total)}</p>
+            <p className="text-lg font-black tabular-nums">{currency.format(grandTotal)}</p>
           </div>
+          {belowMinimum && <p role="status" className="mt-2 text-sm font-bold">{t("El pedido mínimo a domicilio es de {{amount}}, sin contar el envío.", { amount: currency.format(minOrder) })}</p>}
+          {takeaway && ordering.table.orderingEnabled && ordering.table.delivery?.enabled && <div className="mt-4"><ChannelPicker ordering={ordering} /></div>}
+          {isDelivery && <div className="mt-4"><DeliveryFields ordering={ordering} /></div>}
           <div className="mt-4">
             {editingName ? (
               <div className="space-y-4">
@@ -367,10 +498,13 @@ function CartSheet({ ordering, palette, onClose, onOpenAccount }) {
               </p>
             )}
           </div>
-          {takeaway && ordering.canOrder && <p className="mt-3 text-sm opacity-80">{t("Pagas al recoger, en efectivo o con tarjeta.")}</p>}
+          {isDelivery && ordering.canOrder && <div className="mt-4"><PaymentFields ordering={ordering} total={grandTotal} /></div>}
+          {takeaway && !isDelivery && ordering.canOrder && <p className="mt-3 text-sm opacity-80">{t("Pagas al recoger, en efectivo o con tarjeta.")}</p>}
           {!ordering.canOrder && (
             <p className="mt-3 text-sm font-semibold">
-              {takeaway ? t("El restaurante no está recibiendo pedidos para llevar en este momento.") : t("El restaurante pausó los pedidos. Puedes pedirle al mesero.")}
+              {isDelivery
+                ? t("El restaurante no está entregando a domicilio en este momento.")
+                : takeaway ? t("El restaurante no está recibiendo pedidos para llevar en este momento.") : t("El restaurante pausó los pedidos. Puedes pedirle al mesero.")}
             </p>
           )}
         </>
@@ -474,9 +608,10 @@ export default function TableOrderingLayer({ ordering, palette }) {
   }
   if (table.status !== "ready") return null;
 
-  const showWelcome = ordering.canOrder && !welcomed
+  const showWelcome = ordering.canBrowseOrder && !welcomed
     && (!ordering.dinerName || (table.takeaway && !isValidPhone(ordering.dinerPhone)));
-  const pendingCount = ordering.orders.filter((order) => ["pending", "received", "preparing"].includes(order.status)).length;
+  const pendingCount = ordering.orders.filter((order) => ["pending", "received", "preparing"].includes(order.status)
+    || (order.channel === "delivery" && ["ready", "on_the_way"].includes(order.status) && order.account?.status !== "closed")).length;
 
   return (
     <>
@@ -484,8 +619,8 @@ export default function TableOrderingLayer({ ordering, palette }) {
         <div className="mx-auto flex max-w-lg items-center gap-2 rounded-3xl p-2 shadow-[0_8px_30px_rgba(0,0,0,0.25)]" style={{ backgroundColor: palette.background, color: palette.text, fontFamily: palette.font }}>
           {table.takeaway ? (
             <span className="flex shrink-0 flex-col items-center rounded-2xl border border-current/20 px-3 py-2 text-center leading-tight">
-              <ShoppingBag size={18} aria-hidden="true" />
-              <span className="mt-0.5 block text-[10px] font-extrabold uppercase tracking-[0.5px]">{t("Para llevar")}</span>
+              {ordering.isDelivery ? <Bike size={18} aria-hidden="true" /> : <ShoppingBag size={18} aria-hidden="true" />}
+              <span className="mt-0.5 block text-[10px] font-extrabold uppercase tracking-[0.5px]">{ordering.isDelivery ? t("A domicilio") : t("Para llevar")}</span>
             </span>
           ) : (
             <span className="shrink-0 rounded-2xl border border-current/20 px-3 py-2 text-center leading-tight">
@@ -505,7 +640,7 @@ export default function TableOrderingLayer({ ordering, palette }) {
             </button>
           ) : (
             <p className="min-w-0 flex-1 px-2 text-sm font-semibold opacity-85">
-              {ordering.canOrder
+              {ordering.canBrowseOrder
                 ? t("Toca «Agregar» en lo que quieras pedir.")
                 : table.takeaway ? t("Por ahora no hay pedidos para llevar.") : t("Los pedidos están en pausa. Pídele al mesero.")}
             </p>

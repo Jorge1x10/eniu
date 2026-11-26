@@ -212,7 +212,7 @@ export type Analytics = {
 
 // --- Pedidos desde la mesa (server/eniu-backend/docs/ORDERING.md) ------------
 
-export type OrderStatus = 'pending' | 'received' | 'preparing' | 'ready' | 'cancelled';
+export type OrderStatus = 'pending' | 'received' | 'preparing' | 'ready' | 'on_the_way' | 'cancelled';
 
 export type OrderItem = {
   id: string;
@@ -242,14 +242,31 @@ export type Order = {
  * de pedidos les pone `takeaway: true`, `number: null` y el nombre y teléfono
  * de quien pide (ver `withPlace` en `orders-context`).
  */
-export type TableLabel = { id?: string | null; number: number | null; name: string | null; takeaway?: boolean; phone?: string | null };
+export type DeliveryInfo = {
+  address: string;
+  zone: string;
+  references: string | null;
+  fee: string;
+  pay_with: 'cash' | 'card';
+  cash_tendered: string | null;
+};
+
+export type TableLabel = {
+  id?: string | null;
+  number: number | null;
+  name: string | null;
+  takeaway?: boolean;
+  phone?: string | null;
+  delivery?: DeliveryInfo | null;
+};
 
 export type TableAccount = {
   id: string;
   status: 'open' | 'closed';
-  channel?: 'table' | 'takeaway';
+  channel?: 'table' | 'takeaway' | 'delivery';
   table: TableLabel;
   customer?: { name: string; phone: string | null } | null;
+  delivery?: DeliveryInfo | null;
   opened_at: string;
   closed_at: string | null;
   total: string;
@@ -257,7 +274,7 @@ export type TableAccount = {
   orders: Order[];
 };
 
-export type OrderingState = { enabled: boolean; reason: 'paused' | 'plan' | null; takeaway?: boolean };
+export type OrderingState = { enabled: boolean; reason: 'paused' | 'plan' | null; takeaway?: boolean; delivery?: boolean };
 
 export type LiveOrders =
   | { changed: false; version: number }

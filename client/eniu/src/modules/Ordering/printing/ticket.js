@@ -1,5 +1,6 @@
 import i18n from "../../../i18n";
 import { formatDate } from "../../../i18n/formats";
+import { formatPayWith } from "../utils/delivery";
 
 export function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -20,7 +21,7 @@ function time(iso) {
  * el restaurante quitó no se imprime. Todo texto que viene del comensal pasa
  * por `escapeHtml`: la página se dibuja en un iframe del mismo origen.
  */
-export function buildTicketHtml({ order, table, businessName, paper = "80", reprint = false }) {
+export function buildTicketHtml({ order, table, businessName, paper = "80", reprint = false, currency = "MXN" }) {
   const t = i18n.t.bind(i18n);
   const width = paper === "58" ? 58 : 80;
   const items = (order.items || []).filter((item) => !item.is_cancelled);
@@ -33,7 +34,7 @@ export function buildTicketHtml({ order, table, businessName, paper = "80", repr
   const units = items.reduce((sum, item) => sum + item.quantity, 0);
   return `<!doctype html>
 <html lang="${escapeHtml(i18n.language)}"><head><meta charset="utf-8" />
-<title>${escapeHtml(table.takeaway ? t("Comanda · Para llevar") : t("Comanda · Mesa {{number}}", { number: table.number }))}</title>
+<title>${escapeHtml(table.delivery ? t("Comanda · A domicilio") : table.takeaway ? t("Comanda · Para llevar") : t("Comanda · Mesa {{number}}", { number: table.number }))}</title>
 <style>
   /* El alto exacto lo fija \`printTicket\` al medir el contenido: \`auto\` no es
      un tamaño de página válido y el navegador caería a carta o A4. */
@@ -45,6 +46,7 @@ export function buildTicketHtml({ order, table, businessName, paper = "80", repr
   .business { margin: 0; font-size: 0.85em; font-weight: 700; }
   .kind { margin: 1mm 0 0; font-size: 0.8em; letter-spacing: 2px; }
   .table { margin: 2mm 0 0; font-size: ${width === 58 ? 26 : 34}pt; font-weight: 900; line-height: 1; }
+  .table.small { font-size: ${width === 58 ? 18 : 24}pt; }
   .meta { margin: 1.5mm 0 0; font-weight: 700; }
   .rule { border: 0; border-top: 1px dashed #000; margin: 2.5mm 0; }
   ul { list-style: none; margin: 0; padding: 0; }
@@ -59,9 +61,14 @@ export function buildTicketHtml({ order, table, businessName, paper = "80", repr
   ${reprint ? `<p class="center reprint">*** ${escapeHtml(t("REIMPRESIÓN"))} ***</p>` : ""}
   <p class="center business">${escapeHtml(businessName)}</p>
   <p class="center kind">${escapeHtml(t("COMANDA"))}</p>
-  <p class="center table">${escapeHtml(table.takeaway ? t("PARA LLEVAR") : t("MESA {{number}}", { number: table.number }))}</p>
+  <p class="center table${table.delivery ? " small" : ""}">${escapeHtml(table.delivery ? t("A DOMICILIO") : table.takeaway ? t("PARA LLEVAR") : t("MESA {{number}}", { number: table.number }))}</p>
   ${!table.takeaway && table.name ? `<p class="center meta">${escapeHtml(table.name)}</p>` : ""}
   ${table.takeaway && table.phone ? `<p class="center meta">${escapeHtml(t("Tel. {{phone}}", { phone: table.phone }))}</p>` : ""}
+  ${table.delivery ? `<hr class="rule" />
+  <p class="meta">${escapeHtml(table.delivery.address)}</p>
+  <p class="meta">${escapeHtml(t("Col. {{zone}}", { zone: table.delivery.zone }))}</p>
+  ${table.delivery.references ? `<p class="foot">${escapeHtml(table.delivery.references)}</p>` : ""}
+  <p class="foot">${escapeHtml(formatPayWith(table.delivery, currency))}</p>` : ""}
   <p class="center meta">${escapeHtml(order.diner_name)} · ${escapeHtml(time(order.created_at))}</p>
   <hr class="rule" />
   <ul>${lines}</ul>

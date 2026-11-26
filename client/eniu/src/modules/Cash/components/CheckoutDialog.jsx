@@ -40,7 +40,14 @@ export default function CheckoutDialog({ businessId, account, currency, onCloseW
   const totalCents = parseCents(account.total) ?? 0;
 
   const [cash, setCash] = useState({ loaded: false, session: null, error: "" });
-  const [rows, setRows] = useState(() => [newRow()]);
+  // A domicilio, el cobro arranca como dijo el cliente que iba a pagar.
+  const [rows, setRows] = useState(() => {
+    const delivery = account.table?.delivery;
+    if (delivery?.pay_with === "card") return [newRow("card")];
+    const row = newRow();
+    if (delivery?.cash_tendered) row.tendered = delivery.cash_tendered;
+    return [row];
+  });
   // El primer importe sigue al total hasta que alguien lo escribe a mano.
   const [firstEdited, setFirstEdited] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -170,7 +177,9 @@ export default function CheckoutDialog({ businessId, account, currency, onCloseW
     onDone();
   }
 
-  const title = account.table?.takeaway
+  const title = account.table?.delivery
+    ? t("Cobrar a {{name}} · a domicilio", { name: account.table.name })
+    : account.table?.takeaway
     ? t("Cobrar a {{name}} · para llevar", { name: account.table.name })
     : t("Cobrar {{table}}", { table: tableLabel(account.table) });
 

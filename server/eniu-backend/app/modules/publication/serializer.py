@@ -184,6 +184,12 @@ def serialize_public_menu(catalogue):
                 and catalogue.business.ordering_enabled
                 and plans.allows_orders(plan_key)
             ),
+            "delivery": bool(
+                catalogue.business.delivery_enabled
+                and catalogue.business.delivery_zones
+                and catalogue.business.ordering_enabled
+                and plans.allows_orders(plan_key)
+            ),
         },
         "categories": category_payload,
         "uncategorized_products": uncategorized_payload,

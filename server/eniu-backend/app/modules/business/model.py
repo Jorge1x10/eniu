@@ -24,6 +24,12 @@ class Business(BaseModel):
     # Pedidos para llevar desde el enlace del menú, sin QR de mesa. Se suman a
     # `ordering_enabled`: pausar pedidos pausa también los para llevar.
     takeaway_enabled = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # A domicilio: mismo costo de envío para todas las colonias que atiende.
+    delivery_enabled = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    delivery_fee = db.Column(db.Numeric(10, 2), nullable=False, default=0, server_default="0")
+    # Pedido mínimo, sin el envío. Nulo: sin mínimo.
+    delivery_min_order = db.Column(db.Numeric(10, 2), nullable=True)
+    delivery_zones = db.Column(db.JSON, nullable=False, default=list, server_default="[]")
     # Sube con cada cambio en las cuentas o pedidos del negocio. El panel lo
     # manda al consultar los pedidos en vivo y, si no cambió, la respuesta no
     # carga nada más: es lo que hace barata la consulta cada pocos segundos.

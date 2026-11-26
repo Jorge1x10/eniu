@@ -81,7 +81,9 @@ export function LiveOrdersProvider({ businessId, businessName = "", children }) 
       if (event.type === "ready") {
         additions.push({ id: `ready-${event.orderId}`, kind: "ready", ...event });
         if (pageHidden()) {
-          const title = event.table.takeaway
+          const title = event.table.delivery
+            ? tr("Listo para enviar · {{name}}", { name: event.table.name || event.order.diner_name })
+            : event.table.takeaway
             ? tr("Listo para entregar · {{name}}", { name: event.table.name || event.order.diner_name })
             : tr("Listo para llevar · {{table}}", { table });
           showNotification({ tag: readyTag(event.orderId), title, body, persistent: true, onClick: goToOrders });

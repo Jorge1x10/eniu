@@ -829,5 +829,12 @@
   "LLEVAR": "UP",
   "Para llevar": "Pickup",
   "Para llevar · {{name}}": "Pickup · {{name}}",
-  "¿Cerrar el pedido para llevar de {{name}}?": "Close {{name}}'s pickup order?"
+  "¿Cerrar el pedido para llevar de {{name}}?": "Close {{name}}'s pickup order?",
+  "A domicilio": "Delivery",
+  "A DOM.": "DELIV.",
+  "ENVÍO": "ORDER",
+  "En camino": "On the way",
+  "Salió a entregar": "Out for delivery",
+  "A domicilio · {{name}}": "Delivery · {{name}}",
+  "¿Cerrar el pedido a domicilio de {{name}}?": "Close {{name}}'s delivery order?"
 }
